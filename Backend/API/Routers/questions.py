@@ -8,7 +8,7 @@ from datetime import datetime
 
 router = APIRouter()
 
-QUERIES_FILE = "queries.json"
+QUERIES_FILE = "Discord/queries.json"
 
 class QuestionInput(BaseModel):
     question: str
@@ -21,9 +21,27 @@ def load_queries():
             return json.load(f)
     return {"queries": []}
 
-def save_queries(data):
+def save_queries(input_data):
+    # Determine if input_data is the full JSON or a single query
+    if "queries" in input_data:
+        # full JSON was passed → overwrite file directly
+        data = input_data
+    else:
+        # single query was passed → load existing and update
+        data = load_queries()
+        updated_query = input_data
+        for i, query in enumerate(data["queries"]):
+            if query["query_id"] == updated_query["query_id"]:
+                data["queries"][i] = updated_query
+                break
+        else:
+            # not found → append
+            data["queries"].append(updated_query)
+
+    # Save entire JSON back
     with open(QUERIES_FILE, "w") as f:
         json.dump(data, f, indent=2)
+
 
 @router.post("/answer")
 async def send_answer(input_data: QuestionInput):
