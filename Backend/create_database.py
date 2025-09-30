@@ -1,73 +1,32 @@
-from langchain_community.document_loaders import DirectoryLoader, TextLoader
+# This script creates a Chroma vector database from the PDF file.
+# Run this once to build the database.
+# Requirements: pip install langchain langchain-community chromadb pypdf sentence-transformers langchain-huggingface torch
+
 from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.schema import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import HuggingFaceEmbeddings
-import os
-import shutil
 
-# Path where ChromaDB will store the vector database
-CHROMA_PATH = "chroma"
+# Path to your PDF file
+pdf_path = "/Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf"
 
-def main():
-    store_data()
+# Load the PDF
+loader = PyPDFLoader(pdf_path)
+documents = loader.load()
 
-def store_data():
-    # Load the document(s)
-    document = load_document()
-    # Split into smaller chunks
-    chunks = split_text(document)
-    # Save chunks as embeddings in ChromaDB
-    save_to_chroma(chunks)
+# Split the documents into chunks
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+docs = text_splitter.split_documents(documents)
 
-def load_document():
-    """
-    Load documents from the current folder.
-    Here we load a single file 'BackendKnowledge.pdf'.
-    """
-    # loader = TextLoader("alice_in_wonderland.md")
-    loader = PyPDFLoader("/Users/prakarsha/Desktop/courseGPT/Backend_Knowledge.pdf")
-    my_document = loader.load()
-    return my_document
+# Use HuggingFace embeddings (compatible with macOS ARM64 via PyTorch)
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 
-def split_text(documents: list[Document]):
-    """
-    Split documents into smaller chunks with overlap
-    for better embedding + retrieval.
-    """
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=1000,   # each chunk is ~1000 characters
-        chunk_overlap=500, # overlap between chunks
-        length_function=len,
-        add_start_index=True,
-    )
-    chunks = text_splitter.split_documents(documents)
-    print(f"Split {len(documents)} document(s) into {len(chunks)} chunks.")
+# Create and persist the Chroma database in the "Data" folder
+persist_directory = "./Data/chroma_db"
+vectorstore = Chroma.from_documents(
+    documents=docs,
+    embedding=embeddings,
+    persist_directory=persist_directory
+)
 
-    # Print a sample chunk to verify
-    document = chunks[10]
-    print(document.page_content)
-    print(document.metadata)
-
-    return chunks
-
-def save_to_chroma(chunks: list[Document]):
-    """
-    Save the text chunks into ChromaDB using Hugging Face embeddings.
-    This runs locally, no API key required.
-    """
-    # Clear out old database if it exists
-    if os.path.exists(CHROMA_PATH):
-        shutil.rmtree(CHROMA_PATH)
-
-    # Initialize local embeddings model: hugging face api is the free trained AI model
-    embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
-
-    # Store chunks in Chroma vector DB
-    db = Chroma.from_documents(chunks, embeddings, persist_directory=CHROMA_PATH)
-    db.persist()
-    print(f"Saved {len(chunks)} chunks to {CHROMA_PATH}.")
-
-if __name__ == "__main__":
-    main()
+print(f"Database created and saved to {persist_directory}")
