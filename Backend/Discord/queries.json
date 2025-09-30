@@ -1,0 +1,60 @@
+{
+  "queries": [
+    {
+      "query_id": "2f7a5452-e52f-4d40-8b2a-b4fd4c380f2a",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "ADEIFE'SSERVER",
+      "query_text": "what is an integer?",
+      "response_text": "a whole number without decimals",
+      "asked_at": "2025-09-29T03:04:51.675741"
+    },
+    {
+      "query_id": "292bb0f9-c08f-42aa-8311-1a6fff2abd07",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "ADEIFE'SSERVER",
+      "query_text": "what is an integer?",
+      "response_text": "a whole number without decimals",
+      "asked_at": "2025-09-29T03:36:14.382305"
+    },
+    {
+      "query_id": "ec95bafc-8748-4af6-a471-0985a43dd23b",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "ADEIFE'SSERVER",
+      "query_text": "what is an integer?",
+      "response_text": "a whole number without decimals",
+      "asked_at": "2025-09-28T22:39:01.310577"
+    },
+    {
+      "query_id": "90a19454-ce39-4d77-a7c6-474de0fed7c7",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "ADEIFE'SSERVER",
+      "query_text": "what is an integer?",
+      "response_text": "a whole number without decimals",
+      "asked_at": "2025-09-28T22:41:55.860357"
+    },
+    {
+      "query_id": "cdc1258e-c0c1-4aff-9728-d57d3e5fa102",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "ADEIFE'SSERVER",
+      "query_text": "what is an integer?",
+      "response_text": "a whole number without decimals",
+      "asked_at": "2025-09-28T22:43:25.120636"
+    },
+    {
+      "query_id": "9117e0c5-5210-40d3-ab9c-957b5ec4fe2c",
+      "student_id": "73f3db5f-b953-4ea3-ab26-8f1dd82a3894",
+      "course_id": "ADEIFE'SSERVER",
+      "query_text": "Tell me what an integer is?",
+      "response_text": "a whole number without decimals",
+      "asked_at": "2025-09-30T09:57:52.070479"
+    },
+    {
+      "query_id": "bb691b23-7698-456a-ac17-85a4d4dd7271",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is a string?",
+      "response_text": "a sequence of characters enclosed in quotes",
+      "asked_at": "2025-09-30T12:52:17.851729"
+    }
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "students": [
+    {
+      "student_id": "12345",
+      "discord_id": "851234567890123456",
+      "name": "Adeife",
+      "courses": [
+        {
+          "course_id": "ADEIFE'SSERVER",
+          "registered_at": "2025-09-28T12:00:00Z"
+        }
+      ]
+    },
+    {
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "discord_id": "781275897276661830",
+      "name": "lvrd_ade",
+      "courses": [
+        {
+          "course_id": "ADEIFE'SSERVER",
+          "registered_at": "2025-09-29T03:04:18.808412"
+        },
+        {
+          "course_id": "CPRE4910-COURSEGPT",
+          "registered_at": "2025-09-30T12:49:47.044910"
+        }
+      ]
+    },
+    {
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "discord_id": "403460976663461899",
+      "name": "madfuryofficial",
+      "courses": [
+        {
+          "course_id": "CPRE4910-COURSEGPT",
+          "registered_at": "2025-09-30T12:49:52.906397"
+        }
+      ]
+    }
+  ]
+}
