@@ -1,0 +1,42 @@
+In computer science, data types define the kind of values that can be stored and manipulated in a program. 
+
+An integer is a whole number, positive or negative, without a fractional component. Examples include -3, 0, and 42. 
+Integers are commonly used for counting, indexing, and arithmetic operations. 
+
+A string is a sequence of characters, typically enclosed in quotes. Examples include "Hello", "123", and "CS319". 
+Strings are used to represent text, words, or any sequence of symbols, and can be manipulated with operations like concatenation or substring extraction. 
+
+A floating-point number (float) is a number that has a decimal point or is in scientific notation, such as 3.14 or -2.7e3. 
+Floats are used to represent real numbers and support approximate arithmetic for fractional values. 
+
+A boolean is a data type with only two possible values: True or False. Booleans are used in logic, conditions, and control flow such as if-statements. 
+
+An array is a collection of elements of the same data type, stored in contiguous memory locations. Arrays provide fast indexing but have a fixed size once created. 
+
+A list is an ordered collection of elements that can contain different data types. Lists are more flexible than arrays because they can grow and shrink dynamically. 
+
+A dictionary (also called a map or hash map) is a collection of key-value pairs. Keys are unique identifiers that map to specific values, allowing fast lookups. 
+
+A variable is a named storage location in memory that holds a value. Variables allow programmers to label and reuse data in their code. 
+
+An algorithm is a step-by-step procedure or set of rules for solving a problem or performing a task. Algorithms are evaluated for correctness and efficiency. 
+
+A function is a reusable block of code that performs a specific task. Functions take inputs, called parameters, and can return an output. 
+
+Recursion is a programming technique where a function calls itself to solve smaller subproblems of a larger problem. Recursive algorithms are often used in tree traversal, factorial calculation, and divide-and-conquer strategies. 
+
+An object is an instance of a class that groups together data (attributes) and behaviors (methods). Object-oriented programming organizes code around objects. 
+
+A class is a blueprint for creating objects, defining their attributes and methods. Classes support abstraction, encapsulation, and inheritance. 
+
+Compiling is the process of translating source code written in a high-level programming language into machine code that the computer can execute. 
+
+An interpreter executes code line by line without converting the entire program to machine code beforehand. 
+
+Debugging is the process of identifying and fixing errors (bugs) in a program. Debugging tools help track variables, execution flow, and logic issues. 
+
+A loop is a control structure that repeats a block of code while a condition is true. Common loops include for-loops and while-loops. 
+
+A conditional is a control structure that executes a block of code if a specified condition is true. The most common conditional is the if-statement. 
+
+Big-O notation is a way to describe the efficiency of an algorithm in terms of time or space complexity as the input size grows. 
