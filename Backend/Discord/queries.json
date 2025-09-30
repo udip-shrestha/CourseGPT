@@ -55,6 +55,14 @@
       "query_text": "what is a string?",
       "response_text": "a sequence of characters enclosed in quotes",
       "asked_at": "2025-09-30T12:52:17.851729"
+    },
+    {
+      "query_id": "5e11701d-6191-4af2-af5b-af612caed52e",
+      "student_id": "348550f3-02dd-4c2f-b1c4-6724372a6703",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a Controller?",
+      "response_text": "A class that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses.",
+      "asked_at": "2025-09-30T17:43:22.749763"
     }
   ]
 }
