@@ -48,18 +48,12 @@ def clean_and_truncate_response(text, source_documents, target_length=210, max_l
     
     return clean_text, sources_str
 
-def main():
-    # --- CLI setup ---
-    parser = argparse.ArgumentParser(description="Query your PDF or documents via Chroma embeddings.")
-    parser.add_argument("query_text", type=str, help="The question you want to ask.")
-    args = parser.parse_args()
-    query_text = args.query_text
-
-    # --- Load embeddings and Chroma DB ---
+def get_answer_from_query(query_text: str):
+    # Load embeddings and Chroma DB
     embedding_function = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
     db = Chroma(persist_directory=CHROMA_PATH, embedding_function=embedding_function)
 
-    # --- Create HuggingFace LLM pipeline ---
+    # Load HuggingFace model
     model_id = "google/flan-t5-base"
     tokenizer = T5Tokenizer.from_pretrained(model_id)
     model = T5ForConditionalGeneration.from_pretrained(model_id)
@@ -67,14 +61,14 @@ def main():
         "text2text-generation",
         model=model,
         tokenizer=tokenizer,
-        max_new_tokens=200,  # Increased for longer answers
+        max_new_tokens=200,
         temperature=0.7,
         do_sample=True,
         repetition_penalty=1.1
     )
     llm = HuggingFacePipeline(pipeline=hf_pipeline)
 
-    # --- Custom prompt for concise answer ---
+    # Prompt template
     prompt_template = """Using the context below, provide a detailed answer to the question in 100-150 words:
 
 {context}
@@ -83,7 +77,7 @@ Question: {question}
 Answer: """
     prompt = PromptTemplate(template=prompt_template, input_variables=["context", "question"])
 
-    # --- Create Retrieval QA chain ---
+    # Retrieval QA chain
     qa_chain = RetrievalQA.from_chain_type(
         llm=llm,
         chain_type="stuff",
@@ -92,13 +86,7 @@ Answer: """
         chain_type_kwargs={"prompt": prompt}
     )
 
-    # --- Run query ---
+    # Run query
     result = qa_chain.invoke({"query": query_text})
-    answer, sources = clean_and_truncate_response(result["result"], result["source_documents"], target_length=210, max_length=300)
-
-    # --- Print answer and sources ---
-    print(f"Answer: {answer}")
-    print(f"Sources: {sources}")
-
-if __name__ == "__main__":
-    main()
+    answer, sources = clean_and_truncate_response(result["result"], result["source_documents"])
+    return {"answer": answer, "sources": sources}
