@@ -56,7 +56,7 @@ def log_query(student_id, course_id, query_text, response_text):
 # ML model call
 def ask_backend(question: str, student_id: str, course_id: str):
     try:
-        url = "http://localhost:8000/answer"
+        url = "http://127.0.0.1:8000/answer"
         payload = {
             "question": question,
             "student_id": student_id,
@@ -106,7 +106,7 @@ async def ask(interaction: discord.Interaction, question: str):
         )
         return
 
-    answer = ask_ml_model(question)
+    answer = ask_backend(question)
     log_query(student_id, course_id, question, answer)
     await interaction.followup.send(f"🤖 {answer}")
 
