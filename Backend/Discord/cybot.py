@@ -106,7 +106,7 @@ async def ask(interaction: discord.Interaction, question: str):
         )
         return
 
-    answer = ask_backend(question)
+    answer = ask_backend(question, student_id, course_id)
     log_query(student_id, course_id, question, answer)
     await interaction.followup.send(f"🤖 {answer}")
 
