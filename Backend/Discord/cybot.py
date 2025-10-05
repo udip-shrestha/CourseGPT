@@ -54,22 +54,28 @@ def log_query(student_id, course_id, query_text, response_text):
     save_json(QUERIES_FILE, data)
 
 # ML model call
-def ask_ml_model(question: str):
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    context = """
-    In programming, an integer is a whole number without decimals. 
-    A string is a sequence of characters enclosed in quotes.
-    """
-    payload = {"inputs": {"question": question, "context": context}}
-    response = requests.post(
-        f"https://api-inference.huggingface.co/models/{H_MODEL}",
-        headers=headers, json=payload
-    )
-    if response.status_code != 200:
-        return f"Error {response.status_code}: {response.text}"
-    data = response.json()
-    return data.get("answer", "🤖 Sorry, I don't have an answer for that.")
+def ask_backend(question: str, student_id: str, course_id: str):
+    try:
+        url = "http://localhost:8000/answer"
+        payload = {
+            "question": question,
+            "student_id": student_id,
+            "course_id": course_id
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(url, json=payload, headers=headers)
 
+        if response.status_code != 200:
+            return f"⚠️ Backend error ({response.status_code}): {response.text}"
+
+        data = response.json()
+        answer = data.get("answer", "🤖 Sorry, I couldn't find an answer.")
+        sources = data.get("sources", [])
+        return f"{answer}\n\n📚 **Sources:** {sources}"
+
+    except Exception as e:
+        return f"Error connecting to backend: {str(e)}"
+    
 # Discord setup
 intents = discord.Intents.default()
 intents.message_content = True
