@@ -63,6 +63,22 @@
       "query_text": "What is a Controller?",
       "response_text": "A class that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses.",
       "asked_at": "2025-09-30T17:43:22.749763"
+    },
+    {
+      "query_id": "c6b12c07-c0c8-4e40-97a1-da477e67e69e",
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a service class?",
+      "response_text": "a service layer that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). Role: It acts like a traffic cop, routing requests to the right method and returning responses. Example: Your GiftCardController listens for requests like GET /gift-cards/id and...",
+      "asked_at": "2025-10-05T17:54:00.612232"
+    },
+    {
+      "query_id": "c63bbfa6-6f62-4697-bb35-8436e30da5ab",
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a service class?",
+      "response_text": "a service layer that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). Role: It acts like a traffic cop, routing requests to the right method and returning responses. Example: Your GiftCardController listens for requests like GET /gift-cards/id and...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 0)",
+      "asked_at": "2025-10-05T17:54:00.695505"
     }
   ]
 }
