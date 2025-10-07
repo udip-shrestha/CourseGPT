@@ -89,8 +89,7 @@ def ask_backend(question: str, student_id: str, course_id: str):
         data = response.json()
         answer = data.get("answer", "🤖 Sorry, I couldn't find an answer.")
         sources = data.get("sources", [])
-        return f"{answer}\n\n📚 **Sources:** {[{'document': s['document'], 'page': s['page'] + 1} if 'page' in s else s for s in sources]}"
-
+        return f"{answer}\n\n📚 **Sources:** {sources}"
 
     except requests.Timeout:
         return "⚠️ Request timed out. Please try again later."
