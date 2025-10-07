@@ -143,6 +143,54 @@
       "query_text": "what is mixin?",
       "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 2); /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 11)",
       "asked_at": "2025-10-07T12:44:12.795295"
+    },
+    {
+      "query_id": "838cd9e3-1289-4295-a652-963bc4825d64",
+      "student_id": "wrsvvwvdsd",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a yellow?",
+      "response_text": "a color It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses. It uses ResponseEntity to format HTTP responses.",
+      "asked_at": "2025-10-07T13:16:24.057445"
+    },
+    {
+      "query_id": "86db0801-ca43-4405-a967-5855180e2dd4",
+      "student_id": "no",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "hiohjo",
+      "response_text": " It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses. It uses ResponseEntity to format HTTP responses.",
+      "asked_at": "2025-10-07T13:21:07.592874"
+    },
+    {
+      "query_id": "76586959-42ee-44bb-8346-12ff589940f7",
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is Mixin ?",
+      "response_text": "\u26a0\ufe0f Request timed out. Please try again later.",
+      "asked_at": "2025-10-07T13:24:36.248993"
+    },
+    {
+      "query_id": "768593da-fe17-405e-8bb0-3d0b153ffc77",
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is Mixin ?",
+      "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...",
+      "asked_at": "2025-10-07T13:24:47.954910"
+    },
+    {
+      "query_id": "ef0badd5-e20c-44f1-9034-7aafbd24bda4",
+      "student_id": "16b2accc-0a57-4e6d-95d9-58fb09280c59",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is a controller?",
+      "response_text": "a class that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses.",
+      "asked_at": "2025-10-07T13:25:33.392036"
+    },
+    {
+      "query_id": "e45dfc0b-7bb7-4952-9de5-82cf0ea4e236",
+      "student_id": "16b2accc-0a57-4e6d-95d9-58fb09280c59",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is a controller?",
+      "response_text": "a class that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses.\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 0)",
+      "asked_at": "2025-10-07T13:25:33.403010"
     }
   ]
 }

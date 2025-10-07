@@ -58,6 +58,17 @@
           "registered_at": "2025-10-07T12:43:20.303538"
         }
       ]
+    },
+    {
+      "student_id": "16b2accc-0a57-4e6d-95d9-58fb09280c59",
+      "discord_id": "985973373748277248",
+      "name": "allez19",
+      "courses": [
+        {
+          "course_id": "CPRE4910-COURSEGPT",
+          "registered_at": "2025-10-07T13:25:06.977408"
+        }
+      ]
     }
   ]
 }

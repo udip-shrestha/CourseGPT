@@ -53,6 +53,24 @@ def log_query(student_id, course_id, query_text, response_text):
     })
     save_json(QUERIES_FILE, data)
 
+
+def is_student_registered(student_id, filename="students.json"):
+    try:
+        with open(filename, "r") as f:
+            data = json.load(f)
+        
+        for student in data.get("students", []):
+            if student.get("student_id") == student_id:
+                return True
+        return False
+    
+    except FileNotFoundError:
+        print(f"File {filename} not found.")
+        return False
+    except json.JSONDecodeError:
+        print(f"File {filename} is not a valid JSON.")
+        return False
+
 # ML model call
 def ask_backend(question: str, student_id: str, course_id: str):
     try:
@@ -63,7 +81,7 @@ def ask_backend(question: str, student_id: str, course_id: str):
             "course_id": course_id
         }
         headers = {"Content-Type": "application/json"}
-        response = requests.post(url, json=payload, headers=headers, timeout=10)
+        response = requests.post(url, json=payload, headers=headers, timeout=15)
 
         if response.status_code != 200:
             return f"⚠️ Backend error ({response.status_code}): {response.text}"
@@ -71,7 +89,8 @@ def ask_backend(question: str, student_id: str, course_id: str):
         data = response.json()
         answer = data.get("answer", "🤖 Sorry, I couldn't find an answer.")
         sources = data.get("sources", [])
-        return f"{answer}\n\n📚 **Sources:** {sources}"
+        return f"{answer}\n\n📚 **Sources:** {[{'document': s['document'], 'page': s['page'] + 1} if 'page' in s else s for s in sources]}"
+
 
     except requests.Timeout:
         return "⚠️ Request timed out. Please try again later."
@@ -97,7 +116,6 @@ async def on_member_join(member):
 # Ask command
 @bot.tree.command(name="ask", description="Ask a question to the bot")
 async def ask(interaction: discord.Interaction, question: str):
-    await interaction.response.defer(thinking=True)
     course_id = interaction.guild.name.replace(" ", "").upper()  # using server name as course_id
     registered, student_id = is_registered(interaction.user.id, course_id)
 
