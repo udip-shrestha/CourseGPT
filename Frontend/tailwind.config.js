@@ -5,7 +5,6 @@ module.exports = {
         "./src/**/*.{js,ts,jsx,tsx}"
     ],
     theme: {
-        // *** FIX: REMOVED CONTAINER CONFIGURATION ***
         // By removing this, Tailwind will not automatically constrain content
         // using the 'container' class to fixed max-widths (like 1440px or 1920px).
         extend: {
