@@ -55,6 +55,20 @@ def log_query(student_id, course_id, query_text, response_text):
 
 # ML model call
 def ask_backend(question: str, student_id: str, course_id: str):
+    # Check registration using student_id
+    data = load_json(STUDENTS_FILE)
+    registered = False
+
+    for student in data["students"]:
+        if student["student_id"] == student_id:
+            for course in student["courses"]:
+                if course["course_id"] == course_id:
+                    registered = True
+                    break
+            break
+
+    if not registered:
+        return f"🚫 Please register for {course_id}. You are not registered."
     try:
         url = "http://127.0.0.1:8000/answer"
         payload = {

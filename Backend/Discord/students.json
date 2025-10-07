@@ -36,6 +36,28 @@
           "registered_at": "2025-09-30T12:49:52.906397"
         }
       ]
+    },
+    {
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "discord_id": "893870930516930581",
+      "name": "udip_shrestha",
+      "courses": [
+        {
+          "course_id": "CPRE4910-COURSEGPT",
+          "registered_at": "2025-10-07T12:43:17.257069"
+        }
+      ]
+    },
+    {
+      "student_id": "333257e9-27c8-425a-b82c-85b9dbe2199a",
+      "discord_id": "744994980476616746",
+      "name": "mohamedselim.",
+      "courses": [
+        {
+          "course_id": "CPRE4910-COURSEGPT",
+          "registered_at": "2025-10-07T12:43:20.303538"
+        }
+      ]
     }
   ]
 }
