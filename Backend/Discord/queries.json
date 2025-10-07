@@ -79,6 +79,118 @@
       "query_text": "What is a service class?",
       "response_text": "a service layer that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). Role: It acts like a traffic cop, routing requests to the right method and returning responses. Example: Your GiftCardController listens for requests like GET /gift-cards/id and...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 0)",
       "asked_at": "2025-10-05T17:54:00.695505"
+    },
+    {
+      "query_id": "f1b60a6f-1002-4a9d-a6c7-8bbe742e2e3d",
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "a?",
+      "response_text": "department1 = departmentMock(1L, 10L); department1.setPosMode(\"S\"); department2 = departmentMock(2L, 10L); department2.setPosMode(\"S\"); ListDepartment> departments = Arrays.asList(department1, department2); return departments when(departmentModeDao.findDepartmentsByPosMode(eq(10L), eq(\"S\")));...",
+      "asked_at": "2025-10-07T12:36:52.813790"
+    },
+    {
+      "query_id": "bf8b4000-a6ea-4b69-b9b5-bc502a95cd5c",
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "a?",
+      "response_text": "department1 = departmentMock(1L, 10L); department1.setPosMode(\"S\"); department2 = departmentMock(2L, 10L); department2.setPosMode(\"S\"); ListDepartment> departments = Arrays.asList(department1, department2); return departments when(departmentModeDao.findDepartmentsByPosMode(eq(10L), eq(\"S\")));...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 16); /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 17)",
+      "asked_at": "2025-10-07T12:36:52.830385"
+    },
+    {
+      "query_id": "222f875c-6a93-4991-918e-f66ad90789bd",
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a DTO?",
+      "response_text": "dto = new CheckOrderItemResource.CheckOrderItemDTO(); dto.setAmount(BigDecimal.TEN); dto.setBillLater(\"N\"); dto.setCheckId(1L); dto.setOrderItemId(2L); create a CheckOrderItem object CheckOrderItem checkOrderItem = new CheckOrderItem(); when(checkDao.findById(1L)); thenReturn(checkMock);...",
+      "asked_at": "2025-10-07T12:41:28.745711"
+    },
+    {
+      "query_id": "23c3e5fe-6cbc-4da5-b904-b4546427093f",
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a DTO?",
+      "response_text": "dto = new CheckOrderItemResource.CheckOrderItemDTO(); dto.setAmount(BigDecimal.TEN); dto.setBillLater(\"N\"); dto.setCheckId(1L); dto.setOrderItemId(2L); create a CheckOrderItem object CheckOrderItem checkOrderItem = new CheckOrderItem(); when(checkDao.findById(1L)); thenReturn(checkMock);...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 0); /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 13)",
+      "asked_at": "2025-10-07T12:41:28.805450"
+    },
+    {
+      "query_id": "925f1f3c-0a7e-42eb-99fa-91ab147818d5",
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is Mixin?",
+      "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...",
+      "asked_at": "2025-10-07T12:43:51.696059"
+    },
+    {
+      "query_id": "e2d08ec8-1119-4aa0-9110-fae471debd16",
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is Mixin?",
+      "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 2); /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 11)",
+      "asked_at": "2025-10-07T12:43:51.790646"
+    },
+    {
+      "query_id": "ab460ec6-c9a2-4f4a-91fc-ea74b8f7d615",
+      "student_id": "333257e9-27c8-425a-b82c-85b9dbe2199a",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is mixin?",
+      "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...",
+      "asked_at": "2025-10-07T12:44:12.784995"
+    },
+    {
+      "query_id": "25d7b3e5-bdf1-48e8-8537-b81ae4077130",
+      "student_id": "333257e9-27c8-425a-b82c-85b9dbe2199a",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is mixin?",
+      "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 2); /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 11)",
+      "asked_at": "2025-10-07T12:44:12.795295"
+    },
+    {
+      "query_id": "838cd9e3-1289-4295-a652-963bc4825d64",
+      "student_id": "wrsvvwvdsd",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is a yellow?",
+      "response_text": "a color It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses. It uses ResponseEntity to format HTTP responses.",
+      "asked_at": "2025-10-07T13:16:24.057445"
+    },
+    {
+      "query_id": "86db0801-ca43-4405-a967-5855180e2dd4",
+      "student_id": "no",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "hiohjo",
+      "response_text": " It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses. It uses ResponseEntity to format HTTP responses.",
+      "asked_at": "2025-10-07T13:21:07.592874"
+    },
+    {
+      "query_id": "76586959-42ee-44bb-8346-12ff589940f7",
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is Mixin ?",
+      "response_text": "\u26a0\ufe0f Request timed out. Please try again later.",
+      "asked_at": "2025-10-07T13:24:36.248993"
+    },
+    {
+      "query_id": "768593da-fe17-405e-8bb0-3d0b153ffc77",
+      "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "What is Mixin ?",
+      "response_text": "A Jackson feature to customize what properties get serialized/deserialized without modifying the original class. Role: Helps exclude sensitive or unnecessary fields from JSON responses. Example: You ignore fields like giftCardLoadTranList and transactionList in JSON using a mixin. Unit Tests...",
+      "asked_at": "2025-10-07T13:24:47.954910"
+    },
+    {
+      "query_id": "ef0badd5-e20c-44f1-9034-7aafbd24bda4",
+      "student_id": "16b2accc-0a57-4e6d-95d9-58fb09280c59",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is a controller?",
+      "response_text": "a class that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses.",
+      "asked_at": "2025-10-07T13:25:33.392036"
+    },
+    {
+      "query_id": "e45dfc0b-7bb7-4952-9de5-82cf0ea4e236",
+      "student_id": "16b2accc-0a57-4e6d-95d9-58fb09280c59",
+      "course_id": "CPRE4910-COURSEGPT",
+      "query_text": "what is a controller?",
+      "response_text": "a class that receives HTTP requests (like GET, POST, PUT, DELETE) from clients (e.g., browsers, mobile apps). It manages client HTTP requests (GET, POST, etc.) and coordinates with the service layer to process data and return responses.\n\n\ud83d\udcda **Sources:** /Users/prakarsha/Desktop/courseGPT/sdmay26-37/Backend/Data/Backend_Knowledge.pdf (page 0)",
+      "asked_at": "2025-10-07T13:25:33.403010"
     }
   ]
 }
