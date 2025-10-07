@@ -55,20 +55,6 @@ def log_query(student_id, course_id, query_text, response_text):
 
 # ML model call
 def ask_backend(question: str, student_id: str, course_id: str):
-    # Check registration using student_id
-    data = load_json(STUDENTS_FILE)
-    registered = False
-
-    for student in data["students"]:
-        if student["student_id"] == student_id:
-            for course in student["courses"]:
-                if course["course_id"] == course_id:
-                    registered = True
-                    break
-            break
-
-    if not registered:
-        return f"🚫 Please register for {course_id}. You are not registered."
     try:
         url = "http://127.0.0.1:8000/answer"
         payload = {
@@ -77,7 +63,7 @@ def ask_backend(question: str, student_id: str, course_id: str):
             "course_id": course_id
         }
         headers = {"Content-Type": "application/json"}
-        response = requests.post(url, json=payload, headers=headers)
+        response = requests.post(url, json=payload, headers=headers, timeout=10)
 
         if response.status_code != 200:
             return f"⚠️ Backend error ({response.status_code}): {response.text}"
@@ -87,6 +73,8 @@ def ask_backend(question: str, student_id: str, course_id: str):
         sources = data.get("sources", [])
         return f"{answer}\n\n📚 **Sources:** {sources}"
 
+    except requests.Timeout:
+        return "⚠️ Request timed out. Please try again later."
     except Exception as e:
         return f"Error connecting to backend: {str(e)}"
     
@@ -119,6 +107,9 @@ async def ask(interaction: discord.Interaction, question: str):
             ephemeral=True
         )
         return
+    
+    # Only defer if registered
+    await interaction.response.defer(thinking=True)
 
     answer = ask_backend(question, student_id, course_id)
     log_query(student_id, course_id, question, answer)

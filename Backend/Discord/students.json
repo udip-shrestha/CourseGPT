@@ -27,6 +27,17 @@
       ]
     },
     {
+      "student_id": "3cb6d3cf-0620-4926-94b0-19c85461ccad",
+      "discord_id": "403460976663461899",
+      "name": "madfuryofficial",
+      "courses": [
+        {
+          "course_id": "CPRE4910-COURSEGPT",
+          "registered_at": "2025-09-30T12:49:52.906397"
+        }
+      ]
+    },
+    {
       "student_id": "bc1f2379-89b1-40a8-88a9-26fc1214e289",
       "discord_id": "893870930516930581",
       "name": "udip_shrestha",
