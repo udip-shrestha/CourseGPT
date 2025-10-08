@@ -13,6 +13,7 @@ class CourseInput(BaseModel):
     instructor_id: int
     course_description: str
     credit_points : int
+    year: int
 
 @router.get("/instructors/{instructor_id}/courses")
 async def get_courses(instructor_id: int):
