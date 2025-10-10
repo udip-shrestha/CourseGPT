@@ -43,12 +43,28 @@ CREATE TABLE IF NOT EXISTS courses (
 );
 
 -- -----------------------------
+-- File Types Table
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS file_types (
+    id SERIAL PRIMARY KEY,
+    mime_type VARCHAR(100) UNIQUE NOT NULL,   -- e.g. 'application/pdf'
+    extension VARCHAR(10) UNIQUE NOT NULL     -- e.g. 'pdf'
+);
+
+INSERT INTO file_types (mime_type, extension)
+VALUES
+('application/pdf', 'pdf'),
+('text/plain', 'txt');
+
+
+-- -----------------------------
 -- Documents Table
 -- -----------------------------
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL,
+    file_type_id INT REFERENCES file_types(id) ON DELETE RESTRICT,
     file_data BYTEA NOT NULL, -- Ideally max ~10MB to keep DB fast; BYTEA can technically hold up to 1GB
     uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (course_id, file_name)

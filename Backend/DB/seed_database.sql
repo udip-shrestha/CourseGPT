@@ -43,13 +43,15 @@ course_cte AS (
 -- ===========================================
 -- Step 3. Insert a Document linked to Course
 -- ===========================================
-INSERT INTO documents (id, course_id, file_name, file_data)
+INSERT INTO documents (id, course_id, file_name, file_data, file_type_id)
 SELECT
     gen_random_uuid(),
     course_cte.course_id,
     'Backend_Knowledge.pdf',
-    pg_read_binary_file('course_gpt/Backend_Knowledge.pdf')
+    pg_read_binary_file('course_gpt/Backend_Knowledge.pdf'),
+    ft.id  -- <-- file_type_id lookup
 FROM course_cte
+JOIN file_types ft ON ft.mime_type = 'application/pdf'
 ON CONFLICT (course_id, file_name) DO UPDATE
     SET file_data = EXCLUDED.file_data,
         uploaded_at = NOW();
