@@ -31,7 +31,7 @@ class ISQLRepository(Protocol):
 
     def read_all_documents(
         self,
-        course_id: Optional[str] = None,
+        course_id: str,
         file_type_id: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,

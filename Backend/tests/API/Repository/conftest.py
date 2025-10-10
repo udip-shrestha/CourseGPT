@@ -58,12 +58,30 @@ def repo(connection_manager):
     return SQLRepository(connection_manager)
 
 @pytest.fixture
-def temp_course(connection_manager):
+def temp_instructor(connection_manager):
+    """Insert a temporary instructor and return its ID."""
+    instructor_id = str(uuid.uuid4())
+    sql = """
+        INSERT INTO instructors (id, name, title, university, email)
+        VALUES (%s, %s, %s, %s, %s)
+    """
+    connection_manager.execute(
+        sql,
+        (instructor_id, "Dr. Test Instructor", "Professor", "Test U", f"{instructor_id}@example.com")
+    )
+    return instructor_id
+
+
+@pytest.fixture
+def temp_course(connection_manager, temp_instructor):
     """Insert a temporary course record and return its UUID."""
     course_id = str(uuid.uuid4())
     sql = """
-        INSERT INTO courses (id, name, institution, year, semester_id)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO courses (id, name, institution, year, semester_id, instructor_id)
+        VALUES (%s, %s, %s, %s, %s, %s)
     """
-    connection_manager.execute(sql, (course_id, "Temp Course", "Test U", 2025, 1))
+    connection_manager.execute(
+        sql,
+        (course_id, "Temp Course", "Test U", 2025, 1, temp_instructor)
+    )
     return course_id

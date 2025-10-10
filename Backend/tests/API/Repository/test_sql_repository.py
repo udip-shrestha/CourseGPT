@@ -1,3 +1,4 @@
+import base64
 import pytest
 import uuid
 
@@ -45,7 +46,7 @@ def test_create_and_read_document(repo, temp_course):
     assert doc is not None
     assert doc["course_id"] == uuid.UUID(temp_course)
     assert doc["file_name"] == file_name
-    assert doc["file_data"] == file_bytes
+    assert base64.b64decode(doc["file_data"]) == file_bytes
 
 
 def test_read_all_documents_filters_and_pagination(repo, temp_course):

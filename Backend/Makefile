@@ -81,7 +81,7 @@ api-test: api-install
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
 		echo Running API tests... && \
-		pytest APITest -v \
+		pytest tests\API -v \
 	)"
 else
 api-test:
@@ -89,7 +89,7 @@ api-test:
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
 		echo Running API tests... && \
-		pytest APITest -v \
+		pytest tests\API -v \
 	)"
 endif
 
@@ -155,3 +155,10 @@ db-seed:
 	@echo Seeding database with initial data...
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SEED_FILE)
 	@echo Database seeded successfully.
+
+# -------------------------------------------
+# Open interactive PostgreSQL shell
+# -------------------------------------------
+db-shell:
+	@echo "Connecting to PostgreSQL database '$(DB_NAME)'..."
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME)
