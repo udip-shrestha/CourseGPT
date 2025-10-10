@@ -14,6 +14,68 @@ help:
 
 
 
+
+# ===========================================
+# API Make Commands
+# ===========================================
+
+VENV_DIR := API/.venv
+REQ_FILE := API/requirements.txt
+
+# -----------------------------------
+# Create venv if missing
+# -----------------------------------
+ifeq ($(wildcard $(VENV_DIR)),)
+api-create-venv:
+	@echo Creating virtual environment...
+	python -m venv $(VENV_DIR)
+else
+api-create-venv:
+	@echo Virtual environment already exists.
+endif
+
+# -----------------------------------
+# Install dependencies if requirements.txt exists
+# -----------------------------------
+ifeq ($(wildcard $(REQ_FILE)),)
+api-install:
+	@echo ERROR: requirements.txt not found in API directory. && exit 1
+else
+api-install: api-create-venv
+	@echo Activating virtual environment...
+	@cmd /C "( \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Installing dependencies from requirements.txt... && \
+		python -m pip install --upgrade pip && \
+		python -m pip install -r $(REQ_FILE) \
+	)"
+endif
+
+# -------------------------------------------
+# Run FastAPI backend
+# -------------------------------------------
+ifeq ($(wildcard $(VENV_DIR)),)
+api-run: api-install
+	@echo Creating virtual environment and installing dependencies...
+	@cmd /Q /C "( \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Launching FastAPI server... && \
+		python -m uvicorn API.main:app --reload \
+	)"
+else
+api-run:
+	@echo Starting FastAPI server on port 8000...
+	@cmd /Q /C "( \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Launching FastAPI server... && \
+		python -m uvicorn API.main:app --reload \
+	)"
+endif
+
+
+
+
+
 # ===========================================
 # Database Make Commands
 # ===========================================
