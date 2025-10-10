@@ -59,16 +59,37 @@ api-run: api-install
 	@echo Creating virtual environment and installing dependencies...
 	@cmd /Q /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
-		echo Launching FastAPI server... && \
-		python -m uvicorn API.main:app --reload \
+		echo Launching FastAPI server on port 8000... && \
+		python -m uvicorn API.main:app --reload --reload-dir API \
 	)"
 else
 api-run:
-	@echo Starting FastAPI server on port 8000...
 	@cmd /Q /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
-		echo Launching FastAPI server... && \
-		python -m uvicorn API.main:app --reload \
+		echo Launching FastAPI server on port 8000... && \
+		python -m uvicorn API.main:app --reload --reload-dir API \
+	)"
+endif
+
+# -------------------------------------------
+# Run API Tests
+# -------------------------------------------
+ifeq ($(wildcard $(VENV_DIR)),)
+api-test: api-install
+	@echo Creating virtual environment and installing dependencies...
+	@cmd /Q /C "( \
+		set PYTHONPATH=. && \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Running API tests... && \
+		pytest tests\API -v \
+	)"
+else
+api-test:
+	@cmd /Q /C "( \
+		set PYTHONPATH=. && \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Running API tests... && \
+		pytest tests\API -v \
 	)"
 endif
 
@@ -134,3 +155,10 @@ db-seed:
 	@echo Seeding database with initial data...
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SEED_FILE)
 	@echo Database seeded successfully.
+
+# -------------------------------------------
+# Open interactive PostgreSQL shell
+# -------------------------------------------
+db-shell:
+	@echo "Connecting to PostgreSQL database '$(DB_NAME)'..."
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME)

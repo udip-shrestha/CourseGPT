@@ -35,9 +35,9 @@ CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(150) NOT NULL,
     institution VARCHAR(150) NOT NULL, 
-    semester_id INTEGER REFERENCES semesters(id) ON DELETE SET NULL,
+    semester_id INTEGER NOT NULL REFERENCES semesters(id) ON DELETE RESTRICT,
     year INTEGER,
-    instructor_id UUID REFERENCES instructors(id) ON DELETE SET NULL,
+    instructor_id UUID NOT NULL REFERENCES instructors(id) ON DELETE CASCADE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (name, institution, year, semester_id)
 );
