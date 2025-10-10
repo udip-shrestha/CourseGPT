@@ -59,16 +59,37 @@ api-run: api-install
 	@echo Creating virtual environment and installing dependencies...
 	@cmd /Q /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
-		echo Launching FastAPI server... && \
-		python -m uvicorn API.main:app --reload \
+		echo Launching FastAPI server on port 8000... && \
+		python -m uvicorn API.main:app --reload --reload-dir API \
 	)"
 else
 api-run:
-	@echo Starting FastAPI server on port 8000...
 	@cmd /Q /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
-		echo Launching FastAPI server... && \
-		python -m uvicorn API.main:app --reload \
+		echo Launching FastAPI server on port 8000... && \
+		python -m uvicorn API.main:app --reload --reload-dir API \
+	)"
+endif
+
+# -------------------------------------------
+# Run API Tests
+# -------------------------------------------
+ifeq ($(wildcard $(VENV_DIR)),)
+api-test: api-install
+	@echo Creating virtual environment and installing dependencies...
+	@cmd /Q /C "( \
+		set PYTHONPATH=. && \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Running API tests... && \
+		pytest APITest -v \
+	)"
+else
+api-test:
+	@cmd /Q /C "( \
+		set PYTHONPATH=. && \
+		call $(VENV_DIR)\Scripts\activate && \
+		echo Running API tests... && \
+		pytest APITest -v \
 	)"
 endif
 

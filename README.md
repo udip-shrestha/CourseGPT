@@ -20,6 +20,14 @@ Once dependencies are installed, start the backend with:
 make api-run
 ```
 
+### Running Tests
+
+To verify that all repository and service logic works correctly, run the automated tests:
+
+```
+make api-test
+```
+
 ## Database Setup
 
 ### Prerequisites
