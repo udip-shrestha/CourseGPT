@@ -54,7 +54,7 @@ make db-init
 make db-seed
 ```
 
-### **Step 4 (Optional): Open Database Shell**
+### Step 4: (Optional): Open Database Shell
 
 This opens the interactive PostgreSQL shell connected to your `course_gpt` database. Inside the shell, you can verify your tables were created successfully by running `\dt`.
 

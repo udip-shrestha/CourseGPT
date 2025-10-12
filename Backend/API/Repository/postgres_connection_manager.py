@@ -1,5 +1,6 @@
 import threading
 from typing import Any, Dict, List, Optional, Tuple
+import psycopg
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 import logging
@@ -42,19 +43,37 @@ class PostgresConnectionManager:
 
     def __init__(self, db_url: str) -> None:
         self.db_url: str = db_url
-
-        self.pool: ConnectionPool = ConnectionPool(
-            conninfo=db_url,
-            min_size=1,
-            max_size=10,
-            timeout=10,
-            open=True
-        )
-
         self.logger: logging.Logger = logging.getLogger(__name__)
+
+        # So app doesnt crash if DB is not setup
+        if self.database_available(db_url):
+            self.pool: ConnectionPool = ConnectionPool(
+                conninfo=db_url,
+                min_size=1,
+                max_size=10,
+                timeout=10,
+                open=True
+            )
+        else:
+            self.pool = None
+            self.logger.warning("Database not available - running without Postgres.")
+
+    def database_available(self, db_url: str) -> bool:
+        try:
+            with psycopg.connect(db_url) as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+            return True
+        except:
+            return False
 
     def get_connection(self):
         """Get a connection from the pool (usable with context manager)."""
+        
+        # So app doesnt crash if DB is not setup
+        if self.pool is None:
+            raise ConnectionError("Postgres not connected")
+    
         return self.pool.connection()
 
     def insert_one(self, sql: str, params: Tuple[Any, ...] = ()) -> str:
@@ -102,7 +121,8 @@ class PostgresConnectionManager:
 
     def close_all(self) -> None:
         """Close all connections in the pool."""
-        self.pool.close()
+        if self.pool is not None:
+            self.pool.close()
 
     def _log_db_error(self, error: Exception, sql: str) -> None:
         """Log database errors consistently for debugging."""
