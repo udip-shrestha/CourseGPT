@@ -102,7 +102,6 @@ endif
 # ===========================================
 
 DB_NAME = course_gpt
-DB_USER = postgres
 DB_HOST = localhost
 DB_PORT = 5432
 
@@ -113,8 +112,10 @@ SEED_FILE = DB/seed_database.sql
 # Detect OS
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
+	DB_USER = postgres
 else
 	UNAME_S := $(shell uname -s)
+	DB_USER = $(shell whoami)
 endif
 
 # -------------------------------------------
@@ -127,7 +128,7 @@ ifeq ($(UNAME_S),Windows)
 	@echo db-setup complete. Please restart PowerShell.
 else ifeq ($(UNAME_S),Darwin)
 	@echo "Checking PostgreSQL installation..."
-	@bash scripts/install_postgres_mac.sh
+	@bash Script/install_postgres_mac.sh
 	@echo "db-setup complete."
 else
 	@echo "Checking PostgreSQL installation..."
@@ -140,13 +141,12 @@ endif
 # -------------------------------------------
 db-init:
 	@echo Dropping existing database if it exists...
-	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -c "DROP DATABASE IF EXISTS $(DB_NAME)"
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "DROP DATABASE IF EXISTS $(DB_NAME)"
 	@echo Creating new database...
-	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -c "CREATE DATABASE $(DB_NAME)"
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)"
 	@echo Applying schema...
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
-	@echo Fresh database initialized successfully.
-
+	@echo "✅ Fresh database initialized successfully."
 
 # -------------------------------------------
 # Seed database with sample data
