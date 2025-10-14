@@ -10,6 +10,7 @@ from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
 from API.Service.courses_service import CourseService
+from API.Service.instructors_service import InstructorService
 
 
 def get_connection_manager() -> PostgresConnectionManager:
@@ -37,3 +38,9 @@ def get_course_service(
 ) -> CourseService:
     """Provide a CourseService using the SQL repository."""
     return CourseService(sql_repo)
+
+def get_instructor_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> InstructorService:
+    """Provide an InstructorService using the SQL repository."""
+    return InstructorService(sql_repo)
