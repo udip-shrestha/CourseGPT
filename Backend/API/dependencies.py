@@ -9,6 +9,7 @@ from fastapi import Depends
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
+from API.Service.courses_service import CourseService
 
 
 def get_connection_manager() -> PostgresConnectionManager:
@@ -30,3 +31,9 @@ def get_document_service(
 ) -> DocumentService:
     """Provide a DocumentService using the SQL repository."""
     return DocumentService(sql_repo)
+
+def get_course_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> CourseService:
+    """Provide a CourseService using the SQL repository."""
+    return CourseService(sql_repo)
