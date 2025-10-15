@@ -4,7 +4,7 @@ set -euo pipefail
 # CONFIG: adjust as needed
 PERSISTENT_ROOT="/home/gitlab-runner/sdmay26-37"
 FRONTEND_DIR="${CI_PROJECT_DIR:-$PERSISTENT_ROOT}/Frontend"
-WWW_DIR="/var/www/coursegpt"
+WWW_DIR="$PERSISTENT_ROOT/frontend_build"
 
 echo "Deploy frontend: src=$FRONTEND_DIR/dist -> dest=$WWW_DIR (host=$(hostname))"
 
@@ -14,7 +14,7 @@ if [ ! -d "$FRONTEND_DIR/dist" ] || [ -z "$(ls -A "$FRONTEND_DIR/dist")" ]; then
 fi
 
 # create target and sync (requires sudo)
-# mkdir -p "$WWW_DIR"
+mkdir -p "$WWW_DIR"
 rsync -a --delete "$FRONTEND_DIR/dist/" "$WWW_DIR/"
 
 echo "Frontend deployed to $WWW_DIR"
