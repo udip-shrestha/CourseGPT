@@ -1,7 +1,6 @@
 stages:
-  - test_backend
-  - deploy_frontend
-  - deploy_backend
+  - test
+  - deploy
 
 variables:
   BACKEND_DIR: "Backend"
@@ -41,7 +40,7 @@ test_backend:
       junit: "$BACKEND_DIR/test-results.xml"
 
 deploy_frontend:
-  stage: deploy_frontend
+  stage: deploy
   tags:
     - frontend_sdmay26
   # only:
@@ -57,7 +56,7 @@ deploy_frontend:
     - "Backend/Script/deploy_frontend.sh"
 
 deploy_backend:
-  stage: deploy_backend
+  stage: deploy
   tags:
     - backend_sdmay26
   # only:
