@@ -13,9 +13,9 @@ echo "Deploy backend on $(hostname) - root=$PERSISTENT_ROOT branch=$BRANCH"
 # If CI workspace present, sync it to persistent path (optional)
 if [ -n "${CI_PROJECT_DIR:-}" ] && [ "$CI_PROJECT_DIR" != "$PERSISTENT_ROOT" ]; then
   echo "Syncing CI workspace to persistent path"
-  sudo mkdir -p "$PERSISTENT_ROOT"
-  sudo rsync -a --delete --exclude '.git' "$CI_PROJECT_DIR/" "$PERSISTENT_ROOT/"
-  sudo chown -R YOUR_USER:YOUR_USER "$PERSISTENT_ROOT"
+  mkdir -p "$PERSISTENT_ROOT"
+  rsync -a --delete --exclude '.git' "$CI_PROJECT_DIR/" "$PERSISTENT_ROOT/"
+  chown -R YOUR_USER:YOUR_USER "$PERSISTENT_ROOT"
 fi
 
 # Ensure persistent checkout is on expected branch (only if git present)
@@ -37,9 +37,9 @@ fi
 
 # Restart backend service and cybot service (systemd)
 echo "Restarting backend and cybot services"
-sudo systemctl daemon-reload || true
-sudo systemctl restart backend-coursegpt.service || true
-sudo systemctl restart cybot.service || true
-sudo systemctl enable backend-coursegpt.service cybot.service || true
+systemctl daemon-reload || true
+systemctl restart backend-coursegpt.service || true
+systemctl restart cybot.service || true
+systemctl enable backend-coursegpt.service cybot.service || true
 
 echo "Backend deploy complete"

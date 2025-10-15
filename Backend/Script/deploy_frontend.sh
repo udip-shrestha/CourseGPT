@@ -14,7 +14,7 @@ if [ ! -d "$FRONTEND_DIR/dist" ] || [ -z "$(ls -A "$FRONTEND_DIR/dist")" ]; then
 fi
 
 # create target and sync (requires sudo)
-sudo mkdir -p "$WWW_DIR"
-sudo rsync -a --delete "$FRONTEND_DIR/dist/" "$WWW_DIR/"
+mkdir -p "$WWW_DIR"
+rsync -a --delete "$FRONTEND_DIR/dist/" "$WWW_DIR/"
 
 echo "Frontend deployed to $WWW_DIR"
