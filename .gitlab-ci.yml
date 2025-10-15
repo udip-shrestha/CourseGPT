@@ -23,7 +23,7 @@ variables:
 #     expire_in: 1h
 
 test_backend:
-  stage: test_backend
+  stage: test
   tags:
     - backend_sdmay26
   script:
