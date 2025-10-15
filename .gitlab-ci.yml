@@ -8,6 +8,21 @@ variables:
   FRONTEND_DIR: "Frontend"
   DEPLOY_SCRIPT: "Backend/Script/deploy.sh"
 
+# build_frontend:
+#   stage: build
+#   image: node:18
+#   tags:
+#     - frontend_sdmay26
+#   script:
+#     - echo "Building frontend"
+#     - cd "$FRONTEND_DIR"
+#     - npm ci
+#     - npm run build
+#   artifacts:
+#     paths:
+#       - "$FRONTEND_DIR/dist"
+#     expire_in: 1h
+
 test_backend:
   stage: test_backend
   tags:
@@ -32,9 +47,9 @@ deploy_frontend:
   only:
     - main
     - master
-  needs:
-    - job: build_frontend
-      artifacts: true
+  # needs:
+  #   - job: build_frontend
+  #     artifacts: true
   script:
     - echo "Deploying frontend artifact to server"
     - ls -la "$FRONTEND_DIR/dist" || true
@@ -48,11 +63,11 @@ deploy_backend:
   only:
     - main
     - master
-  needs:
-    - job: deploy_frontend
-      artifacts: false
-    - job: test_backend
-      artifacts: false
+  # needs:
+  #   - job: deploy_frontend
+  #     artifacts: false
+  #   - job: test_backend
+  #     artifacts: false
   script:
     - echo "Deploying backend and restarting services"
     - chmod +x "Backend/Script/deploy_backend.sh"
