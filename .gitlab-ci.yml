@@ -44,9 +44,9 @@ deploy_frontend:
   stage: deploy_frontend
   tags:
     - frontend_sdmay26
-  only:
-    - main
-    - master
+  # only:
+  #   - main
+  #   - master
   # needs:
   #   - job: build_frontend
   #     artifacts: true
@@ -60,9 +60,9 @@ deploy_backend:
   stage: deploy_backend
   tags:
     - backend_sdmay26
-  only:
-    - main
-    - master
+  # only:
+  #   - main
+  #   - master
   # needs:
   #   - job: deploy_frontend
   #     artifacts: false
