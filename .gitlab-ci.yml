@@ -1,27 +1,28 @@
 stages:
-  - build
-  - test
-  - deploy
+  # - build_frontend
+  - test_backend
+  - deploy_frontend
+  - deploy_backend
 
 variables:
   BACKEND_DIR: "Backend"
   FRONTEND_DIR: "Frontend"
   DEPLOY_SCRIPT: "Backend/Script/deploy.sh"
 
-build_frontend:
-  stage: build
-  image: node:18
-  tags:
-    - frontend_sdmay26
-  script:
-    - echo "Building frontend"
-    - cd "$FRONTEND_DIR"
-    - npm ci
-    - npm run build
-  artifacts:
-    paths:
-      - "$FRONTEND_DIR/dist"
-    expire_in: 1h
+# build_frontend:
+#   stage: build
+#   image: node:18
+#   tags:
+#     - frontend_sdmay26
+#   script:
+#     - echo "Building frontend"
+#     - cd "$FRONTEND_DIR"
+#     - npm ci
+#     - npm run build
+#   artifacts:
+#     paths:
+#       - "$FRONTEND_DIR/dist"
+#     expire_in: 1h
 
 test_backend:
   stage: test

@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # CONFIG: adjust
-PERSISTENT_ROOT="/home/YOUR_USER/sdmay26-37"
+PERSISTENT_ROOT="/home/vm-user/sdmay26-37"
 BACKEND_DIR="$PERSISTENT_ROOT/Backend"
 API_DIR="$BACKEND_DIR/API"
 API_VENV="$API_DIR/.venv"
@@ -29,8 +29,7 @@ fi
 # Backend venv + install
 mkdir -p "$(dirname "$API_VENV")"
 python3 -m venv "$API_VENV"
-# shellcheck disable=SC1090
-. "$API_VENV/bin/activate"
+source "$API_VENV/bin/activate"
 pip install --upgrade pip
 if [ -f "$BACKEND_DIR/requirements.txt" ]; then
   pip install -r "$BACKEND_DIR/requirements.txt"

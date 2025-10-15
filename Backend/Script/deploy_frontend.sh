@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # CONFIG: adjust as needed
-PERSISTENT_ROOT="/home/YOUR_USER/sdmay26-37"
+PERSISTENT_ROOT="/home/vm-user/sdmay26-37"
 FRONTEND_DIR="${CI_PROJECT_DIR:-$PERSISTENT_ROOT}/Frontend"
 WWW_DIR="/var/www/coursegpt"
 
