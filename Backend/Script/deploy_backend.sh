@@ -26,7 +26,6 @@ if [ -d .git ]; then
   git clean -fd
 fi
 
-# Backend venv + install
 mkdir -p "$(dirname "$API_VENV")"
 python3 -m venv "$API_VENV"
 source "$API_VENV/bin/activate"
