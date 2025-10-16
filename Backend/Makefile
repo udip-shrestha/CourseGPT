@@ -1,16 +1,129 @@
 # ===========================================
+# Require .env file
+# ===========================================
+ifeq (,$(wildcard .env))
+$(error .env file not found! Please create one in the project root before running Make.)
+endif
+
+include .env
+export
+
+
+
+
+
+# ===========================================
+# Variable Definition
+# ===========================================
+ifeq ($(OS),Windows_NT)
+	UNAME_S := Windows
+	DB_USER := postgres
+	ACTIVATE_PATH := $(VENV_DIR)/Scripts/activate
+	PYTHON := python
+else
+	UNAME_S := $(shell uname -s)
+	DB_USER := $(shell whoami)
+	ACTIVATE_PATH := $(VENV_DIR)/bin/activate
+	PYTHON := python3
+endif
+
+
+
+
+
+# ===========================================
 # Default Target - Show available commands
 # ===========================================
+
+.PHONY: help
+
 help:
 	@echo ""
 	@echo "Available Make Commands:"
 	@echo "-------------------------------------------"
 	@echo "make help       -> Show this help message"
-	@echo "make db-setup   -> Check and install PostgreSQL if needed"
-	@echo "make db-init    -> Drop, create, and initialize the database schema"
-	@echo "make db-seed    -> Seed database with sample data"
+	@echo ""
+	@echo "make install    -> Install backend dependencies"
+	@echo ""
+	@echo "make api-run    -> Launch FastAPI backend on $${API_HOST}:$${API_PORT}"
+	@echo "make api-test   -> Run all API tests with pytest"
+	@echo ""
+	@echo "make db-setup   -> Install PostgreSQL"
+	@echo "make db-init    -> Drop, create, and initialize a fresh database"
+	@echo "make db-seed    -> Populate database with sample data"
+	@echo "make db-shell   -> Open interactive PostgreSQL shell"
+	@echo "make db-deploy  -> Create database if missing, preserve data"
 	@echo "-------------------------------------------"
 	@echo ""
+
+
+
+
+
+# ===========================================
+# VENV Make Commands
+# ===========================================
+
+.PHONY: create-venv install
+
+# -----------------------------------
+# Create venv if missing
+# -----------------------------------
+ifeq ($(wildcard $(VENV_DIR)),)
+create-venv:
+	@echo Creating virtual environment...
+	$(PYTHON) -m venv $(VENV_DIR)
+else
+create-venv:
+	@echo Virtual environment already exists.
+endif
+
+# -----------------------------------
+# Install dependencies if requirements.txt exists
+# -----------------------------------
+ifeq ($(wildcard $(REQ_FILE)),)
+install:
+	@echo ERROR: requirements.txt not found in API directory. && exit 1
+else
+install: create-venv
+ifeq ($(OS),Windows_NT)
+	@echo "Activating virtual environment and installing dependencies..."
+	@cmd /C "( \
+		call $(VENV_DIR)\Scripts\activate && \
+		$(PYTHON) -m pip install -r $(REQ_FILE) \
+	)"
+else
+	@echo "Activating virtual environment and installing dependencies..."
+	@bash -c "source $(VENV_DIR)/bin/activate && \
+		$(PYTHON) -m pip install --upgrade pip && \
+		$(PYTHON) -m pip install -r $(REQ_FILE)"
+endif
+endif
+
+
+# -------------------------------------------
+# Ensure venv exists (cross-platform)
+# -------------------------------------------
+ifeq ($(OS),Windows_NT)
+$(ACTIVATE_PATH):
+	@echo Checking virtual environment...
+	@if not exist "$(VENV_DIR)" ( \
+		echo Virtual environment not found. Creating and installing dependencies... && \
+		$(MAKE) install \
+	) else ( \
+		echo Virtual environment exists. \
+	)
+else
+$(ACTIVATE_PATH):
+	@echo "Checking virtual environment..."
+	@if [ ! -d "$(VENV_DIR)" ]; then \
+		echo "Virtual environment not found. Creating and installing dependencies..."; \
+		$(MAKE) install; \
+	else \
+		echo "Virtual environment exists."; \
+	fi
+endif
+
 
 
 
@@ -19,78 +132,42 @@ help:
 # API Make Commands
 # ===========================================
 
-VENV_DIR := API/.venv
-REQ_FILE := API/requirements.txt
-
-# -----------------------------------
-# Create venv if missing
-# -----------------------------------
-ifeq ($(wildcard $(VENV_DIR)),)
-api-create-venv:
-	@echo Creating virtual environment...
-	python -m venv $(VENV_DIR)
-else
-api-create-venv:
-	@echo Virtual environment already exists.
-endif
-
-# -----------------------------------
-# Install dependencies if requirements.txt exists
-# -----------------------------------
-ifeq ($(wildcard $(REQ_FILE)),)
-api-install:
-	@echo ERROR: requirements.txt not found in API directory. && exit 1
-else
-api-install: api-create-venv
-	@echo Activating virtual environment...
-	@cmd /C "( \
-		call $(VENV_DIR)\Scripts\activate && \
-		echo Installing dependencies from requirements.txt... && \
-		python -m pip install --upgrade pip && \
-		python -m pip install -r $(REQ_FILE) \
-	)"
-endif
+.PHONY: api-run api-test
 
 # -------------------------------------------
 # Run FastAPI backend
 # -------------------------------------------
-ifeq ($(wildcard $(VENV_DIR)),)
-api-run: api-install
-	@echo Creating virtual environment and installing dependencies...
-	@cmd /Q /C "( \
+ifeq ($(OS),Windows_NT)
+api-run: $(ACTIVATE_PATH)
+	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
+	@cmd /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
-		echo Launching FastAPI server on port 8000... && \
-		python -m uvicorn API.main:app --reload --reload-dir API \
+		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR) \
 	)"
 else
-api-run:
-	@cmd /Q /C "( \
-		call $(VENV_DIR)\Scripts\activate && \
-		echo Launching FastAPI server on port 8000... && \
-		python -m uvicorn API.main:app --reload --reload-dir API \
-	)"
+api-run: $(ACTIVATE_PATH)
+	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
+	@bash -c "source $(VENV_DIR)/bin/activate && \
+		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR)"
 endif
 
 # -------------------------------------------
 # Run API Tests
 # -------------------------------------------
-ifeq ($(wildcard $(VENV_DIR)),)
-api-test: api-install
-	@echo Creating virtual environment and installing dependencies...
-	@cmd /Q /C "( \
+ifeq ($(OS),Windows_NT)
+api-test: $(ACTIVATE_PATH)
+	@echo "Running API tests..."
+	@cmd /C "( \
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
-		echo Running API tests... && \
-		pytest tests\API -v \
+		pytest tests\\API -v \
 	)"
 else
-api-test:
-	@cmd /Q /C "( \
-		set PYTHONPATH=. && \
-		call $(VENV_DIR)\Scripts\activate && \
-		echo Running API tests... && \
-		pytest tests\API -v \
-	)"
+api-test: $(ACTIVATE_PATH)
+	@echo "Running API tests..."
+	@bash -c "export PYTHONPATH=. && \
+		source $(VENV_DIR)/bin/activate && \
+		pytest tests/API -v"
 endif
 
 
@@ -101,22 +178,7 @@ endif
 # Database Make Commands
 # ===========================================
 
-DB_NAME = course_gpt
-DB_HOST = localhost
-DB_PORT = 5432
-
-# Paths to your SQL scripts
-SCHEMA_FILE = DB/schema_database.sql
-SEED_FILE = DB/seed_database.sql
-
-# Detect OS
-ifeq ($(OS),Windows_NT)
-	UNAME_S := Windows
-	DB_USER = postgres
-else
-	UNAME_S := $(shell uname -s)
-	DB_USER = $(shell whoami)
-endif
+.PHONY: db-setup db-init db-seed db-shell db-deploy
 
 # -------------------------------------------
 # db-setup: Windows uses PowerShell, others use Bash
@@ -132,7 +194,7 @@ else ifeq ($(UNAME_S),Darwin)
 	@echo "db-setup complete."
 else
 	@echo "Checking PostgreSQL installation..."
-	@bash scripts/install_postgres_linux.sh
+	@bash Script/install_postgres_linux.sh
 	@echo "db-setup complete."
 endif
 
@@ -146,7 +208,7 @@ db-init:
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)"
 	@echo Applying schema...
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
-	@echo "✅ Fresh database initialized successfully."
+	@echo "Fresh database initialized successfully."
 
 # -------------------------------------------
 # Seed database with sample data
@@ -162,3 +224,28 @@ db-seed:
 db-shell:
 	@echo "Connecting to PostgreSQL database '$(DB_NAME)'..."
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME)
+
+# -------------------------------------------
+# Deploy database (create if missing, keep data intact)
+# -------------------------------------------
+ifeq ($(OS),Windows_NT)
+db-deploy:
+	@echo "Checking if database $(DB_NAME) exists..."
+	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" | findstr 1 >NUL 2>&1 && \
+		echo "Database $(DB_NAME) already exists: skipping creation." || ( \
+			echo "Creating database $(DB_NAME)..." && \
+			psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)" )
+	@echo "Applying schema to $(DB_NAME)..."
+	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
+	@echo "Database deployed successfully."
+else
+db-deploy:
+	@echo "Checking if database $(DB_NAME) exists..."
+	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" | grep -q 1 && \
+		echo "Database $(DB_NAME) already exists — skipping creation." || ( \
+			echo "Creating database $(DB_NAME)..." && \
+			psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)" )
+	@echo "Applying schema to $(DB_NAME)..."
+	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
+	@echo "Database deployed successfully."
+endif
