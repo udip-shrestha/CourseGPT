@@ -1,7 +1,8 @@
 stages:
-  - build
-  - test
-  - deploy
+  - buildfrontend
+  - testbackend
+  - deploybackend
+  - deployfrontend
 
 variables:
   BACKEND_DIR: "Backend"
@@ -11,7 +12,7 @@ variables:
 
 build_frontend:
   image: node:20
-  stage: build
+  stage: buildfrontend
   tags:
     - frontend_sdmay26
   script:
@@ -25,7 +26,7 @@ build_frontend:
     expire_in: 2h
 
 test_backend:
-  stage: test
+  stage: testbackend
   tags:
     - backend_sdmay26
   script:
@@ -41,13 +42,28 @@ test_backend:
     reports:
       junit: "$BACKEND_DIR/test-results.xml"
 
+deploy_backend:
+  stage: deploybackend
+  tags:
+    - backend_sdmay26
+  only:
+    - main
+    - master
+  needs:
+    - job: test_backend
+      artifacts: false
+  script:
+    - echo "Deploying backend and restarting services"
+    - chmod +x "$BACKEND_DEPLOY_SCRIPT"
+    - "$BACKEND_DEPLOY_SCRIPT"
+
 deploy_frontend:
-  stage: deploy
+  stage: deployfrontend
   tags:
     - backend_sdmay26 # for shell access to deploy
-  # only:
-  #   - main
-  #   - master
+  only:
+    - main
+    - master
   needs:
     - job: build_frontend
       artifacts: true
@@ -56,18 +72,3 @@ deploy_frontend:
     - rm -rf "$FRONTEND_DEPLOY_DIR"/*
     - rsync -a "$FRONTEND_DIR/dist/" "$FRONTEND_DEPLOY_DIR"
     - echo "Frontend deployed successfully."
-
-deploy_backend:
-  stage: deploy
-  tags:
-    - backend_sdmay26
-  # only:
-  #   - main
-  #   - master
-  needs:
-    - job: test_backend
-      artifacts: false
-  script:
-    - echo "Deploying backend and restarting services"
-    - chmod +x "$BACKEND_DEPLOY_SCRIPT"
-    - "$BACKEND_DEPLOY_SCRIPT"

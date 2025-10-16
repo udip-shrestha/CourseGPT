@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# CONFIG: adjust
 PERSISTENT_ROOT="/home/gitlab-runner/sdmay26-37"
 BACKEND_DIR="$PERSISTENT_ROOT/Backend"
 API_DIR="$BACKEND_DIR/API"
@@ -16,15 +15,8 @@ if [ -n "${CI_PROJECT_DIR:-}" ] && [ "$CI_PROJECT_DIR" != "$PERSISTENT_ROOT" ]; 
   rsync -a --delete --exclude '.git' "$CI_PROJECT_DIR/" "$PERSISTENT_ROOT/"
 fi
 
-# Ensure persistent checkout is on expected branch (only if git present)
 cd "$PERSISTENT_ROOT"
-# if [ -d .git ]; then
-#   git fetch --all --prune
-#   git reset --hard "origin/$BRANCH"
-#   git clean -fd
-# fi
 
-# mkdir -p "$(dirname "$API_VENV")"
 echo "Setting up backend virtualenv at $API_VENV"
 python3 -m venv "$API_VENV"
 source "$API_VENV/bin/activate"
@@ -33,7 +25,7 @@ if [ -f "$BACKEND_DIR/requirements.txt" ]; then
   pip install -r "$BACKEND_DIR/requirements.txt"
 fi
 
-# --- Inject GitLab CI/CD secret into .env for cybot ---
+# Inject GitLab CI/CD secret into .env for cybot
 echo "Writing environment variables to $DISCORD_ENV"
 mkdir -p "$(dirname "$DISCORD_ENV")"
 cat > "$DISCORD_ENV" <<EOF
