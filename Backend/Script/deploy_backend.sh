@@ -32,6 +32,16 @@ if [ -f "$BACKEND_DIR/requirements.txt" ]; then
   pip install -r "$BACKEND_DIR/requirements.txt"
 fi
 
+# --- Inject GitLab CI/CD secret into .env for cybot ---
+echo "Writing environment variables to $DISCORD_ENV"
+mkdir -p "$(dirname "$DISCORD_ENV")"
+cat > "$DISCORD_ENV" <<EOF
+DISCORD_TOKEN=${DISCORD_TOKEN:-}
+EOF
+
+chmod 600 "$DISCORD_ENV"
+chown gitlab-runner:gitlab-runner "$DISCORD_ENV"
+
 # Restart backend service and cybot service (systemd)
 echo "Restarting backend and cybot services"
 sudo systemctl daemon-reload
