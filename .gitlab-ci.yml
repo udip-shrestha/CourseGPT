@@ -14,12 +14,14 @@ build_frontend:
   stage: build
   tags:
     - frontend_sdmay26
+  before_script:
+    - apt-get update && apt-get install -y rsync
   script:
     - echo "Building frontend"
     - cd "$FRONTEND_DIR"
     - npm ci
     - npm run build
-    - rsync -a --delete dist/ "$FRONTEND_DEPLOY_DIR/"
+    - rsync -a dist/ "$FRONTEND_DEPLOY_DIR/"
   artifacts:
     paths:
       - "$FRONTEND_DIR/dist"
