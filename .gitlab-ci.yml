@@ -11,9 +11,8 @@ variables:
 
 build_frontend:
   stage: build
-  image: node:20
   tags:
-    - frontend_sdmay26
+    - backend_sdmay26
   script:
     - echo "Building frontend"
     - cd "$FRONTEND_DIR"
@@ -54,7 +53,7 @@ deploy_frontend:
   script:
     - echo "Deploying frontend artifact to server"
     - mkdir -p "$DEPLOY_DIR"
-    - rsync -r "$FRONTEND_DIR/dist/" "$DEPLOY_DIR/"
+    - rsync -a --delete "$FRONTEND_DIR/dist/" "$DEPLOY_DIR/"
     - echo "Frontend deployed successfully to $DEPLOY_DIR"
 
 deploy_backend:
