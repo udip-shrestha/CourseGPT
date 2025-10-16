@@ -27,6 +27,7 @@ cd "$PERSISTENT_ROOT"
 # fi
 
 # mkdir -p "$(dirname "$API_VENV")"
+echo "Setting up backend virtualenv at $API_VENV"
 python3 -m venv "$API_VENV"
 source "$API_VENV/bin/activate"
 pip install --upgrade pip
