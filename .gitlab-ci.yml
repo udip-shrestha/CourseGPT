@@ -7,6 +7,7 @@ variables:
   BACKEND_DIR: "Backend"
   FRONTEND_DIR: "Frontend"
   DEPLOY_SCRIPT: "Backend/Script/deploy.sh"
+  DEPLOY_DIR: "/home/gitlab-runner/sdmay26-37/frontend_build"
 
 build_frontend:
   stage: build
@@ -44,19 +45,19 @@ deploy_frontend:
   stage: deploy
   image: node:20
   tags:
-    - frontend_sdmay26
+    - backend_sdmay26 # for shell access to deploy
   # only:
   #   - main
   #   - master
-  # needs:
-  #   - job: build_frontend
-  #     artifacts: true
+  needs:
+    - job: build_frontend
+      artifacts: true
   script:
     - apt-get update && apt-get install -y rsync openssh-client
     - echo "Deploying frontend artifact to server"
-    - ls -la "$FRONTEND_DIR/dist" || true
-    - chmod +x "Backend/Script/deploy_frontend.sh"
-    - "Backend/Script/deploy_frontend.sh"
+    - mkdir -p "$DEPLOY_DIR"
+    - rsync -a --delete "$FRONTEND_DIR/dist/" "$DEPLOY_DIR/"
+    - echo "Frontend deployed successfully to $DEPLOY_DIR"
 
 deploy_backend:
   stage: deploy
@@ -65,11 +66,9 @@ deploy_backend:
   # only:
   #   - main
   #   - master
-  # needs:
-  #   - job: deploy_frontend
-  #     artifacts: false
-  #   - job: test_backend
-  #     artifacts: false
+  needs:
+    - job: test_backend
+      artifacts: false
   script:
     - echo "Deploying backend and restarting services"
     - chmod +x "Backend/Script/deploy_backend.sh"
