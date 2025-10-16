@@ -37,9 +37,9 @@ fi
 
 # Restart backend service and cybot service (systemd)
 echo "Restarting backend and cybot services"
-sudo systemctl daemon-reload
-sudo systemctl restart backend-coursegpt.service
-sudo systemctl restart cybot.service 
-sudo systemctl enable backend-coursegpt.service cybot.service
+systemctl daemon-reload
+systemctl restart backend-coursegpt.service
+systemctl restart cybot.service 
+systemctl enable backend-coursegpt.service cybot.service
 
 echo "Backend deploy complete"
