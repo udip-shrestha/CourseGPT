@@ -5,7 +5,7 @@ PERSISTENT_ROOT="/home/gitlab-runner/sdmay26-37"
 BACKEND_DIR="$PERSISTENT_ROOT/Backend"
 API_DIR="$BACKEND_DIR/API"
 API_VENV="$API_DIR/.venv"
-DISCORD_ENV="$BACKEND_DIR/Discord/.env"
+DISCORD_ENV="$BACKEND_DIR/.env"
 BRANCH="${CI_COMMIT_REF_NAME:-main}"
 
 echo "Deploy backend on $(hostname) - root=$PERSISTENT_ROOT branch=$BRANCH"
