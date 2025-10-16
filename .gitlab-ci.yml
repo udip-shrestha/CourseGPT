@@ -52,10 +52,9 @@ deploy_frontend:
     - job: build_frontend
       artifacts: true
   script:
-    - apt-get update && apt-get install -y rsync openssh-client
     - echo "Deploying frontend artifact to server"
     - mkdir -p "$DEPLOY_DIR"
-    - rsync -a --delete "$FRONTEND_DIR/dist/" "$DEPLOY_DIR/"
+    - rsync -r "$FRONTEND_DIR/dist/" "$DEPLOY_DIR/"
     - echo "Frontend deployed successfully to $DEPLOY_DIR"
 
 deploy_backend:
