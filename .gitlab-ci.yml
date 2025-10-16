@@ -10,7 +10,7 @@ variables:
 
 build_frontend:
   stage: build
-  image: node:18
+  image: node:20
   tags:
     - frontend_sdmay26
   script:
