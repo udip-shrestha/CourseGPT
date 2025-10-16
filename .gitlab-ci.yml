@@ -13,20 +13,21 @@ build_frontend:
   image: node:20
   tags:
     - frontend_sdmay26
-  before_script:
-    # Make sure we're starting clean
-    - cd "$FRONTEND_DIR"
-    - echo "Cleaning previous build..."
-    - rm -rf node_modules
-    - rm -rf dist
-    - npm cache clean --force
+  # before_script:
+  #   # Make sure we're starting clean
+  #   - cd "$FRONTEND_DIR"
+  #   - echo "Cleaning previous build..."
+  #   - rm -rf node_modules
+  #   - rm -rf dist
+  #   - npm cache clean --force
   script:
     - echo "Building frontend"
-    # - cd "$FRONTEND_DIR"
-    - npm ci --no-audit --progress=false
-    - npx tsc -v
-    - node -v
-    - npm -v
+    - cd "$FRONTEND_DIR"
+    # - npm ci --no-audit --progress=false
+    # - npx tsc -v
+    # - node -v
+    # - npm -v
+    - npm ci
     - npm run build
   artifacts:
     paths:
