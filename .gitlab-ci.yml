@@ -21,7 +21,7 @@ build_frontend:
   artifacts:
     paths:
       - "$FRONTEND_DIR/dist"
-    expire_in: 1h
+    expire_in: 2h
 
 test_backend:
   stage: test
