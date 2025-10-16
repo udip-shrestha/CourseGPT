@@ -1,13 +1,13 @@
 stages:
   - build
-  # - test
+  - test
   - deploy
 
 variables:
   BACKEND_DIR: "Backend"
   FRONTEND_DIR: "Frontend"
-  DEPLOY_SCRIPT: "Backend/Script/deploy.sh"
-  DEPLOY_DIR: "/home/gitlab-runner/sdmay26-37/frontend_build"
+  BACKEND_DEPLOY_SCRIPT: "Backend/Script/deploy_backend.sh"
+  FRONTEND_DEPLOY_DIR: "/var/www/sdmay26-37/"
 
 build_frontend:
   image: node:20
@@ -24,22 +24,22 @@ build_frontend:
       - "$FRONTEND_DIR/dist"
     expire_in: 2h
 
-# test_backend:
-#   stage: test
-#   tags:
-#     - backend_sdmay26
-#   script:
-#     - cd "$BACKEND_DIR"
-#     - python3 -m venv API/.venv
-#     - . API/.venv/bin/activate
-#     - pip install --upgrade pip
-#     - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-#     - echo "Run tests if present"
-#     - if [ -f pytest.ini ] || [ -d tests ]; then pytest -q || true; fi
-#   artifacts:
-#     when: always
-#     reports:
-#       junit: "$BACKEND_DIR/test-results.xml"
+test_backend:
+  stage: test
+  tags:
+    - backend_sdmay26
+  script:
+    - cd "$BACKEND_DIR"
+    - python3 -m venv API/.venv
+    - . API/.venv/bin/activate
+    - pip install --upgrade pip
+    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - echo "Run tests if present"
+    - if [ -f pytest.ini ] || [ -d tests ]; then pytest -q || true; fi
+  artifacts:
+    when: always
+    reports:
+      junit: "$BACKEND_DIR/test-results.xml"
 
 deploy_frontend:
   stage: deploy
@@ -53,10 +53,8 @@ deploy_frontend:
       artifacts: true
   script:
     - echo "Deploying frontend artifact to server"
-    # Ensure the Nginx root directory is clean before deploying
-    - rm -rf /var/www/sdmay26-37/*
-    # Copy the artifacts from the build job to the Nginx root directory
-    - rsync -a "$FRONTEND_DIR/dist/" "/var/www/sdmay26-37/"
+    - rm -rf "$FRONTEND_DEPLOY_DIR"/*
+    - rsync -a "$FRONTEND_DIR/dist/" "$FRONTEND_DEPLOY_DIR"
     - echo "Frontend deployed successfully to Nginx."
 
 deploy_backend:
@@ -66,10 +64,10 @@ deploy_backend:
   # only:
   #   - main
   #   - master
-  # needs:
-  #   - job: test_backend
-  #     artifacts: false
+  needs:
+    - job: test_backend
+      artifacts: false
   script:
     - echo "Deploying backend and restarting services"
-    - chmod +x "Backend/Script/deploy_backend.sh"
-    - "Backend/Script/deploy_backend.sh"
+    - chmod +x "$BACKEND_DEPLOY_SCRIPT"
+    - "$BACKEND_DEPLOY_SCRIPT"
