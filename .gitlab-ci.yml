@@ -54,10 +54,9 @@ deploy_frontend:
   script:
     - echo "Deploying frontend artifact to server"
     # Ensure the Nginx root directory is clean before deploying
-    - sudo rm -rf /var/www/sdmay26-37/*
-    - sudo mkdir -p /var/www/sdmay26-37/
+    - rm -rf /var/www/sdmay26-37/*
     # Copy the artifacts from the build job to the Nginx root directory
-    - sudo rsync -a "$FRONTEND_DIR/dist/" "/var/www/sdmay26-37/"
+    - rsync -a "$FRONTEND_DIR/dist/" "/var/www/sdmay26-37/"
     - echo "Frontend deployed successfully to Nginx."
 
 deploy_backend:
