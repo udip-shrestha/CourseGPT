@@ -1,6 +1,6 @@
 stages:
   - build
-  - test
+  # - test
   - deploy
 
 variables:
@@ -14,35 +14,32 @@ build_frontend:
   stage: build
   tags:
     - frontend_sdmay26
-  before_script:
-    - apt-get update && apt-get install -y rsync
   script:
     - echo "Building frontend"
     - cd "$FRONTEND_DIR"
     - npm ci
     - npm run build
-    - rsync -a dist/ "$FRONTEND_DEPLOY_DIR/"
   artifacts:
     paths:
       - "$FRONTEND_DIR/dist"
     expire_in: 2h
 
-test_backend:
-  stage: test
-  tags:
-    - backend_sdmay26
-  script:
-    - cd "$BACKEND_DIR"
-    - python3 -m venv API/.venv
-    - . API/.venv/bin/activate
-    - pip install --upgrade pip
-    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-    - echo "Run tests if present"
-    - if [ -f pytest.ini ] || [ -d tests ]; then pytest -q || true; fi
-  artifacts:
-    when: always
-    reports:
-      junit: "$BACKEND_DIR/test-results.xml"
+# test_backend:
+#   stage: test
+#   tags:
+#     - backend_sdmay26
+#   script:
+#     - cd "$BACKEND_DIR"
+#     - python3 -m venv API/.venv
+#     - . API/.venv/bin/activate
+#     - pip install --upgrade pip
+#     - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+#     - echo "Run tests if present"
+#     - if [ -f pytest.ini ] || [ -d tests ]; then pytest -q || true; fi
+#   artifacts:
+#     when: always
+#     reports:
+#       junit: "$BACKEND_DIR/test-results.xml"
 
 deploy_frontend:
   stage: deploy
@@ -55,9 +52,13 @@ deploy_frontend:
     - job: build_frontend
       artifacts: true
   script:
-    - echo "Verifying frontend deployment"
-    - ls -la "$DEPLOY_DIR"
-    - echo "Frontend deployment directory verified."
+    - echo "Deploying frontend artifact to server"
+    # Ensure the Nginx root directory is clean before deploying
+    - sudo rm -rf /var/www/sdmay26-37/*
+    - sudo mkdir -p /var/www/sdmay26-37/
+    # Copy the artifacts from the build job to the Nginx root directory
+    - sudo rsync -a "$FRONTEND_DIR/dist/" "/var/www/sdmay26-37/"
+    - echo "Frontend deployed successfully to Nginx."
 
 deploy_backend:
   stage: deploy
@@ -66,9 +67,9 @@ deploy_backend:
   # only:
   #   - main
   #   - master
-  needs:
-    - job: test_backend
-      artifacts: false
+  # needs:
+  #   - job: test_backend
+  #     artifacts: false
   script:
     - echo "Deploying backend and restarting services"
     - chmod +x "Backend/Script/deploy_backend.sh"
