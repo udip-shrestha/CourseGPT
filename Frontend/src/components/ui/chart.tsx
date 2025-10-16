@@ -2,6 +2,9 @@
 
 import * as React from "react";
 import * as RechartsPrimitive from "recharts";
+// TS Fix: Remove direct imports of unexported types (Props, ValueType, NameType, Payload).
+// We will use local type definitions as a structural workaround.
+// The RechartsPrimitive export is sufficient for the components themselves.
 
 // Helper function placeholder for demonstration purposes,
 // assuming it exists in "./utils"
@@ -105,19 +108,24 @@ ${colorConfig
     );
 };
 
-// Recharts Tooltip Props types are complex, using a partial type definition for safety
+const ChartTooltip = RechartsPrimitive.Tooltip;
+
+// TS Fix: Define simple placeholder types for Recharts internals
+type ChartValueType = number | string | Array<number | string>;
+type ChartNameType = number | string;
+
 type ChartTooltipPayload = {
-    name: string;
-    value: number | string;
+    name: ChartNameType;
+    value: ChartValueType;
     dataKey: string;
-    payload: any;
+    payload: any; // Use any for the internal Recharts payload for structural compatibility
     color?: string;
     fill?: string;
 };
 
-// TS Fix: Omit the conflicting 'payload' and 'label' properties from the base Recharts Tooltip props
-// before extending and redefining them explicitly.
-interface ChartTooltipContentProps extends Omit<React.ComponentProps<typeof RechartsPrimitive.Tooltip>, 'payload' | 'label'> {
+// TS Fix: Omit conflicting Recharts properties and redefine formatter with simplified types
+interface ChartTooltipContentProps
+    extends Omit<React.ComponentProps<typeof ChartTooltip>, 'payload' | 'label' | 'formatter' | 'labelFormatter'> { // Omit labelFormatter too
     // Redefine properties with corrected types
     payload?: ChartTooltipPayload[];
     label?: any;
@@ -126,9 +134,11 @@ interface ChartTooltipContentProps extends Omit<React.ComponentProps<typeof Rech
     indicator?: "line" | "dot" | "dashed";
     hideLabel?: boolean;
     hideIndicator?: boolean;
+    // TS Fix: Use mutable array type to match usage, and simplify label type
     labelFormatter?: (label: any, payload: ChartTooltipPayload[]) => React.ReactNode;
     labelClassName?: string;
-    formatter?: (value: any, name: string, props: ChartTooltipPayload, index: number, payload: any) => React.ReactNode;
+    // TS Fix: Use simplified types for formatter function
+    formatter?: (value: ChartValueType, name: ChartNameType, props: ChartTooltipPayload, index: number, payload: any) => React.ReactNode;
     color?: string;
     nameKey?: string;
     labelKey?: string;
@@ -218,6 +228,7 @@ function ChartTooltipContent({
                             )}
                         >
                             {formatter && item?.value !== undefined && item.name ? (
+                                // Match the formatter signature used in the call
                                 formatter(item.value, item.name, item, index, item.payload)
                             ) : (
                                 <>
@@ -277,9 +288,10 @@ const ChartLegend = RechartsPrimitive.Legend;
 
 // Define the full set of props for ChartLegendContent
 // TS Fix: Omit the conflicting 'payload' property from the base Recharts Legend props
-interface ChartLegendContentProps extends Omit<React.ComponentProps<typeof RechartsPrimitive.Legend>, 'payload'> {
-    // Redefine payload with Recharts' type
-    payload?: RechartsPrimitive.LegendProps["payload"];
+interface ChartLegendContentProps extends Omit<React.ComponentProps<typeof ChartLegend>, 'payload'> {
+    // TS Fix: Change type to any[] to avoid TS2694 error,
+    // as RechartsPrimitive.Payload is not reliably exported.
+    payload?: any[];
     verticalAlign?: RechartsPrimitive.LegendProps["verticalAlign"];
     hideIcon?: boolean;
     nameKey?: string;
@@ -307,8 +319,8 @@ function ChartLegendContent({
                 className,
             )}
         >
-            {/* Explicitly type map parameter as Recharts Legend payload */}
-            {payload.map((item: RechartsPrimitive.Payload) => {
+            {/* TS Fix: Remove explicit type annotation from map parameter */}
+            {payload.map((item) => {
                 const key = `${nameKey || item.dataKey || "value"}`;
                 const itemConfig = getPayloadConfigFromPayload(config, item, key);
 
@@ -375,8 +387,6 @@ function getPayloadConfigFromPayload(
         ? config[configLabelKey as keyof typeof config]
         : config[key as keyof typeof config];
 }
-
-const ChartTooltip = RechartsPrimitive.Tooltip;
 
 export {
     ChartContainer,
