@@ -31,7 +31,7 @@ echo "Setting up backend virtualenv at $API_VENV"
 python3 -m venv "$API_VENV"
 source "$API_VENV/bin/activate"
 pip install --upgrade pip
-if [ -f "$BACKEND_DIR/requirements.txt" ]; then
+if [ -f "$BACKEND_DIR/requirements.txt" ]; thenkout 
   pip install -r "$BACKEND_DIR/requirements.txt"
 fi
 
