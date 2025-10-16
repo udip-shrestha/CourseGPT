@@ -43,7 +43,6 @@ test_backend:
 
 deploy_frontend:
   stage: deploy
-  image: node:20
   tags:
     - backend_sdmay26 # for shell access to deploy
   # only:
