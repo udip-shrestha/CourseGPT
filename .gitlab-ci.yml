@@ -16,6 +16,7 @@ build_frontend:
   script:
     - echo "Building frontend"
     - cd "$FRONTEND_DIR"
+    - rm -rf node_modules
     - npm ci
     - npm run build
   artifacts:
