@@ -10,14 +10,16 @@ variables:
   DEPLOY_DIR: "/home/gitlab-runner/sdmay26-37/frontend_build"
 
 build_frontend:
+  image: node:20
   stage: build
   tags:
-    - backend_sdmay26
+    - frontend_sdmay26
   script:
     - echo "Building frontend"
     - cd "$FRONTEND_DIR"
     - npm ci
     - npm run build
+    - rsync -a --delete dist/ "$FRONTEND_DEPLOY_DIR/"
   artifacts:
     paths:
       - "$FRONTEND_DIR/dist"
@@ -51,10 +53,9 @@ deploy_frontend:
     - job: build_frontend
       artifacts: true
   script:
-    - echo "Deploying frontend artifact to server"
-    - mkdir -p "$DEPLOY_DIR"
-    - rsync -a --delete "$FRONTEND_DIR/dist/" "$DEPLOY_DIR/"
-    - echo "Frontend deployed successfully to $DEPLOY_DIR"
+    - echo "Verifying frontend deployment"
+    - ls -la "$DEPLOY_DIR"
+    - echo "Frontend deployment directory verified."
 
 deploy_backend:
   stage: deploy
