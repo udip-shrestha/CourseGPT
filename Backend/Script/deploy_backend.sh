@@ -10,12 +10,9 @@ BRANCH="${CI_COMMIT_REF_NAME:-main}"
 
 echo "Deploy backend on $(hostname) - root=$PERSISTENT_ROOT branch=$BRANCH"
 
-# If CI workspace present, sync it to persistent path (optional)
 if [ -n "${CI_PROJECT_DIR:-}" ] && [ "$CI_PROJECT_DIR" != "$PERSISTENT_ROOT" ]; then
   echo "Syncing CI workspace to persistent path"
-  # mkdir -p "$PERSISTENT_ROOT"
   rsync -a --delete --exclude '.git' "$CI_PROJECT_DIR/" "$PERSISTENT_ROOT/"
-  # chown -R YOUR_USER:YOUR_USER "$PERSISTENT_ROOT"
 fi
 
 # Ensure persistent checkout is on expected branch (only if git present)

@@ -55,7 +55,7 @@ deploy_frontend:
     - echo "Deploying frontend artifact to server"
     - rm -rf "$FRONTEND_DEPLOY_DIR"/*
     - rsync -a "$FRONTEND_DIR/dist/" "$FRONTEND_DEPLOY_DIR"
-    - echo "Frontend deployed successfully to Nginx."
+    - echo "Frontend deployed successfully."
 
 deploy_backend:
   stage: deploy
