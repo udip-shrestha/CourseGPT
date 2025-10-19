@@ -41,4 +41,36 @@ class ISQLRepository(Protocol):
         """Retrieve files with pagination, optional filters, and sorting."""
         ...
 
+    # ======================================================
+    # COURSES
+    # ======================================================
+    def create_course(self, name: str, code: str, instructor_id: str, description: Optional[str] = None) -> str:
+        """Create a new course record."""
+        ...
 
+    def read_course(self, course_id: str) -> Optional[dict]:
+        """Retrieve a course record by ID."""
+        ...
+
+    def read_all_courses(self, instructor_id: Optional[str] = None) -> List[dict]:
+        """Retrieve all courses, optionally filtered by instructor."""
+        ...
+
+    def delete_course(self, course_id: str) -> None:
+        """Delete a course record by ID."""
+        ...
+
+    # ======================================================
+    # INSTRUCTORS
+    # ======================================================
+    def create_instructor(self, name: str, title: str, university: str, email: str) -> str:
+        """Add a new instructor."""
+        ...
+
+    def read_instructor(self, instructor_id: str) -> Optional[dict]:
+        """Retrieve an instructor by ID."""
+        ...
+
+    def read_all_instructors(self) -> List[dict]:
+        """Retrieve all instructors."""
+        ...
