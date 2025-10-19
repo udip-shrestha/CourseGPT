@@ -1,4 +1,6 @@
 import os
+import sys
+import subprocess
 import uuid
 import pytest
 import testing.postgresql
@@ -13,8 +15,12 @@ def postgres_instance():
     yield pg
     try:
         pg.stop()
-    except ValueError:
-        pass  # ignore unsupported signal errors on Windows
+    except:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(pg.child_process.pid)], capture_output=True)
+            pg.child_process.returncode = 0
+            pg._owner = None
+        pg.stop()
 
 
 @pytest.fixture(scope="session")

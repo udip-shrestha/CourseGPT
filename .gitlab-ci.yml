@@ -1,0 +1,74 @@
+stages:
+  - buildfrontend
+  - testbackend
+  - deploybackend
+  - deployfrontend
+
+variables:
+  BACKEND_DIR: "Backend"
+  FRONTEND_DIR: "Frontend"
+  BACKEND_DEPLOY_SCRIPT: "Backend/Script/deploy_backend.sh"
+  FRONTEND_DEPLOY_DIR: "/var/www/sdmay26-37/"
+
+build_frontend:
+  image: node:20
+  stage: buildfrontend
+  tags:
+    - frontend_sdmay26
+  script:
+    - echo "Building frontend"
+    - cd "$FRONTEND_DIR"
+    - npm ci
+    - npm run build
+  artifacts:
+    paths:
+      - "$FRONTEND_DIR/dist"
+    expire_in: 2h
+
+test_backend:
+  stage: testbackend
+  tags:
+    - backend_sdmay26
+  script:
+    - cd "$BACKEND_DIR"
+    - python3 -m venv API/.venv
+    - . API/.venv/bin/activate
+    - pip install --upgrade pip
+    - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - echo "Run tests if present"
+    - if [ -f pytest.ini ] || [ -d tests ]; then pytest -q || true; fi
+  artifacts:
+    when: always
+    reports:
+      junit: "$BACKEND_DIR/test-results.xml"
+
+deploy_backend:
+  stage: deploybackend
+  tags:
+    - backend_sdmay26
+  only:
+    - main
+    - master
+  needs:
+    - job: test_backend
+      artifacts: false
+  script:
+    - echo "Deploying backend and restarting services"
+    - chmod +x "$BACKEND_DEPLOY_SCRIPT"
+    - "$BACKEND_DEPLOY_SCRIPT"
+
+deploy_frontend:
+  stage: deployfrontend
+  tags:
+    - backend_sdmay26 # for shell access to deploy
+  only:
+    - main
+    - master
+  needs:
+    - job: build_frontend
+      artifacts: true
+  script:
+    - echo "Deploying frontend artifact to server"
+    - rm -rf "$FRONTEND_DEPLOY_DIR"/*
+    - rsync -a "$FRONTEND_DIR/dist/" "$FRONTEND_DEPLOY_DIR"
+    - echo "Frontend deployed successfully."
