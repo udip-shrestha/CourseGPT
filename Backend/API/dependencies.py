@@ -1,11 +1,15 @@
 import os, platform
+from chromadb import Client, PersistentClient
 from dotenv import load_dotenv
 from fastapi import Depends
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
+from API.Repository.chroma_vector_repository import ChromaVectorRepository
+
 
 load_dotenv()
+
 
 def get_connection_manager() -> PostgresConnectionManager:
     """Create and return a PostgreSQL connection manager."""
@@ -32,3 +36,16 @@ def get_document_service(
 ) -> DocumentService:
     """Provide a DocumentService using the SQL repository."""
     return DocumentService(sql_repo)
+
+
+def get_chroma_client() -> Client:
+    """Create and return a persistent Chroma client."""
+    chroma_dir = os.environ["CHROMA_DATA_PATH"]
+    return PersistentClient(path=chroma_dir)
+
+
+def get_vector_repository(
+    client: Client = Depends(get_chroma_client),
+):
+    """Provide a Chroma-based vector repository instance."""
+    return ChromaVectorRepository(client)
