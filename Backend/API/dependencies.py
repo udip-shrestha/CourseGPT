@@ -5,9 +5,12 @@ from fastapi import Depends
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
+from API.Service.rag_service import RAGService
 from API.Service.courses_service import CourseService
 from API.Service.instructors_service import InstructorService
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
+from API.Util.loaders import Loader
+from API.Util.splitters import Splitter
 
 
 load_dotenv()
@@ -63,3 +66,27 @@ def get_vector_repository(
 ):
     """Provide a Chroma-based vector repository instance."""
     return ChromaVectorRepository(client)
+
+def get_loader() -> Loader:
+    """Return a Loader instance for document parsing."""
+    return Loader()
+
+def get_splitter() -> Splitter:
+    """Return a Splitter instance for document chunking."""
+    return Splitter()
+
+def get_rag_service(
+    loader: Loader = Depends(get_loader),
+    splitter: Splitter = Depends(get_splitter),
+    vector_repo: ChromaVectorRepository = Depends(get_vector_repository),
+) -> RAGService:
+    """Provide a fully configured RAGService instance."""
+    return RAGService(loader, splitter, vector_repo)
+
+
+def get_document_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+    rag_service: RAGService = Depends(get_rag_service),
+) -> DocumentService:
+    """Provide a DocumentService using the SQL repository and RAGService."""
+    return DocumentService(sql_repo, rag_service)

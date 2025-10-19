@@ -3,6 +3,7 @@ from typing import List, Optional
 from langchain_core.documents import Document
 
 from API.Repository.i_sql_repository import ISQLRepository
+from API.Service.rag_service import RAGService
 from API.Util.decorators import clean_service
 
 
@@ -15,9 +16,11 @@ class DocumentService:
 
     def __init__(
         self,
-        sql_repo: ISQLRepository
+        sql_repo: ISQLRepository,
+        rag_service: RAGService,
     ):
         self.sql_repo = sql_repo
+        self.rag_service = rag_service
 
     @clean_service
     def create_document(self, course_id: str, file_name: str, file_bytes: bytes, mime_type: str):
@@ -29,15 +32,21 @@ class DocumentService:
         # --- Step 1: Resolve file type ---
         file_type = self.sql_repo.read_file_type_by_mime(mime_type)
         if not file_type:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Unsupported MIME type: {mime_type}"
-            )
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported MIME type: {mime_type}")
 
         file_type_id = file_type["id"]
+        file_type = file_type["extension"]
 
         # --- Step 2: Save file in SQL ---
         doc_id = self.sql_repo.create_document(course_id, file_name, file_bytes, file_type_id)
+
+        # --- Step 3: Index document in vector store ---
+        try:
+            self.rag_service.create_index(course_id, doc_id, "RecursiveSplitterType", file_type, file_bytes)
+        except Exception as e:
+            # Rollback SQL if vector indexing fails
+            self.sql_repo.delete_document(doc_id)
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Vector indexing failed: {str(e)}")
 
         return {"doc_id": doc_id}
 
@@ -100,5 +109,6 @@ class DocumentService:
         Keeps systems consistent.
         """
         self.sql_repo.delete_document(doc_id)
+        self.rag_service.delete_index(course_id, doc_id)
 
         return {"status": "deleted", "course_id": course_id, "doc_id": doc_id}
