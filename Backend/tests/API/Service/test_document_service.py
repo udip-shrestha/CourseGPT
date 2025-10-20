@@ -1,12 +1,13 @@
 import pytest
 from fastapi import HTTPException, status
 from API.Service.document_service import DocumentService
+from API.Service.rag_service import RAGService
 from API.Repository.i_sql_repository import ISQLRepository
 
 
-def test_create_document_success(document_service: DocumentService, mock_sql_repo: ISQLRepository):
-    """Should successfully create a new document."""
-    mock_sql_repo.read_file_type_by_mime.return_value = {"id": 1}
+def test_create_document_success(document_service: DocumentService, mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> None:
+    """Should successfully create a new document and call RAG indexing."""
+    mock_sql_repo.read_file_type_by_mime.return_value = {"id": 1, "extension": "pdf"}
     mock_sql_repo.create_document.return_value = "doc-123"
 
     result = document_service.create_document(
@@ -18,10 +19,11 @@ def test_create_document_success(document_service: DocumentService, mock_sql_rep
 
     mock_sql_repo.read_file_type_by_mime.assert_called_once_with("application/pdf")
     mock_sql_repo.create_document.assert_called_once_with("course-1", "lecture1.pdf", b"fake-binary", 1)
+    mock_rag_service.create_index.assert_called_once_with("course-1", "doc-123", "RecursiveSplitterType", "pdf", b"fake-binary")
     assert result == {"doc_id": "doc-123"}
 
 
-def test_create_document_invalid_mime(document_service: DocumentService, mock_sql_repo: ISQLRepository):
+def test_create_document_invalid_mime(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
     """Should raise 400 for unsupported MIME type."""
     mock_sql_repo.read_file_type_by_mime.return_value = None
 
@@ -30,7 +32,7 @@ def test_create_document_invalid_mime(document_service: DocumentService, mock_sq
             course_id="course-1",
             file_name="notes.xyz",
             file_bytes=b"data",
-            mime_type="application/xyz"
+            mime_type="application/xyz",
         )
 
     assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
@@ -38,7 +40,26 @@ def test_create_document_invalid_mime(document_service: DocumentService, mock_sq
     mock_sql_repo.create_document.assert_not_called()
 
 
-def test_read_document_success(document_service: DocumentService, mock_sql_repo: ISQLRepository):
+def test_create_document_vector_index_fails(document_service: DocumentService, mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> None:
+    """Should rollback SQL when RAG indexing fails."""
+    mock_sql_repo.read_file_type_by_mime.return_value = {"id": 1, "extension": "pdf"}
+    mock_sql_repo.create_document.return_value = "doc-123"
+    mock_rag_service.create_index.side_effect = Exception("Indexing error")
+
+    with pytest.raises(HTTPException) as exc_info:
+        document_service.create_document(
+            course_id="c1",
+            file_name="a.pdf",
+            file_bytes=b"data",
+            mime_type="application/pdf",
+        )
+
+    mock_sql_repo.delete_document.assert_called_once_with("doc-123")
+    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert "Vector indexing failed" in exc_info.value.detail
+
+
+def test_read_document_success(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
     """Should read an existing document."""
     mock_sql_repo.read_document.return_value = {"id": "doc-1", "course_id": "c1", "file_name": "hw1.pdf"}
 
@@ -49,7 +70,7 @@ def test_read_document_success(document_service: DocumentService, mock_sql_repo:
     assert doc["file_name"] == "hw1.pdf"
 
 
-def test_read_document_not_found(document_service: DocumentService, mock_sql_repo: ISQLRepository):
+def test_read_document_not_found(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
     """Should raise 404 for non-existent document."""
     mock_sql_repo.read_document.return_value = None
 
@@ -60,7 +81,7 @@ def test_read_document_not_found(document_service: DocumentService, mock_sql_rep
     assert "not found" in exc_info.value.detail.lower()
 
 
-def test_read_document_wrong_course(document_service: DocumentService, mock_sql_repo: ISQLRepository):
+def test_read_document_wrong_course(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
     """Should raise 404 if document exists but belongs to a different course."""
     mock_sql_repo.read_document.return_value = {"id": "doc-1", "course_id": "wrong-course"}
 
@@ -71,7 +92,7 @@ def test_read_document_wrong_course(document_service: DocumentService, mock_sql_
     assert "not found" in exc_info.value.detail.lower()
 
 
-def test_read_all_documents(document_service: DocumentService, mock_sql_repo: ISQLRepository):
+def test_read_all_documents(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
     """Should return paginated documents list."""
     mock_sql_repo.read_all_documents.return_value = [
         {"file_name": "a.pdf", "uploaded_at": "2025-10-15"},
@@ -86,19 +107,19 @@ def test_read_all_documents(document_service: DocumentService, mock_sql_repo: IS
     assert docs[0]["uploaded_at"] >= docs[1]["uploaded_at"]
 
 
-def test_delete_document(document_service: DocumentService, mock_sql_repo: ISQLRepository):
-    """Should delete a document successfully."""
+def test_delete_document(document_service: DocumentService, mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> None:
+    """Should delete a document and its index."""
     response = document_service.delete_document("course-1", "doc-1")
 
     mock_sql_repo.delete_document.assert_called_once_with("doc-1")
-
+    mock_rag_service.delete_index.assert_called_once_with("course-1", "doc-1")
     assert response == {"status": "deleted", "course_id": "course-1", "doc_id": "doc-1"}
 
 
-def test_delete_document_idempotent(document_service: DocumentService, mock_sql_repo: ISQLRepository):
-    """Deleting a non-existing document should be a no-op (SQL-like behavior)."""
+def test_delete_document_idempotent(document_service: DocumentService, mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> None:
+    """Deleting a non-existing document should still call both deletions."""
     response = document_service.delete_document("course-1", "nonexistent-id")
 
     mock_sql_repo.delete_document.assert_called_once_with("nonexistent-id")
-    assert response["status"] == "deleted"
-    assert response["doc_id"] == "nonexistent-id"
+    mock_rag_service.delete_index.assert_called_once_with("course-1", "nonexistent-id")
+    assert response == {"status": "deleted", "course_id": "course-1", "doc_id": "nonexistent-id"}

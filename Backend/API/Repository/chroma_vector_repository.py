@@ -46,7 +46,7 @@ class ChromaVectorRepository(IVectorRepository):
         
         documents = [doc.page_content for doc in docs]
         metadatas = [doc.metadata for doc in docs]
-        ids = [f"{m['document_id']}_{i}" for i, m in enumerate(metadatas)]
+        ids = [f"{m['doc_id']}_{i}" for i, m in enumerate(metadatas)]
 
         collection.add(ids=ids, documents=documents, metadatas=metadatas)
 
@@ -71,5 +71,5 @@ class ChromaVectorRepository(IVectorRepository):
         Delete all vectors that belong to a document from a specific Chroma collection.
         """
         collection = self.client.get_collection(name=course_id)
-        collection.delete(where={"document_id": document_id})
+        collection.delete(where={"doc_id": document_id})
 

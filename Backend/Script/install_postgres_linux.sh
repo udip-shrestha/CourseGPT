@@ -77,19 +77,14 @@ sleep 3
 verify_postgres
 
 # ------------------------------------------
-# Ensure your Linux user can access DB
+# Ensure 'postgres' user exists in PostgreSQL
 # ------------------------------------------
-CURRENT_USER=$(whoami)
-echo "Ensuring '$CURRENT_USER' has a database user..."
-if ! sudo -u postgres psql -tAc "SELECT 1 FROM pg_roles WHERE rolname='${CURRENT_USER}'" | grep -q 1; then
-  sudo -u postgres createuser -s "${CURRENT_USER}"
-  echo "Created superuser '${CURRENT_USER}'"
-fi
-
+DB_USER="postgres"
 DEFAULT_PG_PASSWORD="postgres"
-echo "Setting default password for '${CURRENT_USER}'..."
-sudo -u postgres psql -c "ALTER USER \"${CURRENT_USER}\" WITH PASSWORD '${DEFAULT_PG_PASSWORD}';"
-echo "Password for '${CURRENT_USER}' set to '${DEFAULT_PG_PASSWORD}'."
+
+echo "Setting password for PostgreSQL user '${DB_USER}'..."
+sudo -u postgres psql -c "ALTER USER \"${DB_USER}\" WITH PASSWORD '${DEFAULT_PG_PASSWORD}';"
+echo "Password for '${DB_USER}' set to '${DEFAULT_PG_PASSWORD}'."
 
 # ------------------------------------------
 # Copy Project Seed Data
