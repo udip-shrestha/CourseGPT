@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from .Routers import questions, document_router
+from .Routers import questions, document_router, instructors_router, courses_router
 from API.dependencies import get_connection_manager
 
 @asynccontextmanager
@@ -18,7 +18,9 @@ app = FastAPI(lifespan=lifespan)
 
 app.include_router(questions.router)
 app.include_router(document_router.router)
+app.include_router(instructors_router.router)
+app.include_router(courses_router.router)
 
 
-# cd Backend -> uvicorn API.main:app --reload
+# cd Backend -> make db-init, uvicorn API.main:app --reload
 #Find it here: http://127.0.0.1:8000/docs

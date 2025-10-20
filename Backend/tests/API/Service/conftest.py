@@ -1,4 +1,5 @@
 import pytest 
+from unittest.mock import create_autospec
 from API.Repository.i_sql_repository import ISQLRepository 
 from API.Service.document_service import DocumentService 
 from unittest.mock import MagicMock 
@@ -14,3 +15,9 @@ def mock_sql_repo():
 def document_service(mock_sql_repo: ISQLRepository) -> DocumentService: 
     """ Provides a DocumentService using the fake repository. Other service fixtures can depend on sql_repo too. """ 
     return DocumentService(mock_sql_repo)
+
+@pytest.fixture 
+def mock_sql_repo(): 
+    """Provides a mock SQLRepository instance for each test."""
+    mock_repo = MagicMock()  
+    return mock_repo
