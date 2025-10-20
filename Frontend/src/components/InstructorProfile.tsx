@@ -12,7 +12,7 @@ export function InstructorProfile() {
     email: "sarah.johnson@techuni.edu",
     location: "San Francisco, CA",
     website: "www.sarahjohnson.edu",
-    bio: "Dr. Sarah Johnson is an Associate Professor specializing in Machine Learning and Data Science. She has over 10 years of teaching experience and has published numerous papers in top-tier conferences. Her research focuses on practical applications of AI in education and healthcare.",
+    bio: "Dr. Sarah Johnson is an Associate Professor specializing in Machine Learning and Data Science. She has over 10 years of teaching experience and has published numerous papers in top-tier conferences.",
     specializations: ["Machine Learning", "Data Science", "Python Programming", "Statistics", "Research Methods"],
     courses: 12,
     students: 450,
