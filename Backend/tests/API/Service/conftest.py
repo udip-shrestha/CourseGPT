@@ -3,6 +3,8 @@ from unittest.mock import create_autospec
 from API.Repository.i_sql_repository import ISQLRepository 
 from API.Service.document_service import DocumentService 
 from API.Service.rag_service import RAGService 
+from API.Service.courses_service import CourseService
+from API.Repository.i_vector_repository import IVectorRepository
 from unittest.mock import MagicMock 
 
 
@@ -32,3 +34,12 @@ def mock_sql_repo():
     """Provides a mock SQLRepository instance for each test."""
     mock_repo = MagicMock()  
     return mock_repo
+
+@pytest.fixture
+def mock_vector_repo():
+    return MagicMock(spec=IVectorRepository)
+
+@pytest.fixture
+def course_service(mock_sql_repo: ISQLRepository, mock_vector_repo: IVectorRepository) -> CourseService:
+    """Provides a CourseService instance with mock repositories."""
+    return CourseService(sql_repo=mock_sql_repo, vector_repo=mock_vector_repo)

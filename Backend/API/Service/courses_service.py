@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from typing import List, Optional
 
 from API.Repository.i_sql_repository import ISQLRepository
+from API.Repository.i_vector_repository import IVectorRepository
 from API.Util.decorators import clean_service
 
 
@@ -13,9 +14,11 @@ class CourseService:
 
     def __init__(
         self,
-        sql_repo: ISQLRepository
+        sql_repo: ISQLRepository,
+        vector_repo: IVectorRepository,
     ):
         self.sql_repo = sql_repo
+        self.vector_repo = vector_repo
 
     # ------------------------------------------------------
     # Create Course
@@ -32,6 +35,7 @@ class CourseService:
         """
         1️⃣ Validate that instructor exists.
         2️⃣ Persist new course record in the database.
+        3. Create collection for course in vector db
         """
         instructor = self.sql_repo.read_instructor(instructor_id)
         if not instructor:
@@ -47,6 +51,13 @@ class CourseService:
             semester_id=semester_id,
             year=year
         )
+
+        # Step 3: create Chroma/Vector collection
+        try:
+            self.vector_repo.create_collection(course_id, embedding_function=None, metric=None)
+        except Exception as e:
+            self.sql_repo.delete_course(course_id)
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to initialize vector collection for course {course_id}: {str(e)}")
 
         return {"course_id": course_id}
 
@@ -106,4 +117,8 @@ class CourseService:
             )
 
         self.sql_repo.delete_course(course_id)
+
+        # Delete from vector storage
+        self.vector_repo.delete_collection(course_id)
+
         return {"status": "deleted", "course_id": course_id}
