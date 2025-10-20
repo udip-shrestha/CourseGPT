@@ -136,13 +136,43 @@ class SQLRepository:
         """
         return self.cm.select_one(sql, (email,))
 
-    def read_all_instructors(self) -> List[dict]:
-        sql = """
+    def read_all_instructors(
+        self,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
+        university: Optional[str] = None,
+        email: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> List[dict]:
+        filters = []
+        params = []
+
+        if name:
+            filters.append("name ILIKE %s")
+            params.append(f"%{name}%")
+        if title:
+            filters.append("title ILIKE %s")
+            params.append(f"%{title}%")
+        if university:
+            filters.append("university ILIKE %s")
+            params.append(f"%{university}%")
+        if email:
+            filters.append("email ILIKE %s")
+            params.append(f"%{email}%")
+
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        sql = f"""
             SELECT id, name, title, university, email, created_at
             FROM instructors
-            ORDER BY created_at DESC;
+            {where_clause}
+            ORDER BY {order_by} {order_dir}
+            LIMIT %s OFFSET %s;
         """
-        return self.cm.select_all(sql)
+        params.extend([limit, offset])
+        return self.cm.select_all(sql, tuple(params))
 
     def delete_instructor(self, instructor_id: str) -> None:
         sql = "DELETE FROM instructors WHERE id = %s;"

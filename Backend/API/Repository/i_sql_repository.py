@@ -44,9 +44,9 @@ class ISQLRepository(Protocol):
     # ======================================================
     # COURSES
     # ======================================================
-    def create_course(self, name: str, code: str, instructor_id: str, description: Optional[str] = None) -> str:
+    def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int) -> str:
         """Create a new course record."""
-        ...
+    ...
 
     def read_course(self, course_id: str) -> Optional[dict]:
         """Retrieve a course record by ID."""
