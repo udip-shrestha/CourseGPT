@@ -20,11 +20,12 @@ class ChromaVectorRepository(IVectorRepository):
     # ======================================================
 
 
-    def create_collection(self, course_id: str, embedding_function: EmbeddingFunction, metric: str) -> None:
+    def create_collection(self, course_id: str, embedding_function: EmbeddingFunction | None, metric: str | None) -> None:
         """
         Explicitly create a new Chroma collection for a course.
         """
-        self.client.create_collection(name=course_id, embedding_function=embedding_function, metadata={"hnsw:space": metric})
+        metadata = {"hnsw:space": metric} if metric else None
+        self.client.create_collection(name=course_id, embedding_function=embedding_function, metadata=metadata)
 
     def delete_collection(self, course_id: str) -> None:
         """
