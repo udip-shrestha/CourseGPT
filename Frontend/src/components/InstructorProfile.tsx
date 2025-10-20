@@ -20,8 +20,8 @@ export function InstructorProfile() {
   };
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-4xl mx-auto space-y-8">
+    // <div className="container mx-auto px-4 py-8">
+      <div className="space-y-8">
         {/* Hero Section */}
         <Card>
           <CardContent className="p-8">
@@ -124,6 +124,6 @@ export function InstructorProfile() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    // </div>
   );
 }

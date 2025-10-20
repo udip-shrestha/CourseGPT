@@ -14,7 +14,7 @@ export default function App() {
             <Header activeSection={activeSection} onSectionChange={setActiveSection} />
 
             {/* Main content area */}
-            <main className="container-wide mx-auto px-6 sm:px-8 py-10">
+            <main className="  px-6 sm:px-8 py-10">
                 {activeSection === 'profile' && <InstructorProfile />}
                 {activeSection === 'courses' && <CourseManager />}
             </main>
