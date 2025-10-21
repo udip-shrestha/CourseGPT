@@ -60,7 +60,7 @@ export default function Login() {
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
               <button type="submit" className="w-full">
-                  {isLoading ? "Forgot password?" : "Login"}
+                  {isLoading ? "Forgot password?" : "Register"}
                   {/*onChange={(e) => setRegister(e.target.value)}*/}
               </button>
           </form>
