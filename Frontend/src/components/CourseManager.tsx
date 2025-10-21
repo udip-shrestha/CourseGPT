@@ -97,12 +97,11 @@ export function CourseManager() {
 
   if (selectedCourse && selectedCourseData) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="space-y-6">
+        <div className=" w-full space-y-6">
           <div className="flex items-center justify-between">
             <div>
-              <Button 
-                variant="ghost" 
+              <Button
+                variant="ghost"
                 onClick={() => setSelectedCourse(null)}
                 className="mb-2"
               >
@@ -172,13 +171,11 @@ export function CourseManager() {
             </CardContent>
           </Card>
         </div>
-      </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
+      <div className=" w-full space-y-6">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">My Courses</h1>
           <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
@@ -246,6 +243,5 @@ export function CourseManager() {
           ))}
         </div>
       </div>
-    </div>
   );
 }
