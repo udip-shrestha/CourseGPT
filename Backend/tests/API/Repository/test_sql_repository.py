@@ -70,3 +70,65 @@ def test_delete_document(repo, temp_course):
     # Delete it
     repo.delete_document(doc_id)
     assert repo.read_document(doc_id) is None
+
+# ==========================================================
+# INSTRUCTORS
+# ==========================================================
+def test_create_and_read_instructor(repo):
+    instructor_id = repo.create_instructor(
+        name="Dr. Jane Smith",
+        title="Professor",
+        university="ISU",
+        email="jane.smith@isu.edu",
+    )
+    assert instructor_id is not None
+
+    instructor = repo.read_instructor(instructor_id)
+    assert instructor is not None
+    assert instructor["name"] == "Dr. Jane Smith"
+    assert instructor["university"] == "ISU"
+
+
+def test_read_all_instructors(repo, temp_instructor):
+    instructors = repo.read_all_instructors()
+    assert isinstance(instructors, list)
+    assert any(str(inst["id"]) == temp_instructor for inst in instructors)     # Convert UUID to string for comparison
+
+def test_delete_instructor(repo):
+    instructor_id = repo.create_instructor(
+        name="Dr. Temp", title="Assistant Prof.", university="Test U", email="temp@u.edu"
+    )
+    repo.delete_instructor(instructor_id)
+    deleted = repo.read_instructor(instructor_id)
+    assert deleted is None
+
+
+# ==========================================================
+# COURSES
+# ==========================================================
+def test_create_and_read_course(repo, temp_instructor):
+    course_id = repo.create_course(
+        name="Test Course",
+        institution="ISU",
+        year=2025,
+        semester_id=1,
+        instructor_id=temp_instructor,
+    )
+    assert course_id is not None
+
+    course = repo.read_course(course_id)
+    assert course is not None
+    assert course["name"] == "Test Course"
+
+
+def test_read_all_courses(repo):
+    results = repo.read_all_courses()
+    assert isinstance(results, list)
+
+
+def test_delete_course(repo, temp_instructor):
+    course_id = repo.create_course(
+        name="Temp Course", institution="ISU", year=2025, semester_id=1, instructor_id=temp_instructor
+    )
+    repo.delete_course(course_id)
+    assert repo.read_course(course_id) is None

@@ -1,22 +1,45 @@
-# tests/conftest.py
+import pytest 
+from unittest.mock import create_autospec
+from API.Repository.i_sql_repository import ISQLRepository 
+from API.Service.document_service import DocumentService 
+from API.Service.rag_service import RAGService 
+from API.Service.courses_service import CourseService
+from API.Repository.i_vector_repository import IVectorRepository
+from unittest.mock import MagicMock 
+
+
+@pytest.fixture 
+def mock_sql_repo(): 
+    """ Provides a mock SQLRepository instance for each test. """ 
+    return MagicMock(spec=ISQLRepository) 
+    
+
 import pytest
-from API.Repository.fake_sql_repository import ISQLRepository, FakeSQLRepository
-from API.Service.document_service import DocumentService
-
-
-@pytest.fixture
-def sql_repo() -> ISQLRepository:
-    """
-    Provides a fresh FakeSQLRepository instance for each test.
-    Simulates an in-memory SQL database.
-    """
-    return FakeSQLRepository()
-
+from unittest.mock import MagicMock
+from API.Service.rag_service import RAGService
 
 @pytest.fixture
-def document_service(sql_repo: ISQLRepository) -> DocumentService:
-    """
-    Provides a DocumentService using the fake repository.
-    Other service fixtures can depend on sql_repo too.
-    """
-    return DocumentService(sql_repo)
+def mock_rag_service() -> RAGService:
+    """Mock RAGService for dependency injection."""
+    return MagicMock(spec=RAGService)
+
+
+@pytest.fixture 
+def document_service(mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> DocumentService: 
+    """ Provides a DocumentService using the fake repository. Other service fixtures can depend on sql_repo too. """ 
+    return DocumentService(mock_sql_repo, mock_rag_service)
+
+@pytest.fixture 
+def mock_sql_repo(): 
+    """Provides a mock SQLRepository instance for each test."""
+    mock_repo = MagicMock()  
+    return mock_repo
+
+@pytest.fixture
+def mock_vector_repo():
+    return MagicMock(spec=IVectorRepository)
+
+@pytest.fixture
+def course_service(mock_sql_repo: ISQLRepository, mock_vector_repo: IVectorRepository) -> CourseService:
+    """Provides a CourseService instance with mock repositories."""
+    return CourseService(sql_repo=mock_sql_repo, vector_repo=mock_vector_repo)

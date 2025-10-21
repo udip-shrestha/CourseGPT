@@ -64,7 +64,8 @@ class PostgresConnectionManager:
                 with conn.cursor() as cur:
                     cur.execute("SELECT 1")
             return True
-        except:
+        except Exception as e:
+            self.logger.error(f"Failed to connect to Postgres: {e}")
             return False
 
     def get_connection(self):

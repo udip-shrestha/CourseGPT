@@ -17,7 +17,6 @@ H_MODEL = "deepset/roberta-base-squad2"
 STUDENTS_FILE = "students.json"
 QUERIES_FILE = "queries.json"
 
-# Load JSON data
 def load_json(filename):
     if not os.path.exists(filename):
         with open(filename, "w") as f:
