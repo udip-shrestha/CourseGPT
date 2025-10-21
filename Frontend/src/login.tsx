@@ -9,6 +9,7 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  // const [register, setRegister] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +24,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-sm shadow-md">
+      <Card className="w-1/2 shadow-md">
         <header>
           <h1 id="title">CourseGPT</h1>
         </header>
@@ -38,7 +39,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="Enter email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -49,7 +50,7 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder=""
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -58,6 +59,10 @@ export default function Login() {
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Signing in..." : "Sign in"}
             </Button>
+              <button type="submit" className="w-full">
+                  {isLoading ? "Forgot password?" : "Register"}
+                  {/*onChange={(e) => setRegister(e.target.value)}*/}
+              </button>
           </form>
         </CardContent>
       </Card>
