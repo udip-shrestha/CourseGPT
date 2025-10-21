@@ -9,23 +9,26 @@ class ISplitterType(Protocol):
         ...
 
 
-class RecursiveSplitterType(ISplitterType):
+class RecursiveCharacterTextSplitterType(ISplitterType):
     """Splits documents using RecursiveCharacterTextSplitter."""
+    def __init__(self):
+        self.splitter = RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200)
+
     def split(self, docs: List[Document]) -> List[Document]:
-        return RecursiveCharacterTextSplitter(chunk_size=1000, chunk_overlap=200).split_documents(docs)
+        return self.splitter.split_documents(docs)
 
 
 class Splitter:
     """Factory that delegates document splitting by type."""
-    _DEFAULT_REGISTRY: Dict[str, Type[ISplitterType]] = {
-        "RecursiveSplitterType": RecursiveSplitterType,
+    _DEFAULT_REGISTRY: Dict[str, ISplitterType] = {
+        "RecursiveCharacterTextSplitterType": RecursiveCharacterTextSplitterType(),
     }
 
-    def __init__(self, registry: Optional[Dict[str, Type[ISplitterType]]] = None):
+    def __init__(self, registry: Optional[Dict[str, ISplitterType]] = None):
         self._registry = registry or Splitter._DEFAULT_REGISTRY
 
     def split(self, splitter_type: str, docs: List[Document]) -> List[Document]:
-        splitter_cls = self._registry.get(splitter_type)
-        if not splitter_cls:
+        splitter = self._registry.get(splitter_type)
+        if not splitter:
             raise ValueError(f"No splitter for '{splitter_type}'")
-        return splitter_cls().split(docs)
+        return splitter.split(docs)

@@ -1,6 +1,6 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from .Routers import questions, document_router, instructors_router, courses_router
+from .Routers import questions_router, document_router, instructors_router, courses_router
 from API.dependencies import get_connection_manager
 
 @asynccontextmanager
@@ -16,7 +16,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-app.include_router(questions.router)
+app.include_router(questions_router.router)
 app.include_router(document_router.router)
 app.include_router(instructors_router.router)
 app.include_router(courses_router.router)
