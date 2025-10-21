@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from chromadb import EmbeddingFunction
 from chromadb.api import ClientAPI
 from langchain_core.documents import Document
@@ -20,7 +20,7 @@ class ChromaVectorRepository(IVectorRepository):
     # ======================================================
 
 
-    def create_collection(self, course_id: str, embedding_function: EmbeddingFunction | None, metric: str | None) -> None:
+    def create_collection(self, course_id: str, embedding_function: Optional[EmbeddingFunction] , metric: Optional[str]) -> None:
         """
         Explicitly create a new Chroma collection for a course.
         """

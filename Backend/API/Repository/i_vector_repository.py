@@ -1,4 +1,4 @@
-from typing import List, Tuple, Protocol
+from typing import List, Tuple, Protocol, Optional
 from chromadb import EmbeddingFunction
 from langchain_core.documents import Document
 
@@ -16,7 +16,7 @@ class IVectorRepository(Protocol):
     def create_collection(
         self,
         course_id: str,
-        embedding_function: EmbeddingFunction,
+        embedding_function: Optional[EmbeddingFunction],
         metric: str,
     ) -> None:
         """
