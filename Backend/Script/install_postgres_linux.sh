@@ -87,6 +87,30 @@ sudo -u postgres psql -c "ALTER USER \"${DB_USER}\" WITH PASSWORD '${DEFAULT_PG_
 echo "Password for '${DB_USER}' set to '${DEFAULT_PG_PASSWORD}'."
 
 # ------------------------------------------
+# Ensure custom user exist
+# ------------------------------------------
+CUSTOM_DB_USER="coursegpt_db_user"
+CUSTOM_DB_PASS="CourseGPT#932"
+
+echo "Creating custom PostgreSQL user if not exists..."
+sudo -u postgres psql <<EOF
+DO
+\$do\$
+BEGIN
+   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${CUSTOM_DB_USER}') THEN
+      CREATE ROLE ${CUSTOM_DB_USER} LOGIN PASSWORD '${CUSTOM_DB_PASS}' CREATEDB;
+      RAISE NOTICE 'User ${CUSTOM_DB_USER} created with CREATEDB privilege.';
+   ELSE
+      RAISE NOTICE 'User ${CUSTOM_DB_USER} already exists — ensuring CREATEDB privilege.';
+      ALTER ROLE ${CUSTOM_DB_USER} CREATEDB;
+   END IF;
+END
+\$do\$;
+EOF
+
+echo "Ensured custom user '${CUSTOM_DB_USER}' exists and has CREATEDB privilege."
+
+# ------------------------------------------
 # Copy Project Seed Data
 # ------------------------------------------
 echo "Copying seed data files..."

@@ -228,26 +228,10 @@ db-shell:
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME)
 
 # -------------------------------------------
-# Deploy database (create if missing, keep data intact)
+# Deploy database on the Server
 # -------------------------------------------
-ifeq ($(OS),Windows_NT)
 db-deploy:
-	@echo "Checking if database $(DB_NAME) exists..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" | findstr 1 >NUL 2>&1 && \
-		echo "Database $(DB_NAME) already exists: skipping creation." || ( \
-			echo "Creating database $(DB_NAME)..." && \
-			psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)" )
-	@echo "Applying schema to $(DB_NAME)..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
+	@echo "Applying schema..."
+	@PGPASSWORD='$(DB_PASSWORD)' psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
 	@echo "Database deployed successfully."
-else
-db-deploy:
-	@echo "Checking if database $(DB_NAME) exists..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" | grep -q 1 && \
-		echo "Database $(DB_NAME) already exists — skipping creation." || ( \
-			echo "Creating database $(DB_NAME)..." && \
-			psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)" )
-	@echo "Applying schema to $(DB_NAME)..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
-	@echo "Database deployed successfully."
-endif
+
