@@ -22,8 +22,7 @@ export function InstructorProfile() {
     return (
         <div className="space-y-8">
             {/* Hero Section (Remains in its own card for emphasis) */}
-            {/* --- CHANGE: Added className="dark" --- */}
-            <Card className="dark">
+            <Card>
                 <CardContent className="p-8">
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         <Avatar className="h-32 w-32">
@@ -80,8 +79,7 @@ export function InstructorProfile() {
             </Card>
 
             {/* NEW: Unified Card for secondary information */}
-            {/* --- CHANGE: Added className="dark" --- */}
-            <Card className="dark">
+            <Card>
                 <div className="divide-y divide-border">
                     {/* About Section */}
                     <div className="p-6">
@@ -105,14 +103,14 @@ export function InstructorProfile() {
                     <div className="p-6">
                         <h2 className="text-xl font-bold mb-4">Featured Courses</h2>
                         <div className="grid md:grid-cols-2 gap-4">
-                            <div className="border-border rounded-lg border p-4">
+                            <div className="border-border rounded-lg border p-4"> {/* Changed to border-border */}
                                 <div className="flex items-center gap-2 mb-2">
                                     <BookOpen className="h-5 w-5 text-primary" />
                                     <h3 className="font-medium">Introduction to Machine Learning</h3>
                                 </div>
                                 <p className="text-sm text-muted-foreground">CS 480 • Fall 2024 • 85 students</p>
                             </div>
-                            <div className="border-border rounded-lg border p-4">
+                            <div className="border-border rounded-lg border p-4"> {/* Changed to border-border */}
                                 <div className="flex items-center gap-2 mb-2">
                                     <BookOpen className="h-5 w-5 text-primary" />
                                     <h3 className="font-medium">Advanced Data Science</h3>
@@ -126,4 +124,3 @@ export function InstructorProfile() {
         </div>
     );
 }
-
