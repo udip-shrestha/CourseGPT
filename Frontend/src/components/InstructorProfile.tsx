@@ -1,18 +1,10 @@
-import { Mail, MapPin, Globe, BookOpen, Star, Paintbrush } from 'lucide-react'; // --- ADDED PAINTBRUSH ---
+import { Mail, MapPin, Globe, BookOpen, Star } from 'lucide-react';
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
 
-// --- ADDED POPOVER IMPORTS ---
-import {
-    Popover,
-    PopoverContent,
-    PopoverTrigger,
-} from "./ui/popover";
-import { ThemeCustomizer } from './ThemeCustomizer';
-import { Button } from './ui/button'; // --- ADDED BUTTON IMPORT ---
-
+// Imports for Popover, ThemeCustomizer, Paintbrush, and Button have been removed.
 
 export function InstructorProfile() {
     const instructor = {
@@ -21,7 +13,7 @@ export function InstructorProfile() {
         university: "Tech University",
         email: "sarah.johnson@techuni.edu",
         location: "San Francisco, CA",
-        website: "www.sarah johnson.edu",
+        website: "www.sarahjohnson.edu",
         bio: "Dr. Sarah Johnson is an Associate Professor specializing in Machine Learning and Data Science. She has over 10 years of teaching experience and has published numerous papers in top-tier conferences.",
         specializations: ["Machine Learning", "Data Science", "Python Programming", "Statistics", "Research Methods"],
         courses: 12,
@@ -31,23 +23,11 @@ export function InstructorProfile() {
 
     return (
         <div className="space-y-8">
-            {/* --- ADDED 'relative' CLASS HERE --- */}
-            <Card className="dark relative">
+            {/* The 'relative' class has been removed from this Card */}
+            {/* The className="dark" has been removed */}
+            <Card>
 
-                {/* --- ADDED THIS POPOVER BUTTON --- */}
-                <div className="absolute top-4 right-4 z-10">
-                    <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <Paintbrush className="h-4 w-4" />
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="dark" align="end">
-                            <ThemeCustomizer />
-                        </PopoverContent>
-                    </Popover>
-                </div>
-                {/* --- END OF POPOVER BUTTON --- */}
+                {/* The entire Popover button div has been deleted from here. */}
 
                 <CardContent className="p-8">
                     <div className="flex flex-col md:flex-row gap-6 items-start">
@@ -105,7 +85,8 @@ export function InstructorProfile() {
             </Card>
 
             {/* NEW: Unified Card for secondary information */}
-            <Card className="dark">
+            {/* The className="dark" has been removed */}
+            <Card>
                 <div className="divide-y divide-border">
                     {/* About Section */}
                     <div className="p-6">
@@ -117,6 +98,7 @@ export function InstructorProfile() {
                     <div className="p-6">
                         <h2 className="text-xl font-bold mb-4">Specializations</h2>
                         <div className="flex flex-wrap gap-2">
+                            {/* The extra dot from 'specializations..map' is fixed here. */}
                             {instructor.specializations.map((spec) => (
                                 <Badge key={spec} variant="secondary" className="px-3 py-1">
                                     {spec}
