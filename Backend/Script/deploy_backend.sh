@@ -17,6 +17,24 @@ fi
 
 cd "$PERSISTENT_ROOT"
 
+# ------------------------------------------
+# Database configuration (must come from CI/CD variables)
+# ------------------------------------------
+: "${DB_NAME:?DB_NAME is required but not set.}"
+: "${DB_USER:?DB_USER is required but not set.}"
+: "${DB_PASSWORD:?DB_PASSWORD is required but not set.}"
+: "${DB_HOST:?DB_HOST is required but not set.}"
+: "${DB_PORT:?DB_PORT is required but not set.}"
+: "${SCHEMA_FILE:?SCHEMA_FILE is required but not set.}"
+
+# ------------------------------------------
+# Apply database schema (Makefile db-deploy)
+# ------------------------------------------
+echo "Applying database schema..."
+PGPASSWORD="$DB_PASSWORD" psql -U "$DB_USER" -h "$DB_HOST" -p "$DB_PORT" -d "$DB_NAME" -f "$SCHEMA_FILE"
+echo "Database schema applied successfully."
+
+
 echo "Setting up backend virtualenv at $API_VENV"
 python3 -m venv "$API_VENV"
 source "$API_VENV/bin/activate"
