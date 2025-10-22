@@ -1,8 +1,18 @@
-import { Mail, MapPin, Globe, BookOpen, Star } from 'lucide-react';
+import { Mail, MapPin, Globe, BookOpen, Star, Paintbrush } from 'lucide-react'; // --- ADDED PAINTBRUSH ---
 import { Card, CardContent } from './ui/card';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+
+// --- ADDED POPOVER IMPORTS ---
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "./ui/popover";
+import { ThemeCustomizer } from './ThemeCustomizer';
+import { Button } from './ui/button'; // --- ADDED BUTTON IMPORT ---
+
 
 export function InstructorProfile() {
     const instructor = {
@@ -11,7 +21,7 @@ export function InstructorProfile() {
         university: "Tech University",
         email: "sarah.johnson@techuni.edu",
         location: "San Francisco, CA",
-        website: "www.sarahjohnson.edu",
+        website: "www.sarah johnson.edu",
         bio: "Dr. Sarah Johnson is an Associate Professor specializing in Machine Learning and Data Science. She has over 10 years of teaching experience and has published numerous papers in top-tier conferences.",
         specializations: ["Machine Learning", "Data Science", "Python Programming", "Statistics", "Research Methods"],
         courses: 12,
@@ -21,8 +31,24 @@ export function InstructorProfile() {
 
     return (
         <div className="space-y-8">
-            {/* Hero Section (Remains in its own card for emphasis) */}
-            <Card>
+            {/* --- ADDED 'relative' CLASS HERE --- */}
+            <Card className="dark relative">
+
+                {/* --- ADDED THIS POPOVER BUTTON --- */}
+                <div className="absolute top-4 right-4 z-10">
+                    <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <Paintbrush className="h-4 w-4" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="dark" align="end">
+                            <ThemeCustomizer />
+                        </PopoverContent>
+                    </Popover>
+                </div>
+                {/* --- END OF POPOVER BUTTON --- */}
+
                 <CardContent className="p-8">
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         <Avatar className="h-32 w-32">
@@ -79,7 +105,7 @@ export function InstructorProfile() {
             </Card>
 
             {/* NEW: Unified Card for secondary information */}
-            <Card>
+            <Card className="dark">
                 <div className="divide-y divide-border">
                     {/* About Section */}
                     <div className="p-6">
@@ -124,3 +150,4 @@ export function InstructorProfile() {
         </div>
     );
 }
+
