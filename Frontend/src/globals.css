@@ -2,11 +2,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Define the .dark class for potential future use (light theme) */
 @custom-variant dark (&:is(.dark *));
 
-/* THIS IS NOW THE "LIGHT BLACK" THEME BY DEFAULT
-   Based on your old index.css and previous dark theme styles.
-*/
+/* DEFAULT THEME: "Light Black" Style */
 :root {
     --font-size: 16px;
     --text-base: 1rem;
@@ -14,34 +13,58 @@
     --text-xl: 1.25rem;
     --text-2xl: 1.5rem;
 
-    /* "Light Black" Theme Variables */
-    --background: oklch(0.145 0 0); /* Dark background (close to #242424) */
-    --foreground: oklch(0.985 0 0); /* Light text (close to rgba(255, 255, 255, 0.87)) */
+    /* Core Colors */
+    --background: oklch(0.145 0 0); /* Dark background */
+    --foreground: oklch(0.985 0 0); /* Light text */
+
+    /* Card Colors */
     --card: oklch(0.145 0 0);       /* Card background same as page */
     --card-foreground: oklch(0.985 0 0); /* Card text same as page */
+
+    /* Popover Colors */
     --popover: oklch(0.145 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.985 0 0); /* Primary elements (like buttons) use light text color */
-    --primary-foreground: oklch(0.205 0 0); /* Text on primary elements is dark */
+
+    /* Primary Colors (Used for main buttons, interactive elements) */
+    --primary: oklch(0.985 0 0); /* Primary elements are light */
+    --primary-foreground: oklch(0.205 0 0); /* Text ON primary elements is dark */
+
+    /* Secondary Colors (Used for less prominent buttons, badges) */
     --secondary: oklch(0.269 0 0); /* Secondary elements slightly lighter dark */
-    --secondary-foreground: oklch(0.985 0 0); /* Text on secondary is light */
+    --secondary-foreground: oklch(0.985 0 0); /* Text ON secondary is light */
+
+    /* Muted Colors (Used for subtle text, backgrounds) */
     --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0); /* Muted text is less bright */
+    --muted-foreground: oklch(0.708 0 0); /* Muted text is less bright grey */
+
+    /* Accent Colors (Used for hover states, selected items) */
     --accent: oklch(0.269 0 0);
     --accent-foreground: oklch(0.985 0 0);
+
+    /* Destructive Colors (Used for errors, delete buttons) */
     --destructive: oklch(0.396 0.141 25.723);
-    --destructive-foreground: oklch(0.637 0.237 25.331);
+    --destructive-foreground: oklch(0.637 0.237 25.331); /* Often light text on dark red */
+
+    /* Border & Ring Colors */
     --border: oklch(0.269 0 0); /* Slightly lighter border makes cards visible */
-    --input: oklch(0.269 0 0);
-    --ring: oklch(0.439 0 0); /* Focus ring color */
+    --input: oklch(0.269 0 0);  /* Input background color */
+    --ring: oklch(0.439 0 0);   /* Focus ring color */
+
+    /* Radius */
+    --radius: 0.625rem;
+
+    /* Font Weights (Keep these consistent) */
     --font-weight-medium: 500;
     --font-weight-normal: 400;
+
+    /* Chart Colors (Keep these from your theme) */
     --chart-1: oklch(0.488 0.243 264.376);
     --chart-2: oklch(0.696 0.17 162.48);
     --chart-3: oklch(0.769 0.188 70.08);
     --chart-4: oklch(0.627 0.265 303.9);
     --chart-5: oklch(0.645 0.246 16.439);
-    --radius: 0.625rem;
+
+    /* Sidebar Colors (Keep these from your theme) */
     --sidebar: oklch(0.205 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
     --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -50,11 +73,14 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(0.269 0 0);
     --sidebar-ring: oklch(0.439 0 0);
+
+    /* Added missing Input background variable */
+    --input-background: oklch(0.269 0 0); /* Match input color */
+    /* Added missing Switch background variable */
+    --switch-background: oklch(0.439 0 0); /* Use ring color or similar */
 }
 
-/* The .dark class now holds the LIGHT theme.
-  You can ignore this or use it if you want to add a light mode toggle later.
-*/
+/* LIGHT THEME (Now under .dark class, if needed later) */
 .dark {
     --background: #ffffff;
     --foreground: oklch(0.145 0 0);
@@ -73,11 +99,9 @@
     --destructive: #d4183d;
     --destructive-foreground: #ffffff;
     --border: rgba(0, 0, 0, 0.1);
-    --input: transparent;
+    --input: transparent; /* Light mode input might be different */
     --input-background: #f3f3f5;
     --switch-background: #cbced4;
-    --font-weight-medium: 500;
-    --font-weight-normal: 400;
     --ring: oklch(0.708 0 0);
     --chart-1: oklch(0.646 0.222 41.116);
     --chart-2: oklch(0.6 0.118 184.704);
@@ -96,6 +120,8 @@
 
 
 @theme inline {
+    /* This section maps the variables to Tailwind utility classes */
+    /* No changes needed here */
     --color-background: var(--background);
     --color-foreground: var(--foreground);
     --color-card: var(--card);
@@ -138,72 +164,29 @@
 
 @layer base {
     * {
-        /* FIX: Use outline utility with arbitrary color/opacity to avoid PostCSS error */
-        /* This applies a 2px outline using the 'ring' color at 50% opacity */
-        @apply border border-border outline-2 outline-[color:var(--ring)/0.5];
+        /* Apply the outline color variable ONLY */
+        /* --- REMOVED border border-border --- */
+        @apply outline-2 outline-[color:var(--ring)/0.5];
     }
 
     body {
+        /* Apply the background and text color variables */
         @apply bg-background text-foreground;
     }
 }
 
-
-
-/**
- * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
- */
+/* Base Typography (No changes needed here) */
 @layer base {
     :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
-        h1 {
-            font-size: var(--text-2xl);
-            font-weight: var(--font-weight-medium);
-            line-height: 1.5;
-        }
-
-        h2 {
-            font-size: var(--text-xl);
-            font-weight: var(--font-weight-medium);
-            line-height: 1.5;
-        }
-
-        h3 {
-            font-size: var(--text-lg);
-            font-weight: var(--font-weight-medium);
-            line-height: 1.5;
-        }
-
-        h4 {
-            font-size: var(--text-base);
-            font-weight: var(--font-weight-medium);
-            line-height: 1.5;
-        }
-
-        p {
-            font-size: var(--text-base);
-            font-weight: var(--font-weight-normal);
-            line-height: 1.5;
-        }
-
-        label {
-            font-size: var(--text-base);
-            font-weight: var(--font-weight-medium);
-            line-height: 1.5;
-        }
-
-        button {
-            font-size: var(--text-base);
-            font-weight: var(--font-weight-medium);
-            line-height: 1.5;
-        }
-
-        input {
-            font-size: var(--text-base);
-            font-weight: var(--font-weight-normal);
-            line-height: 1.5;
-        }
+        h1 { font-size: var(--text-2xl); font-weight: var(--font-weight-medium); line-height: 1.5; }
+        h2 { font-size: var(--text-xl); font-weight: var(--font-weight-medium); line-height: 1.5; }
+        h3 { font-size: var(--text-lg); font-weight: var(--font-weight-medium); line-height: 1.5; }
+        h4 { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+        p { font-size: var(--text-base); font-weight: var(--font-weight-normal); line-height: 1.5; }
+        label { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+        button { font-size: var(--text-base); font-weight: var(--font-weight-medium); line-height: 1.5; }
+        input { font-size: var(--text-base); font-weight: var(--font-weight-normal); line-height: 1.5; }
     }
-
 }
 
 html {
