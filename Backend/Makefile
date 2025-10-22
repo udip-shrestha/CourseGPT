@@ -172,6 +172,24 @@ api-test: $(ACTIVATE_PATH)
 		pytest tests/API -v"
 endif
 
+# ------------------------------------------
+# Check API Tests Coverage
+# ------------------------------------------
+ifeq ($(OS),Windows_NT)
+api-coverage: $(ACTIVATE_PATH)
+	@echo "Running API tests with coverage..."
+	@cmd /C "( \
+		set PYTHONPATH=. && \
+		call $(VENV_DIR)\Scripts\activate && \
+		pytest --cov=API --cov-report=term-missing --cov-report=html tests\\API -v \
+	)"
+else
+api-coverage: $(ACTIVATE_PATH)
+	@echo "Running API tests with coverage..."
+	@bash -c "export PYTHONPATH=. && \
+		source $(VENV_DIR)/bin/activate && \
+		pytest --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests/API -v"
+endif
 
 
 

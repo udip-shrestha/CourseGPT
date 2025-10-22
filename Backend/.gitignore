@@ -16,3 +16,9 @@ Backend/.DS_Store
 
 # Ignore chroma data
 .chroma_data
+
+# Coverage and testing artifacts
+.coverage
+coverage.xml
+htmlcov/
+.cache/
