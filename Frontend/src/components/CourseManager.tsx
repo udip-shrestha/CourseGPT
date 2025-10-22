@@ -20,7 +20,7 @@ interface Document {
 }
 
 interface Course {
-    id:string;
+    id: string;
     name: string;
     code: string;
     semester: string;
@@ -89,7 +89,6 @@ export function CourseManager() {
 
     const handleFilesSelected = (files: File[]) => {
         console.log('Files selected:', files);
-        // In a real app, you would upload these files to your backend
     };
 
     const selectedCourseData = courses.find(course => course.id === selectedCourse);
@@ -97,7 +96,7 @@ export function CourseManager() {
 
     if (selectedCourse && selectedCourseData) {
         return (
-            <div className="w-full flex flex-col space-y-6">
+            <div className="w-full space-y-6">
                 <div className="flex items-center justify-between">
                     <div>
                         <Button
@@ -155,15 +154,9 @@ export function CourseManager() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        <Button variant="ghost" size="sm">
-                                            <Eye className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm">
-                                            <Download className="h-4 w-4" />
-                                        </Button>
-                                        <Button variant="ghost" size="sm">
-                                            <Trash2 className="h-4 w-4" />
-                                        </Button>
+                                        <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="sm"><Download className="h-4 w-4" /></Button>
+                                        <Button variant="ghost" size="sm"><Trash2 className="h-4 w-4" /></Button>
                                     </div>
                                 </div>
                             ))}
@@ -175,15 +168,12 @@ export function CourseManager() {
     }
 
     return (
-        <div className="w-full flex flex-col space-y-6">
+        <div className="w-full space-y-6">
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">My Courses</h1>
                 <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
                     <DialogTrigger asChild>
-                        <Button>
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Document
-                        </Button>
+                        <Button><Plus className="h-4 w-4 mr-2" />Add Document</Button>
                     </DialogTrigger>
                     <DialogContent className="max-w-2xl">
                         <DialogHeader>
@@ -193,9 +183,7 @@ export function CourseManager() {
                             <div className="space-y-2">
                                 <Label htmlFor="course">Select Course</Label>
                                 <Select value={newDocumentCourse} onValueChange={setNewDocumentCourse}>
-                                    <SelectTrigger>
-                                        <SelectValue placeholder="Choose a course" />
-                                    </SelectTrigger>
+                                    <SelectTrigger><SelectValue placeholder="Choose a course" /></SelectTrigger>
                                     <SelectContent>
                                         {courses.map((course) => (
                                             <SelectItem key={course.id} value={course.id}>
@@ -207,9 +195,7 @@ export function CourseManager() {
                             </div>
                             <FileUpload onFilesSelected={handleFilesSelected} />
                             <div className="flex justify-end gap-2">
-                                <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>
-                                    Cancel
-                                </Button>
+                                <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>Cancel</Button>
                                 <Button>Upload Documents</Button>
                             </div>
                         </div>
@@ -227,10 +213,7 @@ export function CourseManager() {
                         className="pl-10"
                     />
                 </div>
-                <Button variant="outline">
-                    <Filter className="h-4 w-4 mr-2" />
-                    Filter
-                </Button>
+                <Button variant="outline"><Filter className="h-4 w-4 mr-2" />Filter</Button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -245,3 +228,4 @@ export function CourseManager() {
         </div>
     );
 }
+
