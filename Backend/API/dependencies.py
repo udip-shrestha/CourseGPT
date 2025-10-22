@@ -1,7 +1,11 @@
+from functools import lru_cache
 import os, platform
 from chromadb import Client, PersistentClient
+from langchain_core.language_models import BaseLanguageModel
 from dotenv import load_dotenv
 from fastapi import Depends
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
+from langchain_huggingface import HuggingFacePipeline
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
@@ -12,6 +16,7 @@ from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
+from API.Util.prompt_builders import PromptBuilder
 
 
 load_dotenv()
@@ -50,15 +55,41 @@ def get_vector_repository(
     return ChromaVectorRepository(client)
 
 
+@lru_cache
 def get_loader() -> Loader:
-    """Return a Loader instance for document parsing."""
+    """Return a Singleton Loader instance for document parsing."""
     return Loader()
 
 
+@lru_cache
 def get_splitter() -> Splitter:
-    """Return a Splitter instance for document chunking."""
+    """Return a Singleton Splitter instance for document chunking."""
     return Splitter()
 
+@lru_cache()
+def get_prompt_builder() -> PromptBuilder:
+    """Return a Singleton PromptBuilder instance."""
+    return PromptBuilder()
+
+@lru_cache()
+def get_llm() -> BaseLanguageModel:
+    """Load and return a HuggingFace conversational model wrapped for LangChain."""
+    model_id = "declare-lab/flan-alpaca-base"  # open & free conversational model
+
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
+
+    hf_pipeline = pipeline(
+        "text2text-generation",
+        model=model,
+        tokenizer=tokenizer,
+        max_new_tokens=256,
+        temperature=0.7,
+        do_sample=True,
+        repetition_penalty=1.1,
+    )
+
+    return HuggingFacePipeline(pipeline=hf_pipeline)
 
 def get_document_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
@@ -83,10 +114,12 @@ def get_instructor_service(
 def get_rag_service(
     loader: Loader = Depends(get_loader),
     splitter: Splitter = Depends(get_splitter),
-    vector_repo: ChromaVectorRepository = Depends(get_vector_repository),
+    vector_repo: IVectorRepository = Depends(get_vector_repository),
+    prompt_builder: PromptBuilder = Depends(get_prompt_builder),
+    llm: BaseLanguageModel = Depends(get_llm),
 ) -> RAGService:
     """Provide a fully configured RAGService instance."""
-    return RAGService(loader, splitter, vector_repo)
+    return RAGService(loader, splitter, vector_repo, prompt_builder, llm)
 
 
 def get_document_service(

@@ -42,7 +42,7 @@ class DocumentService:
 
         # --- Step 3: Index document in vector store ---
         try:
-            self.rag_service.create_index(course_id, doc_id, "RecursiveSplitterType", file_type, file_bytes)
+            self.rag_service.create_index(course_id, doc_id, "RecursiveCharacterTextSplitterType", file_name, file_type, file_bytes)
         except Exception as e:
             # Rollback SQL if vector indexing fails
             self.sql_repo.delete_document(doc_id)
@@ -96,11 +96,6 @@ class DocumentService:
             order_by=order_by,
             order_dir=order_dir,
         )
-
-    @clean_service
-    def search_documents(self, course_id: str, query: str, top_k: int = 3) -> List[Document]:
-        """TODO: Perform semantic vector search within one course."""
-        pass
 
     @clean_service
     def delete_document(self, course_id: str, doc_id: str):
