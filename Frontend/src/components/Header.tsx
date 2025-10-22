@@ -1,38 +1,105 @@
-import { GraduationCap, User, Upload } from 'lucide-react';
-import { Button } from './ui/button';
+import { GraduationCap, User, Upload, LogIn, UserPlus } from "lucide-react";
+import { useLocation, useParams, useNavigate } from "react-router-dom";
+import { Button } from "./ui/button";
 
-interface HeaderProps {
-  activeSection: 'profile' | 'courses';
-  onSectionChange: (section: 'profile' | 'courses') => void;
-}
+export function Header() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { instructorId } = useParams();
 
-export function Header({ activeSection, onSectionChange }: HeaderProps) {
+  const path = location.pathname;
+
+  const onInstructorRoute = path.startsWith("/instructors/");
+  const onLoginPage = path === "/login";
+  const onRegisterPage = path === "/register";
+  const onHomePage = path === "/";
+
   return (
     <header className="border-b bg-card">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+        {/* Stack content on mobile, side-by-side on larger screens */}
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          {/* Logo */}
+          <div className="flex items-center justify-center sm:justify-start gap-2">
             <GraduationCap className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-primary">CourseGPT</h1>
           </div>
-          
-          <nav className="flex items-center gap-4">
-            <Button
-              variant={activeSection === 'profile' ? 'default' : 'ghost'}
-              onClick={() => onSectionChange('profile')}
-              className="flex items-center gap-2"
-            >
-              <User className="h-4 w-4" />
-              Profile
-            </Button>
-            <Button
-              variant={activeSection === 'courses' ? 'default' : 'ghost'}
-              onClick={() => onSectionChange('courses')}
-              className="flex items-center gap-2"
-            >
-              <Upload className="h-4 w-4" />
-              Courses
-            </Button>
+
+          {/* Conditional Navigation */}
+          <nav className="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4">
+            {/* Instructor route: Profile + Courses */}
+            {onInstructorRoute && (
+              <>
+                <Button
+                  variant={path.endsWith("/profile") ? "default" : "ghost"}
+                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                  onClick={() =>
+                    navigate(`/instructors/${instructorId}/profile`)
+                  }
+                >
+                  <User className="h-4 w-4" />
+                  Profile
+                </Button>
+
+                <Button
+                  variant={path.endsWith("/courses") ? "default" : "ghost"}
+                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                  onClick={() =>
+                    navigate(`/instructors/${instructorId}/courses`)
+                  }
+                >
+                  <Upload className="h-4 w-4" />
+                  Courses
+                </Button>
+              </>
+            )}
+
+            {/* Login page: show Register */}
+            {onLoginPage && (
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                onClick={() => navigate("/register")}
+              >
+                <UserPlus className="h-4 w-4" />
+                Register
+              </Button>
+            )}
+
+            {/* Register page: show Login */}
+            {onRegisterPage && (
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                onClick={() => navigate("/login")}
+              >
+                <LogIn className="h-4 w-4" />
+                Login
+              </Button>
+            )}
+
+            {/* Home page: show both Login + Register */}
+            {onHomePage && (
+              <>
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                  onClick={() => navigate("/login")}
+                >
+                  <LogIn className="h-4 w-4" />
+                  Login
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                  onClick={() => navigate("/register")}
+                >
+                  <UserPlus className="h-4 w-4" />
+                  Register
+                </Button>
+              </>
+            )}
           </nav>
         </div>
       </div>
