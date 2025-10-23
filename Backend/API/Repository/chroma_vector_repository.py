@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from chromadb import EmbeddingFunction
 from chromadb.api import ClientAPI
 from langchain_core.documents import Document
@@ -20,11 +20,12 @@ class ChromaVectorRepository(IVectorRepository):
     # ======================================================
 
 
-    def create_collection(self, course_id: str, embedding_function: EmbeddingFunction, metric: str) -> None:
+    def create_collection(self, course_id: str, embedding_function: Optional[EmbeddingFunction] , metric: Optional[str]) -> None:
         """
         Explicitly create a new Chroma collection for a course.
         """
-        self.client.create_collection(name=course_id, embedding_function=embedding_function, metadata={"hnsw:space": metric})
+        metadata = {"hnsw:space": metric} if metric else None
+        self.client.create_collection(name=course_id, embedding_function=embedding_function, metadata=metadata)
 
     def delete_collection(self, course_id: str) -> None:
         """
@@ -46,7 +47,7 @@ class ChromaVectorRepository(IVectorRepository):
         
         documents = [doc.page_content for doc in docs]
         metadatas = [doc.metadata for doc in docs]
-        ids = [f"{m['document_id']}_{i}" for i, m in enumerate(metadatas)]
+        ids = [f"{m['doc_id']}_{i}" for i, m in enumerate(metadatas)]
 
         collection.add(ids=ids, documents=documents, metadatas=metadatas)
 
@@ -71,5 +72,5 @@ class ChromaVectorRepository(IVectorRepository):
         Delete all vectors that belong to a document from a specific Chroma collection.
         """
         collection = self.client.get_collection(name=course_id)
-        collection.delete(where={"document_id": document_id})
+        collection.delete(where={"doc_id": document_id})
 

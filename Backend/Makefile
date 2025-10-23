@@ -17,14 +17,16 @@ export
 # ===========================================
 ifeq ($(OS),Windows_NT)
 	UNAME_S := Windows
-	DB_USER := postgres
 	ACTIVATE_PATH := $(VENV_DIR)/Scripts/activate
 	PYTHON := python
 else
 	UNAME_S := $(shell uname -s)
-	DB_USER := $(shell whoami)
 	ACTIVATE_PATH := $(VENV_DIR)/bin/activate
 	PYTHON := python3
+endif
+
+ifeq ($(UNAME_S),Darwin)
+    DB_USER := $(shell whoami)
 endif
 
 

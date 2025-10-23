@@ -109,3 +109,133 @@ class SQLRepository:
 
         return results
 
+    # ======================================================
+    # INSTRUCTORS
+    # ======================================================
+    def create_instructor(self, name: str, title: str, university: str, email: str) -> str:
+        sql = """
+            INSERT INTO instructors (name, title, university, email)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (name, title, university, email))
+
+    def read_instructor(self, instructor_id: str) -> Optional[dict]:
+        sql = """
+            SELECT id, name, title, university, email, created_at
+            FROM instructors
+            WHERE id = %s;
+        """
+        return self.cm.select_one(sql, (instructor_id,))
+
+    def read_instructor_by_email(self, email: str) -> Optional[dict]:
+        sql = """
+            SELECT id, name, title, university, email, created_at
+            FROM instructors
+            WHERE email = %s;
+        """
+        return self.cm.select_one(sql, (email,))
+
+    def read_all_instructors(
+        self,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
+        university: Optional[str] = None,
+        email: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> List[dict]:
+        filters = []
+        params = []
+
+        if name:
+            filters.append("name ILIKE %s")
+            params.append(f"%{name}%")
+        if title:
+            filters.append("title ILIKE %s")
+            params.append(f"%{title}%")
+        if university:
+            filters.append("university ILIKE %s")
+            params.append(f"%{university}%")
+        if email:
+            filters.append("email ILIKE %s")
+            params.append(f"%{email}%")
+
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        sql = f"""
+            SELECT id, name, title, university, email, created_at
+            FROM instructors
+            {where_clause}
+            ORDER BY {order_by} {order_dir}
+            LIMIT %s OFFSET %s;
+        """
+        params.extend([limit, offset])
+        return self.cm.select_all(sql, tuple(params))
+
+    def delete_instructor(self, instructor_id: str) -> None:
+        sql = "DELETE FROM instructors WHERE id = %s;"
+        self.cm.execute(sql, (instructor_id,))
+
+    # ======================================================
+    # COURSES
+    # ======================================================
+    def create_course(
+        self,
+        instructor_id: str,
+        name: str,
+        institution: str,
+        semester_id: int,
+        year: int
+    ) -> str:
+        sql = """
+            INSERT INTO courses (instructor_id, name, institution, semester_id, year)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (instructor_id, name, institution, semester_id, year))
+
+    def read_course(self, course_id: str) -> Optional[dict]:
+        sql = """
+            SELECT 
+                c.id, c.name, c.institution, c.semester_id, c.year, c.created_at,
+                i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email
+            FROM courses c
+            LEFT JOIN instructors i ON c.instructor_id = i.id
+            WHERE c.id = %s;
+        """
+        return self.cm.select_one(sql, (course_id,))
+
+    def read_all_courses(
+        self,
+        instructor_id: Optional[str] = None,
+        institution: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> List[dict]:
+        filters = []
+        params = []
+
+        if instructor_id:
+            filters.append("instructor_id = %s")
+            params.append(instructor_id)
+        if institution:
+            filters.append("institution ILIKE %s")
+            params.append(f"%{institution}%")
+
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        sql = f"""
+            SELECT id, instructor_id, name, institution, semester_id, year, created_at
+            FROM courses
+            {where_clause}
+            ORDER BY {order_by} {order_dir}
+            LIMIT %s OFFSET %s;
+        """
+        params.extend([limit, offset])
+        return self.cm.select_all(sql, tuple(params))
+
+    def delete_course(self, course_id: str) -> None:
+        self.cm.execute("DELETE FROM courses WHERE id = %s;", (course_id,))
