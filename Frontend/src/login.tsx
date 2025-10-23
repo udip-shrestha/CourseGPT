@@ -47,7 +47,7 @@ export default function Login() {
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="grid gap-4">
-                        <div className="grid gap-2 text-white">
+                        <div className="grid gap-2 text-black">
                             <Label htmlFor="email">Email</Label>
                             <Input
                                 id="email"
@@ -58,16 +58,9 @@ export default function Login() {
                                 required
                             />
                         </div>
-                        <div className="grid gap">
-                            <div className="flex items-center justify-between">
+                        <div className="forgot-password-container">
+                            <div className="forgot-password-btn">
                                 <Label htmlFor="password">Password</Label>
-                                <button
-                                    type="button"
-                                    onClick={handleForgotPassword}
-                                    className="text-sm text-black-600 hover:text-black-800"
-                                >
-                                    Forgot password?
-                                </button>
                             </div>
                             <Input
                                 id="password"
@@ -79,20 +72,27 @@ export default function Login() {
                             />
                         </div>
                         <Button onSubmit={handleClick} type="submit"
-                            name="signin"
-                            className="w-full"
+                            name="button-signin"
+                            className="w-full bg-blue-500"
                             disabled={isLoading}
                         >
                             {isLoading ? "Signing in..." : "Sign in"}
                         </Button>
                         <div className="text-center text-sm">
-                            <span className="text-gray-600">Don't have an account? </span>
-                            <button
+                            <span className="text-gray-600"></span>
+                            <button name="register-btn"
+                                    className="bg-blue-500"
                                 type="button"
                                 onClick={handleRegister}
-                                className="text-black-600 hover:text-blue-800 hover:underline font-medium"
                             >
                                 Register
+
+                            </button>
+                            <button name="forgot-password-btn"
+                                    className="bg-blue-500"
+                                    type="button"
+                            onClick={handleForgotPassword}>
+                                Forgot password?
                             </button>
                         </div>
                     </form>
