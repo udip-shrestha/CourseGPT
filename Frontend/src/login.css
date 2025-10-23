@@ -4,53 +4,64 @@
 
 body {
     margin: 0;
-    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
-    background: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+    background: #f5f5f5;
 }
 
 .login-container {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    background: #f5f5f5;
 }
 
 .login-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 18px 32px;
-    border-bottom: 1px solid #eee;
+    padding: 20px 40px;
     background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.header-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .logo {
-    font-size: 2rem;
-    margin-right: 12px;
+    font-size: 1.75rem;
 }
 
 .brand {
-    font-weight: bold;
-    font-size: 1.25rem;
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #000;
 }
 
 .header-buttons {
     display: flex;
-    gap: 10px;
+    gap: 12px;
 }
 
 .header-btn {
-    background: #111827;
-    color: #fff;
     border: none;
-    padding: 7px 16px;
+    padding: 10px 24px;
     border-radius: 6px;
     cursor: pointer;
     font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s;
 }
 
-.header-btn.secondary {
-    background: #e5e7eb;
-    color: #111827;
+.header-btn.primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.header-btn.primary:hover {
+    background: #1d4ed8;
 }
 
 .login-main {
@@ -59,53 +70,63 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
+    padding: 40px 20px;
 }
 
-h1 {
-    font-size: 2rem;
+.main-title {
+    font-size: 3.5rem;
     font-weight: 700;
-    margin-bottom: 20px;
+    margin: 0 0 24px 0;
+    color: #000;
 }
 
-.login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    width: 350px;
-    max-width: 90vw;
-}
-
-.login-form input {
-    padding: 12px 14px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    font-size: 1rem;
-}
-
-.login-btn {
-    background: #111827;
-    color: #fff;
-    border: none;
-    padding: 10px 0;
-    border-radius: 6px;
+.welcome-text {
     font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
+    color: #6b7280;
+    margin: 0 0 40px 0;
+    text-align: center;
 }
 
-.login-btn:hover {
+.nav-buttons {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+}
+
+.nav-btn {
+    border: none;
+    padding: 12px 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.nav-btn.primary {
+    background: #000;
+    color: #fff;
+}
+
+.nav-btn.primary:hover {
     background: #1f2937;
 }
 
-.register-btn {
-    background: #111827;
-    color: #ffffff;
-    border: none;
-    padding: 10px 0;
-    border-radius: 6px;
-    font-size: 1.1rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: background 0.15s;
+.nav-btn.secondary {
+    background: #e5e7eb;
+    color: #000;
+}
+
+.nav-btn.secondary:hover {
+    background: #d1d5db;
+}
+
+.nav-btn.tertiary {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: default;
+}
+
+.nav-btn.tertiary:hover {
+    background: #f3f4f6;
 }
