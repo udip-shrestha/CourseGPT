@@ -2,91 +2,110 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-    font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-    line-height: 1.5;
-    font-weight: 400;
-
-  color-scheme: light dark;
-  color: rgb(28, 49, 193);
-  background-color: #ffffff;
-
-
-    font-synthesis: none;
-    text-rendering: optimizeLegibility;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-a {
-    font-weight: 500;
-    color: #646cff;
-    text-decoration: inherit;
-}
-a:hover {
-    color: #535bf2;
-}
-
 body {
-  margin: 0px;
-  min-width: 320px;
-  min-height: 100vh;
-    text-align: center;
-  width: 100%;
+    margin: 0;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: #fff;
+}
+
+.login-container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.login-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid #eee;
+    background: #fff;
+}
+
+.logo {
+    font-size: 2rem;
+    margin-right: 12px;
+}
+
+.brand {
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.header-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.header-btn {
+    background: #111827;
+    color: #fff;
+    border: none;
+    padding: 7px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.header-btn.secondary {
+    background: #e5e7eb;
+    color: #111827;
+}
+
+.login-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
 }
 
 h1 {
-  font-size: 3.2em;
-    text-align: center;
-  line-height: 1.1;
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 20px;
 }
 
-h4 {
-    font-size: 1.9em;
-    color: #000000;
-    line-height: 5.3;
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    width: 350px;
+    max-width: 90vw;
 }
 
-p {
-    line-height: 2.6;
-}
-title {
-  font-size: xx-large;
-  /*color: #960000;*/
-}
-
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #000000;
-  cursor: pointer;
-  transition: border-color 0.25s;
+.login-form input {
+    padding: 12px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 1rem;
 }
 
-.button-signin{
-    background-color: #000000;
+.login-btn {
+    background: #111827;
+    color: #fff;
+    border: none;
+    padding: 10px 0;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
 }
 
-button:hover {
-    border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-    outline: 4px auto -webkit-focus-ring-color;
+.login-btn:hover {
+    background: #1f2937;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #000000;
-  }
-  a:hover {
-    background-color: #ffffff;
-  }
-  button {
-    background-color: #1361c6;
-  }
+.register-btn {
+    background: #111827;
+    color: #ffffff;
+    border: none;
+    padding: 10px 0;
+    border-radius: 6px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
 }
