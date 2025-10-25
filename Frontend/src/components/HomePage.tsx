@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from './ui/button'; // Assuming Button is from shadcn/ui
+import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
-import { Info, LogIn, X } from 'lucide-react'; // Icons
-//CardDescription    this will be used later, not now
+// Removed LogIn, kept Info, X
+import { Info, X } from 'lucide-react';
+
 export function HomePage() {
     const navigate = useNavigate();
     const [showInstructions, setShowInstructions] = useState(true);
@@ -15,17 +16,19 @@ export function HomePage() {
         // Make the main container relative to position elements inside it
         <div className="relative min-h-[calc(100vh-theme(spacing.40))] w-full"> {/* Adjust min-height based on header/footer */}
 
-            {/* Login Button (Top Right) */}
-            <div className="absolute top-0 right-0 p-4">
-                <Button
-                    variant="ghost" // Or "outline"
-                    size="icon"
-                    onClick={() => navigate('/login')}
-                    aria-label="Login"
-                >
-                    <LogIn className="h-5 w-5" />
-                </Button>
-            </div>
+            {/* Login Button (Top Right) - REMOVED */}
+            {/*
+      <div className="absolute top-0 right-0 p-4">
+        <Button
+          variant="ghost" // Or "outline"
+          size="icon"
+          onClick={() => navigate('/login')}
+          aria-label="Login"
+        >
+          <LogIn className="h-5 w-5" />
+        </Button>
+      </div>
+      */}
 
             {/* Main Content (Centered) */}
             <div className="flex flex-col items-center justify-center pt-16 sm:pt-24 space-y-4 text-center">
@@ -41,10 +44,8 @@ export function HomePage() {
                     Your AI assistant for managing course materials and generating insights.
                 </p>
 
-
-                {/* --- ADDED BACK TEST BUTTON --- */}
+                {/* --- Test Buttons --- */}
                 <div className="flex gap-4 pt-4">
-                    {/* Example Button to quickly access instructor profile/courses for testing */}
                     <Button
                         variant="secondary" // Use a secondary style
                         onClick={() => navigate('/instructors/1/profile')} // Use a specific ID or placeholder
@@ -58,17 +59,9 @@ export function HomePage() {
                         Go to Test Instructor Courses
                     </Button>
                 </div>
-                {/* --- END OF ADDED SECTION --- */}
+                {/* --- END --- */}
 
-                {/* Removed old test buttons - Navigation is now mainly via Header/Login button */}
-                {/* You can add primary action buttons here if needed */}
-                {/*
-        <div className="flex gap-4 pt-4">
-          <Button onClick={() => navigate('/instructors/1/courses')}>View My Courses</Button>
-        </div>
-        */}
             </div>
-
 
             {/* Instruction Pop-up (Bottom Left) */}
             {showInstructions && (
@@ -94,6 +87,7 @@ export function HomePage() {
                                 Here's some default information on how to integrate content.
                                 Use the header links to navigate between your profile and courses.
                                 Click the login icon to sign in.
+                                questions? (yes) (no)
                             </p>
                             {/* Add more specific instructions later */}
                         </CardContent>
@@ -104,3 +98,4 @@ export function HomePage() {
         </div>
     );
 }
+
