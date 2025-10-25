@@ -1,41 +1,41 @@
-import './login.css'
+import {useState} from 'react';
+import {Header} from './components/Header';
 
-export default function HomePage() {
-    const handleLogin = () => {
-        console.log("Navigate to login page");
-        // TODO: Add navigation to login page
+export function Login() {
+    const [activeSection, setActiveSection] = useState<'profile' | 'courses'>('profile');
+
+    const handleSectionChange = (section: 'profile' | 'courses') => {
+        setActiveSection(section);
     };
 
-    const handleRegister = () => {
-        console.log("Navigate to registration page");
-        // TODO: Add navigation to registration page
-    };
-
-    const handleInstructorTest = () => {
-        console.log("Navigate to instructor test page");
-        // TODO: Add navigation to instructor test page
-    };
 
     return (
-        <div className="login-container">
-            <header className="login-header">
-                <div className="header-left">
-                    <span className="logo" role="img" aria-label="graduation cap">🎓</span>
-                    <span className="brand">CourseGPT</span>
-                </div>
-                <div className="header-buttons">
-                    <button className="header-btn primary">Login</button>
-                    <button className="header-btn primary">Register</button>
-                </div>
-            </header>
-            <main className="login-main">
-                <h1 className="main-title">CourseGPT</h1>
-                <p className="welcome-text">Welcome! Use the buttons below to navigate for quick testing.</p>
-                <div className="nav-buttons">
-                    <button className="nav-btn primary" onClick={handleLogin}>Login</button>
-                    <button className="nav-btn secondary" onClick={handleRegister}>Register</button>
-                    <button className="nav-btn tertiary" onClick={handleInstructorTest}>Instructor (Test)</button>
-                </div>
+        <div className="min-h-screen bg-background">
+            <Header
+                activeSection={activeSection}
+                onSectionChange={handleSectionChange}
+            />
+
+            <main className="container mx-auto px-4 py-8">
+                {activeSection === 'profile' && (
+                    <div className="space-y-6">
+                        <h2 className="text-3xl font-bold">Profile</h2>
+                        <p className="text-muted-foreground">
+                            Manage your profile information and settings.
+                        </p>
+                        {/* Add your profile content here */}
+                    </div>
+                )}
+
+                {activeSection === 'courses' && (
+                    <div className="space-y-6">
+                        <h2 className="text-3xl font-bold">Courses</h2>
+                        <p className="text-muted-foreground">
+                            Upload and manage your course materials.
+                        </p>
+                        {/* Add your courses content here */}
+                    </div>
+                )}
             </main>
         </div>
     );
