@@ -83,11 +83,10 @@ export function HomePage() {
                             </Button>
                         </CardHeader>
                         <CardContent>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground mb-3"> {/* Added margin-bottom */}
                                 Here's some default information on how to integrate content.
                                 Use the header links to navigate between your profile and courses.
-                                Click the login icon to sign in.
-                                questions? (yes) (no)
+                                Need more specific instructions?
                             </p>
                             {/* Add more specific instructions later */}
                         </CardContent>
