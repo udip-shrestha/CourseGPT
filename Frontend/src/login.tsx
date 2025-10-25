@@ -1,6 +1,6 @@
 import './login.css'
 
-export default function Login() {
+export default function HomePage() {
     const handleLogin = () => {
         console.log("Navigate to login page");
         // TODO: Add navigation to login page
