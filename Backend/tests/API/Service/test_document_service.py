@@ -19,7 +19,7 @@ def test_create_document_success(document_service: DocumentService, mock_sql_rep
 
     mock_sql_repo.read_file_type_by_mime.assert_called_once_with("application/pdf")
     mock_sql_repo.create_document.assert_called_once_with("course-1", "lecture1.pdf", b"fake-binary", 1)
-    mock_rag_service.create_index.assert_called_once_with("course-1", "doc-123", "RecursiveSplitterType", "pdf", b"fake-binary")
+    mock_rag_service.create_index.assert_called_once_with("course-1", "doc-123", "RecursiveCharacterTextSplitterType", "lecture1.pdf", "pdf", b"fake-binary")
     assert result == {"doc_id": "doc-123"}
 
 
@@ -110,6 +110,7 @@ def test_read_all_documents(document_service: DocumentService, mock_sql_repo: IS
 def test_delete_document(document_service: DocumentService, mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> None:
     """Should delete a document and its index."""
     response = document_service.delete_document("course-1", "doc-1")
+    mock_rag_service.delete_index.return_value = None
 
     mock_sql_repo.delete_document.assert_called_once_with("doc-1")
     mock_rag_service.delete_index.assert_called_once_with("course-1", "doc-1")
@@ -119,6 +120,7 @@ def test_delete_document(document_service: DocumentService, mock_sql_repo: ISQLR
 def test_delete_document_idempotent(document_service: DocumentService, mock_sql_repo: ISQLRepository, mock_rag_service: RAGService) -> None:
     """Deleting a non-existing document should still call both deletions."""
     response = document_service.delete_document("course-1", "nonexistent-id")
+    mock_rag_service.delete_index.return_value = None
 
     mock_sql_repo.delete_document.assert_called_once_with("nonexistent-id")
     mock_rag_service.delete_index.assert_called_once_with("course-1", "nonexistent-id")

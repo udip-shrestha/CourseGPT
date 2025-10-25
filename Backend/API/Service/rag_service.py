@@ -1,12 +1,13 @@
-from typing import List
-
+from typing import Dict, List
+from fastapi import HTTPException, status
 from langchain_core.documents import Document
-from chromadb import EmbeddingFunction
-
+from langchain_core.language_models import BaseLanguageModel
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
+from API.Util.prompt_builders import PromptBuilder
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Util.decorators import clean_service
+from API.Util.formatters import clean_and_format_response
 
 
 class RAGService:
@@ -24,16 +25,20 @@ class RAGService:
         loader: Loader,
         splitter: Splitter,
         vector_repo: IVectorRepository,
+        prompt_builder: PromptBuilder,
+        llm: BaseLanguageModel
     ):
         self.loader = loader
         self.splitter = splitter
         self.vector_repo = vector_repo
+        self.prompt_builder = prompt_builder
+        self.llm = llm
 
     # ======================================================
     # INDEXING (Loader → Splitter → Vector Store)
     # ======================================================
     @clean_service
-    def create_index(self, course_id: str, doc_id: str, splitter_type: str, file_type: str, file_bytes: bytes) -> List[Document]:
+    def create_index(self, course_id: str, doc_id: str, splitter_type: str, file_name: str, file_type: str, file_bytes: bytes) -> List[Document]:
         """
         Ingest a file and build a vector index for retrieval.
 
@@ -41,9 +46,9 @@ class RAGService:
           1. Load → 2. Split → 3. Store (embedding handled automatically by Chroma)
         """
         # 1. Load
-        docs = self.loader.load(file_type, file_bytes)
+        docs = self.loader.load(file_name, file_type, file_bytes)
         if not docs:
-            raise ValueError("No text extracted from file.")
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No text extracted from file. Please upload a valid document.")
 
         # 2. Split
         chunks = self.splitter.split(splitter_type, docs)
@@ -56,15 +61,37 @@ class RAGService:
 
         return chunks
 
+    # ======================================================
+    # DELETION (Vector Cleanup)
+    # ======================================================
     @clean_service
-    def delete_index(self, course_id: str, document_id: str) -> None:
-        """Delete all vectors associated with a specific document."""
-        self.vector_repo.delete_index(course_id, document_id)
+    def delete_index(self, course_id: str, doc_id: str) -> None:
+        """
+        Deletes all vector entries associated with a given document within a course.
+        """
+        self.vector_repo.delete_index(course_id, doc_id)
 
     # ======================================================
     # RETRIEVAL (Retriever → Prompt → LLM)
     # ======================================================
     @clean_service
-    def query(self, course_id: str, query_text: str) -> str:
-        """Full RAG pipeline: retrieve → build prompt → generate response."""
-        pass
+    def query(self, course_id: str, question: str) -> Dict[str, str]:
+        """
+        1️⃣ Retrieve relevant text chunks from vector DB.
+        2️⃣ Construct a context-aware prompt using retrieved chunks.
+        3️⃣ Generate an answer via the LLM.
+        """
+        # --- Step 1: Retrieve relevant chunks ---
+        retrieved = self.vector_repo.query(course_id, question)
+        if not retrieved:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No relevant information found for this course.")
+
+        # --- Step 2: Build context from retrieved chunks ---
+        context = "\n\n".join([doc.page_content for doc, _ in retrieved])
+        message = self.prompt_builder.build("DefaultLangChainRAGPrompt", context, question)
+
+        # --- Step 3: Generate response from LLM ---
+        result = self.llm.invoke(message)
+        answer, sources = clean_and_format_response(result, [doc for doc, _ in retrieved])
+
+        return {"answer": answer, "sources": sources}

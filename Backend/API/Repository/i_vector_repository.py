@@ -79,8 +79,8 @@ class IVectorRepository(Protocol):
     def query(
         self,
         course_id: str,
-        query_text: str,
-        top_k: int,
+        question: str,
+        top_k: Optional[int],
     ) -> List[Tuple[Document, float]]:
         """
         Retrieve top-k matching Documents with their similarity distance.
