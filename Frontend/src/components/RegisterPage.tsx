@@ -5,12 +5,14 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
+// Renamed component for clarity
 export function RegisterPage() {
     const navigate = useNavigate();
-    const [name, setName] = useState(""); // Or separate firstName, lastName if needed
+    const [name, setName] = useState("");
+    const [title, setTitle] = useState(""); // Added Title
+    const [university, setUniversity] = useState(""); // Added University
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [confirmPassword, setConfirmPassword] = useState("");
+    // Removed password states
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -21,49 +23,56 @@ export function RegisterPage() {
         setError(null);
 
         // --- Basic Validation ---
-        if (!name || !email || !password || !confirmPassword) {
+        // Updated validation to include new fields
+        if (!name || !title || !university || !email ) {
             setError("Please fill out all fields.");
             setIsLoading(false);
             return;
         }
-        if (password !== confirmPassword) {
-            setError("Passwords do not match.");
-            setIsLoading(false);
-            return;
-        }
-        // Add more validation (email format, password strength) as needed
+        // Add more specific validation (e.g., email format) if needed
         // --- End Validation ---
 
-        const userData = {
+        // --- Updated data object to match backend ---
+        const instructorData = {
             name: name,
+            title: title,
+            university: university,
             email: email,
-            password: password, // Send plain password - backend should hash it
         };
+        // ---------------------------------------------
 
-        console.log("Submitting User Registration:", userData);
+        console.log("Submitting Instructor Registration:", instructorData);
 
-        // --- Replace with your actual User Registration API call ---
+        // --- ACTUAL API CALL ---
         try {
-            // Example:
-            // const response = await fetch('/api/users/register', {
-            //   method: 'POST',
-            //   headers: { 'Content-Type': 'application/json' },
-            //   body: JSON.stringify(userData),
-            // });
-            // if (!response.ok) {
-            //   const errorData = await response.json();
-            //   throw new Error(errorData.detail || 'Registration failed');
-            // }
-            // console.log('User registration successful');
-            // navigate('/login'); // Redirect to login page after successful registration
+            // Assuming your backend runs on port 8000 and has an endpoint like /instructors/
+            const response = await fetch('http://localhost:8000/instructors/', { // Adjust endpoint if needed
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(instructorData), // Send the correct data
+            });
 
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log("Simulated user registration successful");
-            navigate('/login'); // Go to login after fake success
+            if (!response.ok) {
+                // Try to get error detail from backend response
+                let errorDetail = 'Registration failed. Please try again.';
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorDetail;
+                } catch (jsonError) {
+                    // If response is not JSON, use default error
+                    console.error("Could not parse error response:", jsonError);
+                }
+                throw new Error(errorDetail);
+            }
+
+            const result = await response.json(); // Get the response (e.g., {"instructor_id": "..."})
+            console.log('Instructor registration successful:', result);
+
+            // Navigate to login or maybe the new instructor's profile?
+            navigate('/login'); // Redirect to login page after successful registration
 
         } catch (err: any) {
-            console.error("User registration failed:", err);
+            console.error("Instructor registration failed:", err);
             setError(err.message || "An unexpected error occurred during registration.");
         } finally {
             setIsLoading(false);
@@ -75,10 +84,11 @@ export function RegisterPage() {
         // Centering container
         <div className="w-full flex items-center justify-center p-4">
             {/* Responsive Card */}
-            <Card className="w-full max-w-md shadow-md"> {/* Consistent width with login */}
+            <Card className="w-full max-w-md shadow-md"> {/* Consistent width */}
                 <CardHeader>
-                    <CardTitle>Create Account</CardTitle>
-                    <CardDescription>Enter your details to register.</CardDescription>
+                    {/* Updated Title */}
+                    <CardTitle>Register as Instructor</CardTitle>
+                    <CardDescription>Enter your professional details.</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="grid gap-4">
@@ -88,12 +98,40 @@ export function RegisterPage() {
                             <Input
                                 id="name"
                                 type="text"
-                                placeholder="e.g., Ada Lovelace"
+                                placeholder="e.g., Dr. Ada Lovelace"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                                 required
                             />
                         </div>
+
+                        {/* --- ADDED Title Field --- */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="title">Title</Label>
+                            <Input
+                                id="title"
+                                type="text"
+                                placeholder="e.g., Associate Professor"
+                                value={title}
+                                onChange={(e) => setTitle(e.target.value)}
+                                required
+                            />
+                        </div>
+                        {/* ------------------------- */}
+
+                        {/* --- ADDED University Field --- */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="university">University</Label>
+                            <Input
+                                id="university"
+                                type="text"
+                                placeholder="e.g., Tech University"
+                                value={university}
+                                onChange={(e) => setUniversity(e.target.value)}
+                                required
+                            />
+                        </div>
+                        {/* ---------------------------- */}
 
                         {/* Email */}
                         <div className="grid gap-2">
@@ -108,38 +146,14 @@ export function RegisterPage() {
                             />
                         </div>
 
-                        {/* Password */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
-                            <Input
-                                id="password"
-                                type="password"
-                                placeholder="********"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
-                        </div>
-
-                        {/* Confirm Password */}
-                        <div className="grid gap-2">
-                            <Label htmlFor="confirmPassword">Confirm Password</Label>
-                            <Input
-                                id="confirmPassword"
-                                type="password"
-                                placeholder="********"
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                            />
-                        </div>
+                        {/* REMOVED Password Fields */}
 
                         {/* Error Message */}
                         {error && <p className="text-sm text-destructive">{error}</p>}
 
                         {/* Submit Button */}
                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? "Creating Account..." : "Create Account"}
+                            {isLoading ? "Registering..." : "Register Instructor Profile"}
                         </Button>
 
                         {/* Link back to Login */}
@@ -149,7 +163,7 @@ export function RegisterPage() {
                             className="w-full text-sm"
                             onClick={() => navigate('/login')} // Navigate back to login
                         >
-                            Already have an account? Sign In
+                            Already registered? Sign In
                         </Button>
                     </form>
                 </CardContent>
@@ -158,39 +172,3 @@ export function RegisterPage() {
     );
 }
 
-
-
-//
-// ### 2. Update `LoginPage.tsx` (If Needed)
-//
-// Double-check your `LoginPage.tsx` file. Make sure the button intended for registration now correctly navigates to `/register` (or whatever path you choose for user registration in `App.tsx`). It should look like this:
-//
-// ```tsx
-// // Inside LoginPage.tsx
-//
-// import { useNavigate } from "react-router-dom";
-// // ... other imports
-//
-// export function LoginPage() {
-//     const navigate = useNavigate();
-//     // ... other state
-//
-//     return (
-//         // ... wrapping divs and Card ...
-//         <form onSubmit={handleSubmit} className="grid gap-4">
-//             {/* ... email and password inputs ... */}
-//             <Button type="submit" /* ... */>Sign in</Button>
-//
-//             {/* This button should navigate to user registration */}
-//             <Button
-//                 type="button"
-//                 variant="outline"
-//                 className="w-full"
-//                 onClick={() => navigate('/register')} // MAKE SURE THIS PATH MATCHES App.tsx
-//             >
-//                 Register New Account
-//             </Button>
-//         </form>
-//         // ... rest of component
-//     );
-// }
