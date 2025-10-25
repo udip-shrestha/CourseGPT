@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 
-export function UserRegisterPage() {
+export function RegisterPage() {
     const navigate = useNavigate();
     const [name, setName] = useState(""); // Or separate firstName, lastName if needed
     const [email, setEmail] = useState("");
