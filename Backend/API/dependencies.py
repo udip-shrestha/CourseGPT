@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 from fastapi import Depends
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
+
+from langchain_community.llms import Ollama
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
@@ -17,6 +19,8 @@ from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
 from API.Util.prompt_builders import PromptBuilder
+
+from langchain_community.llms import Ollama
 
 
 load_dotenv()
@@ -73,21 +77,21 @@ def get_prompt_builder() -> PromptBuilder:
 
 @lru_cache()
 def get_llm() -> BaseLanguageModel:
-    """Load and return a HuggingFace conversational model wrapped for LangChain."""
-    model_id = "declare-lab/flan-alpaca-base"  # open & free conversational model
+    """
+    Load and return the Llama Scout 4 model via Ollama.
+    Uses environment variables defined in .env:
+      - LLM_MODEL
+      - LLM_BASE_URL
+    """
+    model_name = os.getenv("LLM_MODEL", "llama-scout-4")
+    base_url = os.getenv("LLM_BASE_URL", "http://localhost:11434")
 
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
-
-    hf_pipeline = pipeline(
-        "text2text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        max_new_tokens=256,
-        temperature=0.7,
-        do_sample=True,
-        repetition_penalty=1.1,
+    llm = Ollama(
+        model=model_name,
+        base_url=base_url,
     )
+
+    return llm
 
     return HuggingFacePipeline(pipeline=hf_pipeline)
 
