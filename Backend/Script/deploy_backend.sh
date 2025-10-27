@@ -25,10 +25,31 @@ if [ -f "$BACKEND_DIR/requirements.txt" ]; then
   pip install -r "$BACKEND_DIR/requirements.txt"
 fi
 
-# Inject GitLab CI/CD secret into .env for cybot
+# -------------------------------------------------------
+#  Inject GitLab CI/CD secret into Backend/.env
+# -------------------------------------------------------
 echo "Writing environment variables to $DISCORD_ENV"
 mkdir -p "$(dirname "$DISCORD_ENV")"
 cat > "$DISCORD_ENV" <<EOF
+# ===========================================
+# PostgreSQL Database Configuration
+# ===========================================
+DB_NAME=${DB_NAME:-}
+DB_HOST=${DB_HOST:-}
+DB_PORT=${DB_PORT:-}
+DB_USER=${DB_USER:-}
+DB_PASSWORD=${DB_PASSWORD:-}
+SCHEMA_FILE=${SCHEMA_FILE:-}
+SEED_FILE=${SEED_FILE:-}
+
+# ===========================================
+# Chroma Vector Database Configuration
+# ===========================================
+CHROMA_DATA_PATH=${CHROMA_DATA_PATH:-.chroma_data}
+
+# ===========================================
+# Discord Bot Configuration
+# ===========================================
 DISCORD_TOKEN=${DISCORD_TOKEN:-}
 EOF
 
