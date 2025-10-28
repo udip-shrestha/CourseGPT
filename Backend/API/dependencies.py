@@ -6,6 +6,11 @@ from dotenv import load_dotenv
 from fastapi import Depends
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from huggingface_hub import InferenceClient
+from langchain.llms.base import LLM
+from typing import Optional, List, Any
+from pydantic import BaseModel
 
 from langchain_community.llms import Ollama
 from API.Repository.sql_repository import SQLRepository
@@ -75,25 +80,38 @@ def get_prompt_builder() -> PromptBuilder:
     """Return a Singleton PromptBuilder instance."""
     return PromptBuilder()
 
+# Custom LangChain-compatible wrapper
+class HuggingFaceScoutLLM(LLM):
+    """Custom LangChain-compatible wrapper for Hugging Face Llama 4 Scout."""
+    model_id: str = os.getenv("LLM_MODEL", "meta-llama/Llama-4-Scout-17B-16E-Instruct")
+    token: Optional[str] = os.getenv("HUGGINGFACE_TOKEN")
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        client = InferenceClient(model=self.model_id, token=self.token)
+
+        response = client.chat.completions.create(
+            model=self.model_id,
+            messages=[
+                {"role": "system", "content": "You are a helpful and concise assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.5,
+        )
+
+        return response.choices[0].message.content
+
+    @property
+    def _llm_type(self) -> str:
+        return "huggingface-scout"
+
+
 @lru_cache()
-def get_llm() -> BaseLanguageModel:
-    """
-    Load and return the Llama Scout 4 model via Ollama.
-    Uses environment variables defined in .env:
-      - LLM_MODEL
-      - LLM_BASE_URL
-    """
-    model_name = os.getenv("LLM_MODEL", "llama-scout-4")
-    base_url = os.getenv("LLM_BASE_URL", "http://localhost:11434")
-
-    llm = Ollama(
-        model=model_name,
-        base_url=base_url,
-    )
-
-    return llm
-
-    return HuggingFacePipeline(pipeline=hf_pipeline)
+def get_llm() -> LLM:
+    """Use Hugging Face Inference API for Llama 4 Scout (no local download)."""
+    llm_instance = HuggingFaceScoutLLM()
+    print(f"[LLM INIT] Loaded model: {llm_instance.model_id}")
+    return llm_instance
 
 def get_document_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
