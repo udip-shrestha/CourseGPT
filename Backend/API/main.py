@@ -21,7 +21,9 @@ app = FastAPI(lifespan=lifespan)
 # Define the origins allowed to make requests (frontend URL)
 origins = [
     "http://localhost:5173", # Vite frontend dev server URL
-    # future URL,origins like your deployed frontend URL
+    "http://127.0.0.1:5173",                      # alt local
+    "http://sdmay26-37.ece.iastate.edu",          # deployed frontend (HTTP)
+    "https://sdmay26-37.ece.iastate.edu",         # deployed frontend (HTTPS - for later)
 ]
 
 app.add_middleware(
@@ -32,6 +34,7 @@ app.add_middleware(
     allow_headers=["*"], # Allow all headers
 )
 # --------------------------------------
+
 
 app.include_router(questions_router.router)
 app.include_router(document_router.router)
