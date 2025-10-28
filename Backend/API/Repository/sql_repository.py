@@ -129,12 +129,23 @@ class SQLRepository:
         return self.cm.select_one(sql, (instructor_id,))
 
     def read_instructor_by_email(self, email: str) -> Optional[dict]:
+        """
+        Safely fetch an instructor by email.
+        Returns None if no matching record exists.
+        """
         sql = """
             SELECT id, name, title, university, email, created_at
             FROM instructors
             WHERE email = %s;
         """
-        return self.cm.select_one(sql, (email,))
+        try:
+            row = self.cm.select_one(sql, (email,))
+            if not row:
+                return None
+            return row
+        except Exception as e:
+            print(f"[SQLRepository] Error reading instructor by email: {e}")
+            return None
 
     def read_all_instructors(
         self,

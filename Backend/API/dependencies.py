@@ -6,6 +6,13 @@ from dotenv import load_dotenv
 from fastapi import Depends
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
 from langchain_huggingface import HuggingFacePipeline
+from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
+from huggingface_hub import InferenceClient
+from langchain.llms.base import LLM
+from typing import Optional, List, Any
+from pydantic import BaseModel
+
+from langchain_community.llms import Ollama
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
@@ -17,6 +24,8 @@ from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
 from API.Util.prompt_builders import PromptBuilder
+
+from langchain_community.llms import Ollama
 
 
 load_dotenv()
@@ -71,25 +80,38 @@ def get_prompt_builder() -> PromptBuilder:
     """Return a Singleton PromptBuilder instance."""
     return PromptBuilder()
 
+# Custom LangChain-compatible wrapper
+class HuggingFaceScoutLLM(LLM):
+    """Custom LangChain-compatible wrapper for Hugging Face Llama 4 Scout."""
+    model_id: str = os.getenv("LLM_MODEL", "meta-llama/Llama-4-Scout-17B-16E-Instruct")
+    token: Optional[str] = os.getenv("HUGGINGFACE_TOKEN")
+
+    def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        client = InferenceClient(model=self.model_id, token=self.token)
+
+        response = client.chat.completions.create(
+            model=self.model_id,
+            messages=[
+                {"role": "system", "content": "You are a helpful and concise assistant."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=500,
+            temperature=0.5,
+        )
+
+        return response.choices[0].message.content
+
+    @property
+    def _llm_type(self) -> str:
+        return "huggingface-scout"
+
+
 @lru_cache()
-def get_llm() -> BaseLanguageModel:
-    """Load and return a HuggingFace conversational model wrapped for LangChain."""
-    model_id = "declare-lab/flan-alpaca-base"  # open & free conversational model
-
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    model = AutoModelForSeq2SeqLM.from_pretrained(model_id)
-
-    hf_pipeline = pipeline(
-        "text2text-generation",
-        model=model,
-        tokenizer=tokenizer,
-        max_new_tokens=256,
-        temperature=0.7,
-        do_sample=True,
-        repetition_penalty=1.1,
-    )
-
-    return HuggingFacePipeline(pipeline=hf_pipeline)
+def get_llm() -> LLM:
+    """Use Hugging Face Inference API for Llama 4 Scout (no local download)."""
+    llm_instance = HuggingFaceScoutLLM()
+    print(f"[LLM INIT] Loaded model: {llm_instance.model_id}")
+    return llm_instance
 
 def get_document_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
