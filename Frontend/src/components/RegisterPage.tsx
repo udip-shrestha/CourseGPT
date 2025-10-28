@@ -9,10 +9,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 export function RegisterPage() {
     const navigate = useNavigate();
     const [name, setName] = useState("");
-    const [title, setTitle] = useState(""); // Added Title
-    const [university, setUniversity] = useState(""); // Added University
+    const [title, setTitle] = useState("");
+    const [university, setUniversity] = useState("");
     const [email, setEmail] = useState("");
-    // Removed password states
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -22,58 +21,73 @@ export function RegisterPage() {
         setIsLoading(true);
         setError(null);
 
-        // --- Basic Validation ---
-        // Updated validation to include new fields
+        // Basic Validation
         if (!name || !title || !university || !email ) {
             setError("Please fill out all fields.");
             setIsLoading(false);
             return;
         }
-        // Add more specific validation (e.g., email format) if needed
-        // --- End Validation ---
 
-        // --- Updated data object to match backend ---
-        const instructorData = {
-            name: name,
-            title: title,
-            university: university,
-            email: email,
-        };
-        // ---------------------------------------------
+        // --- CONSTRUCT URL WITH QUERY PARAMETERS ---
+        const params = new URLSearchParams();
+        params.append('name', name);
+        params.append('title', title);
+        params.append('university', university);
+        params.append('email', email);
 
-        console.log("Submitting Instructor Registration:", instructorData);
+        const url = `http://localhost:8000/instructors?${params.toString()}`;
+        console.log("Submitting Instructor Registration via URL:", url);
+        // --- END URL CONSTRUCTION ---
 
-        // --- ACTUAL API CALL ---
+        // --- API CALL (Sending data via Query Params) ---
         try {
-            // Assuming your backend runs on port 8000 and has an endpoint like /instructors/
-            const response = await fetch('http://localhost:8000/instructors?', { // Adjust endpoint if needed
+            const response = await fetch(url, { // Use the constructed URL
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(instructorData), // Send the correct data
+                headers: {
+                    'accept': 'application/json' // Often needed for FastAPI
+                    // No 'Content-Type' or 'body' needed for query params
+                },
+                // No body property needed here
             });
 
             if (!response.ok) {
-                // Try to get error detail from backend response
-                let errorDetail = 'Registration failed. Please try again.';
+                let errorDetail = `Registration failed with status: ${response.status}. Please try again.`;
                 try {
+                    // Try to parse error detail even if status indicates failure
                     const errorData = await response.json();
                     errorDetail = errorData.detail || errorDetail;
+                    if (Array.isArray(errorData.detail)) { // Handle FastAPI validation errors
+                        errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
+                    }
                 } catch (jsonError) {
-                    // If response is not JSON, use default error
                     console.error("Could not parse error response:", jsonError);
+                    errorDetail = await response.text() || errorDetail;
                 }
+                console.error("Backend Error Detail:", errorDetail);
                 throw new Error(errorDetail);
             }
 
-            const result = await response.json(); // Get the response (e.g., {"instructor_id": "..."})
-            console.log('Instructor registration successful:', result);
+            // Status 201 Created is typical for successful POST
+            if (response.status === 201) {
+                const result = await response.json();
+                console.log('Instructor registration successful:', result);
+                navigate('/login');
+            } else {
+                // Handle unexpected successful status codes if needed
+                const responseText = await response.text();
+                console.warn("Unexpected success status:", response.status, responseText);
+                // Still navigate, or show a warning?
+                navigate('/login');
+            }
 
-            // Navigate to login or maybe the new instructor's profile?
-            navigate('/login'); // Redirect to login page after successful registration
 
         } catch (err: any) {
-            console.error("Instructor registration failed:", err);
-            setError(err.message || "An unexpected error occurred during registration.");
+            console.error("Instructor registration failed (fetch error):", err);
+            if (err instanceof TypeError && err.message === "Failed to fetch") {
+                setError("Could not connect to the server. Please ensure it's running and check CORS settings.");
+            } else {
+                setError(err.message || "An unexpected error occurred during registration.");
+            }
         } finally {
             setIsLoading(false);
         }
@@ -104,8 +118,7 @@ export function RegisterPage() {
                                 required
                             />
                         </div>
-
-                        {/* --- ADDED Title Field --- */}
+                        {/* Title Field */}
                         <div className="grid gap-2">
                             <Label htmlFor="title">Title</Label>
                             <Input
@@ -117,9 +130,7 @@ export function RegisterPage() {
                                 required
                             />
                         </div>
-                        {/* ------------------------- */}
-
-                        {/* --- ADDED University Field --- */}
+                        {/* University Field */}
                         <div className="grid gap-2">
                             <Label htmlFor="university">University</Label>
                             <Input
@@ -131,8 +142,6 @@ export function RegisterPage() {
                                 required
                             />
                         </div>
-                        {/* ---------------------------- */}
-
                         {/* Email */}
                         <div className="grid gap-2">
                             <Label htmlFor="email">Email</Label>
@@ -145,8 +154,6 @@ export function RegisterPage() {
                                 required
                             />
                         </div>
-
-                        {/* REMOVED Password Fields */}
 
                         {/* Error Message */}
                         {error && <p className="text-sm text-destructive">{error}</p>}
