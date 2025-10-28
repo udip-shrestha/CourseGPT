@@ -51,6 +51,11 @@ CHROMA_DATA_PATH=${CHROMA_DATA_PATH:-.chroma_data}
 # Discord Bot Configuration
 # ===========================================
 DISCORD_TOKEN=${DISCORD_TOKEN:-}
+
+# ===========================================
+# LLM Configuration
+# ===========================================
+HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
 EOF
 
 chmod 600 "$DISCORD_ENV"
