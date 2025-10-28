@@ -46,7 +46,7 @@ export function RegisterPage() {
         // --- ACTUAL API CALL ---
         try {
             // Assuming your backend runs on port 8000 and has an endpoint like /instructors/
-            const response = await fetch('http://localhost:8000/instructors/', { // Adjust endpoint if needed
+            const response = await fetch('http://localhost:8000/instructors?', { // Adjust endpoint if needed
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(instructorData), // Send the correct data
