@@ -16,3 +16,6 @@ Backend/.DS_Store
 
 # Ignore chroma data
 .chroma_data
+
+#ignore all ideas
+.idea
