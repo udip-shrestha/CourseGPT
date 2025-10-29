@@ -1,9 +1,24 @@
-
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from './ui/card';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { Mail } from "lucide-react"; // Only import Mail now
+import { Mail, Settings, Trash2, AlertTriangle } from "lucide-react";
+import { Button } from './ui/button';
+import {
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
+} from "./ui/popover";
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "./ui/dialog";
 
 // Define an interface for the expected API response data
 interface Instructor {
@@ -13,20 +28,24 @@ interface Instructor {
     university: string;
     email: string;
     created_at: string;
-    // Add other fields here if/when your API provides them
 }
 
 export function InstructorProfile() {
-    // Get the instructorId from the URL path parameter
     const { instructorId } = useParams<{ instructorId: string }>();
+    const navigate = useNavigate();
 
-    // State for instructor data, loading status, and errors
     const [instructor, setInstructor] = useState<Instructor | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    // Fetch data when the component mounts or instructorId changes
+    // State for Popover and Dialogs
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isFinalDeleteDialogOpen, setIsFinalDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+
     useEffect(() => {
+        // ... (fetchInstructor effect remains the same) ...
         if (!instructorId) {
             setError("Instructor ID not found in URL.");
             setIsLoading(false);
@@ -37,7 +56,6 @@ export function InstructorProfile() {
             setIsLoading(true);
             setError(null);
             try {
-                // This uses the correct GET endpoint with the ID from the URL
                 const response = await fetch(`http://localhost:8000/instructors/${instructorId}`);
                 if (!response.ok) {
                     if (response.status === 404) {
@@ -63,9 +81,51 @@ export function InstructorProfile() {
                 setIsLoading(false);
             }
         };
-
         fetchInstructor();
     }, [instructorId]);
+
+
+    // --- Delete Handler ---
+    const handleDelete = async () => {
+        // ... (handleDelete function remains the same) ...
+        if (!instructorId) return;
+
+        setIsDeleting(true);
+        setError(null);
+
+        try {
+            const response = await fetch(`http://localhost:8000/instructors/${instructorId}`, {
+                method: 'DELETE',
+                headers: { 'accept': 'application/json' }
+            });
+
+            if (!response.ok) {
+                let errorDetail = `Failed to delete instructor (Status: ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorDetail;
+                } catch (_) {}
+                throw new Error(errorDetail);
+            }
+
+            console.log(`Instructor ${instructorId} deleted successfully.`);
+            setIsFinalDeleteDialogOpen(false);
+            setIsDeleteDialogOpen(false);
+            setIsSettingsOpen(false);
+            navigate('/login');
+
+        } catch (err: any) {
+            console.error("Failed to delete instructor:", err);
+            if (err instanceof TypeError && err.message === "Failed to fetch") {
+                setError("Could not connect to the server. Please ensure it's running.");
+            } else {
+                setError(err.message || "An unexpected error occurred during deletion.");
+            }
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
 
     // --- Render Loading State ---
     if (isLoading) {
@@ -73,7 +133,7 @@ export function InstructorProfile() {
     }
 
     // --- Render Error State ---
-    if (error) {
+    if (error && !instructor) {
         return <div className="text-center text-destructive p-10">Error: {error}</div>;
     }
 
@@ -84,6 +144,7 @@ export function InstructorProfile() {
 
     // --- Render Profile Data ---
     const getInitials = (name: string): string => {
+        // ... (getInitials function remains the same) ...
         return name
             .split(' ')
             .map(n => n[0])
@@ -94,9 +155,105 @@ export function InstructorProfile() {
 
     return (
         <div className="space-y-8">
-            {/* Hero Section */}
-            <Card>
+            <Card className="relative"> {/* Added relative positioning */}
                 <CardContent className="p-8">
+
+                    {/* --- Settings Popover Button --- */}
+                    <div className="absolute top-4 right-4 z-10">
+                        <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                            <PopoverTrigger asChild>
+                                <Button variant="ghost" size="icon" aria-label="Profile Settings">
+                                    <Settings className="h-5 w-5" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2">
+                                <div className="grid gap-1"> {/* Reduced gap */}
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full justify-start text-sm h-8" // Adjusted styles
+                                        disabled // Keep disabled for now
+                                        onClick={() => {
+                                            console.log("Update profile clicked");
+                                            setIsSettingsOpen(false);
+                                        }}
+                                    >
+                                        Update Profile
+                                    </Button>
+
+                                    {/* --- Delete Option (Triggers First Dialog) --- */}
+                                    {/* Wrap the trigger logic inside the PopoverContent */}
+                                    <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button
+                                                variant="ghost"
+                                                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-sm h-8" // Adjusted styles
+                                                // Removed onClick from here, DialogTrigger handles opening
+                                            >
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete Profile
+                                            </Button>
+                                        </DialogTrigger>
+                                        {/* --- First Confirmation Dialog --- */}
+                                        <DialogContent>
+                                            <DialogHeader>
+                                                <DialogTitle>Are you sure?</DialogTitle>
+                                                <DialogDescription>
+                                                    This action cannot be undone immediately. Do you want to proceed with deleting your profile?
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <DialogFooter className="gap-2 sm:justify-end"> {/* Use justify-end */}
+                                                <DialogClose asChild>
+                                                    <Button variant="outline">Cancel</Button>
+                                                </DialogClose>
+                                                {/* --- Second Confirmation Dialog (Nested Trigger) --- */}
+                                                <Dialog open={isFinalDeleteDialogOpen} onOpenChange={setIsFinalDeleteDialogOpen}>
+                                                    <DialogTrigger asChild>
+                                                        {/* This button OPENS the final confirmation */}
+                                                        <Button variant="destructive">Confirm Delete</Button>
+                                                    </DialogTrigger>
+                                                    <DialogContent>
+                                                        <DialogHeader>
+                                                            <DialogTitle className="flex items-center gap-2">
+                                                                <AlertTriangle className="text-destructive h-5 w-5"/> Final Confirmation
+                                                            </DialogTitle>
+                                                            <DialogDescription>
+                                                                Deleting your profile is permanent and will remove all associated data. This action cannot be recovered.
+                                                                {/* Display delete error here */}
+                                                                {error && <p className="text-sm text-destructive mt-4">Error: {error}</p>}
+                                                            </DialogDescription>
+                                                        </DialogHeader>
+                                                        <DialogFooter className="gap-2">
+                                                            {/* This CLOSE button only closes the FINAL dialog */}
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => setIsFinalDeleteDialogOpen(false)} // Explicitly close this dialog
+                                                                disabled={isDeleting}
+                                                            >
+                                                                Cancel
+                                                            </Button>
+                                                            <Button
+                                                                variant="destructive"
+                                                                onClick={handleDelete} // This calls the API
+                                                                disabled={isDeleting}
+                                                            >
+                                                                {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
+                                                            </Button>
+                                                        </DialogFooter>
+                                                    </DialogContent>
+                                                </Dialog>
+                                                {/* --- End Second Dialog --- */}
+                                            </DialogFooter>
+                                        </DialogContent>
+                                        {/* --- End First Dialog --- */}
+                                    </Dialog>
+                                    {/* --- End Delete Option --- */}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+                    </div>
+                    {/* --- End Settings Popover Button --- */}
+
+                    {/* ... Rest of the Profile Card Content (Avatar, Name, Title, etc.) ... */}
                     <div className="flex flex-col md:flex-row gap-6 items-start">
                         {/* Avatar */}
                         <Avatar className="h-32 w-32">
@@ -119,14 +276,12 @@ export function InstructorProfile() {
                                     <Mail className="h-4 w-4" />
                                     {instructor.email}
                                 </div>
-                                {/* Other contact info removed */}
                             </div>
-                            {/* Other sections removed */}
                         </div>
                     </div>
                 </CardContent>
             </Card>
-            {/* Other cards removed */}
         </div>
     );
 }
+
