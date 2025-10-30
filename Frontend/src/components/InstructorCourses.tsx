@@ -1,126 +1,178 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom"; // Added useParams
-import { Search, Filter, Plus } from "lucide-react"; // Added Plus
+import { useParams, useNavigate } from "react-router-dom";
+import { Search, Filter, Plus } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { CourseCard } from "./CourseCard";
-import { CourseRegisterDialog } from "./CourseRegisterDialog"; // Import the new dialog
-import { Dialog, DialogTrigger } from "./ui/dialog"; // Import Dialog primitives
+import { CourseRegisterDialog } from "./CourseRegisterDialog";
+import { Dialog, DialogTrigger } from "./ui/dialog";
 
-// Updated interface to match API response for the list
-// Note: Fields like code, studentCount, documentCount, lastUpdated, color are NOT in the API response for this endpoint
 export interface CourseSummary {
-    id: string; // Course UUID
+    id: string;
     instructor_id: string;
     name: string;
     institution: string;
-    semester_id: number; // API returns numeric ID
+    semester_id: number;
     year: number;
-    created_at: string; // ISO date string
+    created_at: string;
 }
 
 export function InstructorCourses() {
-    const { instructorId } = useParams<{ instructorId: string }>(); // Get instructorId from URL
+    // --- Get instructorId from URL ---
+    const { instructorId } = useParams<{ instructorId: string }>();
+    // --- ADDED LOG: Log ID on initial render ---
+    console.log("--- InstructorCourses Component Render ---");
+    console.log("instructorId from useParams:", instructorId);
+    // ------------------------------------------
+
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
-    const [courses, setCourses] = useState<CourseSummary[]>([]); // State for fetched courses
-    const [isLoading, setIsLoading] = useState(true);
+    const [courses, setCourses] = useState<CourseSummary[]>([]);
+    const [isLoading, setIsLoading] = useState(true); // Default to true
     const [error, setError] = useState<string | null>(null);
-    const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false); // State for dialog visibility
+    const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
 
-
-    // --- Fetch Courses ---
-    const fetchCourses = async () => {
-        if (!instructorId) return; // Don't fetch if no ID
-
-        setIsLoading(true);
-        setError(null);
-        // Construct URL with sorting (newest first)
-        const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
-
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                // Try parsing error detail
-                let errorDetail = `Failed to fetch courses (Status: ${response.status})`;
-                try {
-                    const errorData = await response.json();
-                    errorDetail = errorData.detail || errorDetail;
-                } catch (_) { /* Ignore if response isn't JSON */ }
-                throw new Error(errorDetail);
-            }
-            const data: CourseSummary[] = await response.json();
-            setCourses(data);
-        } catch (err: any) {
-            console.error("Fetch courses error:", err);
-            if (err instanceof TypeError && err.message === "Failed to fetch") {
-                setError("Could not connect to the server.");
-            } else {
-                setError(err.message || "An error occurred while fetching courses.");
-            }
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Fetch courses on initial load or when instructorId changes
+    // --- Fetch Courses Effect ---
     useEffect(() => {
+        console.log("--- useEffect Running ---");
+        console.log("instructorId inside useEffect:", instructorId);
+
+        // --- Robust Guard ---
+        if (!instructorId || instructorId === "undefined") {
+            console.error("GUARD: Instructor ID is missing or invalid, stopping fetch.", instructorId);
+            // Don't set loading to false here immediately if it might become valid later
+            // setError("Instructor ID is missing or invalid in URL.");
+            // setIsLoading(false); // Let's remove this for now
+            return; // Stop the effect
+        }
+        // --- End Guard ---
+
+        // If we pass the guard, proceed with fetch
+        console.log("GUARD PASSED: Proceeding with fetch for instructorId:", instructorId);
+        setIsLoading(true); // Ensure loading is true before fetch starts
+        setError(null); // Clear previous errors
+
+        const fetchCourses = async () => {
+            const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
+            console.log("Fetching courses from:", url);
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    let errorDetail = `Failed to fetch courses (Status: ${response.status})`;
+                    // ... (rest of error parsing remains the same) ...
+                    try {
+                        const errorData = await response.json();
+                        if (Array.isArray(errorData.detail)) {
+                            errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
+                        } else if (errorData.detail) {
+                            errorDetail = errorData.detail;
+                        }
+                    } catch (_) {
+                        errorDetail = (await response.text()) || errorDetail;
+                    }
+                    throw new Error(errorDetail);
+                }
+                const data: CourseSummary[] = await response.json();
+                console.log("Fetched courses successfully:", data);
+                setCourses(data);
+            } catch (err: any) {
+                console.error("Fetch courses error:", err);
+                if (err instanceof TypeError && err.message === "Failed to fetch") {
+                    setError("Could not connect to the server.");
+                } else {
+                    setError(err.message || "An error occurred while fetching courses.");
+                }
+                setCourses([]); // Clear courses on error
+            } finally {
+                console.log("Fetch finished, setting loading to false.");
+                setIsLoading(false);
+            }
+        };
+
         fetchCourses();
-    }, [instructorId]);
+
+    }, [instructorId]); // Dependency array remains correct
     // --- End Fetch Courses ---
 
 
-    // Navigate to the full course page (we'll implement this later)
+    // Navigate to the full course page
     const handleViewCourse = (courseId: string) => {
-        // This navigation target might need adjustment based on your full CoursePage component
-        navigate(`/courses/${courseId}`); // Assuming a route like this exists
-        console.log("Navigate to view course:", courseId); // Placeholder
+        navigate(`/courses/${courseId}`);
     };
 
     // Callback function for when a new course is created by the dialog
     const handleCourseCreated = () => {
         setIsRegisterDialogOpen(false); // Close the dialog
-        fetchCourses(); // Re-fetch the course list to show the new one
+        // Re-fetch courses immediately after creation
+        if (instructorId && instructorId !== "undefined") {
+            console.log("Course created, re-fetching courses...");
+            const fetchAgain = async () => {
+                setIsLoading(true); // Show loading indicator again
+                setError(null);
+                const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
+                try {
+                    const response = await fetch(url);
+                    if (!response.ok) throw new Error("Failed to re-fetch courses");
+                    const data: CourseSummary[] = await response.json();
+                    setCourses(data);
+                    console.log("Courses re-fetched successfully.");
+                } catch (err: any) {
+                    console.error("Re-fetch failed:", err);
+                    setError(err.message || "Failed to refresh courses.");
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+            fetchAgain(); // Call the re-fetch function
+        } else {
+            console.error("Cannot re-fetch, instructorId is invalid after course creation:", instructorId);
+        }
     };
 
 
     // Client-side filtering based on search term
     const filteredCourses = courses.filter((course) =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        course.institution.toLowerCase().includes(searchTerm.toLowerCase()) // Filter by institution too?
+        course.institution.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Render loading/error states
-    if (isLoading) {
-        return <div className="text-center p-10">Loading courses...</div>;
+    // Loading State: Show only if truly loading initial data and ID is valid or potentially becoming valid
+    if (isLoading && courses.length === 0 && (!error || error === "Instructor ID is missing or invalid in URL.")) {
+        return <div className="text-center p-10">Loading courses... (ID: {instructorId || 'pending'})</div>;
     }
 
-    if (error) {
+    // Error State: Show if an error occurred (and we're not actively loading)
+    if (error && !isLoading) {
         return <div className="text-center text-destructive p-10">Error: {error}</div>;
     }
+    // Explicit check if ID remained invalid after loading attempt
+    if (!isLoading && (!instructorId || instructorId === "undefined")) {
+        return <div className="text-center text-destructive p-10">Error: Invalid Instructor ID provided in URL.</div>;
+    }
 
+    // --- Main Render ---
     return (
-        // Removed container/mx-auto as layout is handled by App.tsx
         <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">My Courses</h1>
-                {/* --- Register Course Button and Dialog Trigger --- */}
                 <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button disabled={!instructorId || instructorId === "undefined"}> {/* Disable if no valid ID */}
                             <Plus className="h-4 w-4 mr-2" />
                             Register New Course
                         </Button>
                     </DialogTrigger>
-                    {/* Pass instructorId and callback */}
-                    <CourseRegisterDialog
-                        instructorId={instructorId!} // Assert non-null as we check above
-                        onCourseCreated={handleCourseCreated}
-                        onClose={() => setIsRegisterDialogOpen(false)}
-                    />
+                    {/* Ensure instructorId is valid before rendering dialog */}
+                    {instructorId && instructorId !== "undefined" && (
+                        <CourseRegisterDialog
+                            instructorId={instructorId}
+                            onCourseCreated={handleCourseCreated}
+                            onClose={() => setIsRegisterDialogOpen(false)}
+                        />
+                    )}
                 </Dialog>
-                {/* --- End Register Course Button --- */}
             </div>
 
             {/* Search + Filter */}
@@ -134,7 +186,6 @@ export function InstructorCourses() {
                         className="pl-10"
                     />
                 </div>
-                {/* Keep filter button, functionality TBD */}
                 <Button variant="outline">
                     <Filter className="h-4 w-4 mr-2" />
                     Filter
@@ -142,23 +193,24 @@ export function InstructorCourses() {
             </div>
 
             {/* Course Grid */}
+            {isLoading && courses.length > 0 && <p className="text-center text-muted-foreground">Refreshing courses...</p>} {/* Show refresh only if courses were previously loaded */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
                     <CourseCard
                         key={course.id}
-                        course={course} // Pass the course data matching CourseSummary
+                        course={course}
                         onViewCourse={handleViewCourse}
                     />
                 ))}
             </div>
 
-            {/* No Courses Message */}
-            {filteredCourses.length === 0 && courses.length > 0 && (
+            {/* No Courses Messages */}
+            {!isLoading && filteredCourses.length === 0 && courses.length > 0 && (
                 <p className="text-center text-muted-foreground mt-10">
                     No courses match your search term.
                 </p>
             )}
-            {courses.length === 0 && (
+            {!isLoading && courses.length === 0 && !error && (
                 <p className="text-center text-muted-foreground mt-10">
                     You haven't registered any courses yet.
                 </p>
