@@ -7,8 +7,8 @@ import { cn } from "./utils";
 
 const Popover = PopoverPrimitive.Root;
 
-// --- UPDATED PopoverTrigger ---
-// We wrap this in React.forwardRef to allow it to pass
+
+// wrapped in React.forwardRef to allow it to pass
 // props and refs down to its child, which is required by asChild.
 const PopoverTrigger = React.forwardRef<
     React.ElementRef<typeof PopoverPrimitive.Trigger>,
@@ -17,7 +17,7 @@ const PopoverTrigger = React.forwardRef<
     <PopoverPrimitive.Trigger ref={ref} className={cn(className)} {...props} />
 ));
 PopoverTrigger.displayName = PopoverPrimitive.Trigger.displayName;
-// --- END OF UPDATE ---
+
 
 const PopoverContent = React.forwardRef<
     React.ElementRef<typeof PopoverPrimitive.Content>,
