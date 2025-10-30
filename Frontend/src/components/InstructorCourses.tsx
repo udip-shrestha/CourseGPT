@@ -1,111 +1,169 @@
-import { useState } from "react";
-import { Search, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom"; // Added useParams
+import { Search, Filter, Plus } from "lucide-react"; // Added Plus
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { CourseCard } from "./CourseCard";
-import { useNavigate } from "react-router-dom";
+import { CourseRegisterDialog } from "./CourseRegisterDialog"; // Import the new dialog
+import { Dialog, DialogTrigger } from "./ui/dialog"; // Import Dialog primitives
 
-interface Course {
-  id: string;
-  name: string;
-  code: string;
-  semester: string;
-  studentCount: number;
-  documentCount: number;
-  lastUpdated: string;
-  color: string;
+// Updated interface to match API response for the list
+// Note: Fields like code, studentCount, documentCount, lastUpdated, color are NOT in the API response for this endpoint
+export interface CourseSummary {
+    id: string; // Course UUID
+    instructor_id: string;
+    name: string;
+    institution: string;
+    semester_id: number; // API returns numeric ID
+    year: number;
+    created_at: string; // ISO date string
 }
 
 export function InstructorCourses() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const navigate = useNavigate();
+    const { instructorId } = useParams<{ instructorId: string }>(); // Get instructorId from URL
+    const navigate = useNavigate();
+    const [searchTerm, setSearchTerm] = useState("");
+    const [courses, setCourses] = useState<CourseSummary[]>([]); // State for fetched courses
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false); // State for dialog visibility
 
-  // Mock data
-  const [courses] = useState<Course[]>([
-    {
-      id: "1",
-      name: "Introduction to Machine Learning",
-      code: "CS 480",
-      semester: "Fall 2024",
-      studentCount: 85,
-      documentCount: 12,
-      lastUpdated: "2 days ago",
-      color: "#3b82f6",
-    },
-    {
-      id: "2",
-      name: "Advanced Data Science",
-      code: "CS 580",
-      semester: "Fall 2024",
-      studentCount: 62,
-      documentCount: 8,
-      lastUpdated: "1 week ago",
-      color: "#10b981",
-    },
-    {
-      id: "3",
-      name: "Python Programming",
-      code: "CS 101",
-      semester: "Fall 2024",
-      studentCount: 120,
-      documentCount: 15,
-      lastUpdated: "3 days ago",
-      color: "#f59e0b",
-    },
-  ]);
 
-  const handleViewCourse = (courseId: string) => {
-    navigate(`/courses/${courseId}`);
-  };
+    // --- Fetch Courses ---
+    const fetchCourses = async () => {
+        if (!instructorId) return; // Don't fetch if no ID
 
-  // Optional: filter courses by search term
-  const filteredCourses = courses.filter((course) =>
-    course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    course.code.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+        setIsLoading(true);
+        setError(null);
+        // Construct URL with sorting (newest first)
+        const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">My Courses</h1>
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                // Try parsing error detail
+                let errorDetail = `Failed to fetch courses (Status: ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorDetail;
+                } catch (_) { /* Ignore if response isn't JSON */ }
+                throw new Error(errorDetail);
+            }
+            const data: CourseSummary[] = await response.json();
+            setCourses(data);
+        } catch (err: any) {
+            console.error("Fetch courses error:", err);
+            if (err instanceof TypeError && err.message === "Failed to fetch") {
+                setError("Could not connect to the server.");
+            } else {
+                setError(err.message || "An error occurred while fetching courses.");
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // Fetch courses on initial load or when instructorId changes
+    useEffect(() => {
+        fetchCourses();
+    }, [instructorId]);
+    // --- End Fetch Courses ---
+
+
+    // Navigate to the full course page (we'll implement this later)
+    const handleViewCourse = (courseId: string) => {
+        // This navigation target might need adjustment based on your full CoursePage component
+        navigate(`/courses/${courseId}`); // Assuming a route like this exists
+        console.log("Navigate to view course:", courseId); // Placeholder
+    };
+
+    // Callback function for when a new course is created by the dialog
+    const handleCourseCreated = () => {
+        setIsRegisterDialogOpen(false); // Close the dialog
+        fetchCourses(); // Re-fetch the course list to show the new one
+    };
+
+
+    // Client-side filtering based on search term
+    const filteredCourses = courses.filter((course) =>
+        course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        course.institution.toLowerCase().includes(searchTerm.toLowerCase()) // Filter by institution too?
+    );
+
+    // Render loading/error states
+    if (isLoading) {
+        return <div className="text-center p-10">Loading courses...</div>;
+    }
+
+    if (error) {
+        return <div className="text-center text-destructive p-10">Error: {error}</div>;
+    }
+
+    return (
+        // Removed container/mx-auto as layout is handled by App.tsx
+        <div className="space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+                <h1 className="text-2xl font-bold">My Courses</h1>
+                {/* --- Register Course Button and Dialog Trigger --- */}
+                <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Register New Course
+                        </Button>
+                    </DialogTrigger>
+                    {/* Pass instructorId and callback */}
+                    <CourseRegisterDialog
+                        instructorId={instructorId!} // Assert non-null as we check above
+                        onCourseCreated={handleCourseCreated}
+                        onClose={() => setIsRegisterDialogOpen(false)}
+                    />
+                </Dialog>
+                {/* --- End Register Course Button --- */}
+            </div>
+
+            {/* Search + Filter */}
+            <div className="flex gap-4">
+                <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search courses by name or institution..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10"
+                    />
+                </div>
+                {/* Keep filter button, functionality TBD */}
+                <Button variant="outline">
+                    <Filter className="h-4 w-4 mr-2" />
+                    Filter
+                </Button>
+            </div>
+
+            {/* Course Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredCourses.map((course) => (
+                    <CourseCard
+                        key={course.id}
+                        course={course} // Pass the course data matching CourseSummary
+                        onViewCourse={handleViewCourse}
+                    />
+                ))}
+            </div>
+
+            {/* No Courses Message */}
+            {filteredCourses.length === 0 && courses.length > 0 && (
+                <p className="text-center text-muted-foreground mt-10">
+                    No courses match your search term.
+                </p>
+            )}
+            {courses.length === 0 && (
+                <p className="text-center text-muted-foreground mt-10">
+                    You haven't registered any courses yet.
+                </p>
+            )}
         </div>
-
-        {/* Search + Filter */}
-        <div className="flex gap-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search courses..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          <Button variant="outline">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-        </div>
-
-        {/* Course Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCourses.map((course) => (
-            <CourseCard
-              key={course.id}
-              course={course}
-              onViewCourse={handleViewCourse}
-            />
-          ))}
-        </div>
-
-        {filteredCourses.length === 0 && (
-          <p className="text-center text-muted-foreground mt-10">
-            No courses found.
-          </p>
-        )}
-      </div>
-    </div>
-  );
+    );
 }
+

@@ -1,69 +1,63 @@
-import { BookOpen, Users, FileText, Calendar } from 'lucide-react';
+import { BookOpen, Calendar, Building } from 'lucide-react'; // Changed icons
 import { Card, CardContent, CardHeader } from './ui/card';
-import { Badge } from './ui/badge';
+// Removed Badge import
 import { Button } from './ui/button';
+import type {CourseSummary} from './InstructorCourses'; // Import the interface reflecting API data
+// Import the interface reflecting API data
 
-interface Course {
-  id: string;
-  name: string;
-  code: string;
-  semester: string;
-  studentCount: number;
-  documentCount: number;
-  lastUpdated: string;
-  color: string;
+// Interface for props using the API data structure
+interface CourseCardProps {
+    course: CourseSummary;
+    onViewCourse: (courseId: string) => void;
 }
 
-interface CourseCardProps {
-  course: Course;
-  onViewCourse: (courseId: string) => void;
+// Helper to convert semester ID to string (Adjust mapping if needed based on your backend)
+function semesterIdToString(id: number): string {
+    switch (id) {
+        case 1: return "Spring";
+        case 2: return "Summer";
+        case 3: return "Fall";
+        case 4: return "Fall"; // Handling the '4' seen in Swagger example
+        default: return "Unknown";
+    }
 }
 
 export function CourseCard({ course, onViewCourse }: CourseCardProps) {
-  return (
-    <Card className="hover:shadow-md transition-shadow">
-      <CardHeader className="pb-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div 
-              className="w-3 h-3 rounded-full" 
-              style={{ backgroundColor: course.color }}
-            />
-            <Badge variant="secondary" className="text-xs">
-              {course.code}
-            </Badge>
-          </div>
-          <h3 className="font-medium leading-tight">{course.name}</h3>
-          <p className="text-sm text-muted-foreground">{course.semester}</p>
-        </div>
-      </CardHeader>
-      
-      <CardContent className="pt-0 space-y-4">
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div className="flex items-center gap-2">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span>{course.studentCount} students</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <FileText className="h-4 w-4 text-muted-foreground" />
-            <span>{course.documentCount} documents</span>
-          </div>
-        </div>
-        
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Calendar className="h-3 w-3" />
-          <span>Updated {course.lastUpdated}</span>
-        </div>
-        
-        <Button 
-          onClick={() => onViewCourse(course.id)}
-          className="w-full"
-          variant="outline"
-        >
-          <BookOpen className="h-4 w-4 mr-2" />
-          View Course
-        </Button>
-      </CardContent>
-    </Card>
-  );
+    const semesterString = semesterIdToString(course.semester_id);
+
+    return (
+        // You can add className="dark" here if you want dark cards on a light background
+        <Card className="hover:shadow-md transition-shadow">
+            <CardHeader className="pb-3">
+                {/* Updated Header Content */}
+                <div className="space-y-1">
+                    <h3 className="font-semibold leading-tight text-lg">{course.name}</h3>
+                    {/* Display Institution */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Building className="h-4 w-4" />
+                        <span>{course.institution}</span>
+                    </div>
+                    {/* Display Semester and Year */}
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span>{semesterString} {course.year}</span>
+                    </div>
+                </div>
+            </CardHeader>
+
+            <CardContent className="pt-2">
+                {/* Removed old stats grid (studentCount, documentCount, lastUpdated) */}
+                {/* View Course Button */}
+                <Button
+                    onClick={() => onViewCourse(course.id)}
+                    className="w-full mt-4" // Added margin-top for spacing
+                    variant="outline"
+                >
+                    <BookOpen className="h-4 w-4 mr-2" />
+                    View Course
+                </Button>
+            </CardContent>
+        </Card>
+    );
 }
+
