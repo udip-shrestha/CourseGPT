@@ -56,7 +56,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
         );
     }
 );
-Button.displayName = "Button"; // Add display name for debugging
+Button.displayName = "Button"; //display name for debugging
 
 
 export { Button, buttonVariants };
