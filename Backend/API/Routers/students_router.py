@@ -2,6 +2,12 @@ from fastapi import APIRouter, Query, Path, Depends, HTTPException, status
 from typing import Optional, List, Dict
 from API.Service.students_service import StudentService
 from API.dependencies import get_student_service
+from uuid import UUID
+from pydantic import BaseModel
+
+class StudentRegistrationStatus(BaseModel):
+    registered: bool
+    student_id: Optional[UUID] = None
 
 router = APIRouter(
     prefix="/students",
@@ -35,6 +41,7 @@ def register_student(
 # ------------------------------------------------------
 @router.get(
     "/is_registered", 
+    response_model=StudentRegistrationStatus,
     summary="Check if a student is registered in a specific course",
     description="Verifies whether a student (via Discord ID) is enrolled in a given course."
 )
