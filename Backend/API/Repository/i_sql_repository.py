@@ -97,13 +97,21 @@ class ISQLRepository(Protocol):
     # STUDENTS
     # ======================================================
     def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        """Create a new student and link them to a course."""
         ...
-    
+
     def read_student(self, student_id: str) -> Optional[dict]:
+        """Fetch a student by their ID."""
         ...
-    
+
     def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
+        """Fetch all students, optionally filtering by course ID."""
         ...
-    
+
     def delete_student(self, student_id: str) -> None:
+        """Delete a student and remove their course associations."""
+        ...
+
+    def read_courses_by_discord(self, discord_id: str) -> List[dict]:
+        """Get all courses a student is registered in by Discord ID."""
         ...
