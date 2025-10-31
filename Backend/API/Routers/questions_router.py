@@ -6,7 +6,7 @@ router = APIRouter(tags=["Questions"])
 
 
 @router.post(
-    "/courses/{course_id}/question",
+    "/courses/{course_id}/queries",
     status_code=status.HTTP_200_OK,
     summary="Ask a question about a course",
     description=(
