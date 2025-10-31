@@ -57,48 +57,6 @@ def is_registered(
         return {"registered": True, "student_id": match["id"]}
     return {"registered": False}
 
-
-# ------------------------------------------------------
-# Log a Student Query
-# ------------------------------------------------------
-@router.post(
-    "/log_query", 
-    summary="Log a query made by a student",
-    description="Stores a student's question and the corresponding system response."
-)
-def log_query(
-    student_id: str = Query(..., description="Student's unique ID."),
-    course_id: str = Query(..., description="Course ID related to the query."),
-    query_text: str = Query(..., description="Text of the student's question."),
-    response_text: str = Query(..., description="System's response text."),
-    service: StudentService = Depends(get_student_service)
-) -> Dict[str, str]:
-    try:
-        query_id = service.sql_repo.create_query_log(student_id, course_id, query_text, response_text)
-        return {"message": "Query logged successfully", "query_id": query_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Logging failed: {e}")
-
-
-# ------------------------------------------------------
-# Get All Queries by Student
-# ------------------------------------------------------
-@router.get(
-    "/{student_id}/queries",
-    summary="Get all queries from a specific student",
-    description="Fetches a list of all queries (with responses) made by a given student."
-)
-def get_student_queries(
-    student_id: str = Path(..., description="Student's unique ID."),
-    service: StudentService = Depends(get_student_service)
-) -> Dict[str, List[Dict[str, str]]]:
-    try:
-        queries = service.sql_repo.read_queries_by_student(student_id)
-        return {"queries": queries}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve queries: {e}")
-
-
 # ------------------------------------------------------
 # Get Courses Registered by Discord ID
 # ------------------------------------------------------

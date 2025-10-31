@@ -115,3 +115,19 @@ class ISQLRepository(Protocol):
     def read_courses_by_discord(self, discord_id: str) -> List[dict]:
         """Get all courses a student is registered in by Discord ID."""
         ...
+
+    # ======================================================
+    # Queries
+    # ======================================================
+    def create_query_log(
+        self,
+        student_id: str,
+        course_id: str,
+        query_text: str,
+        response_text: str
+    ) -> str:
+        """Log a student's question and the corresponding response, returning the new query ID."""
+        ...
+
+    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
+        """Fetch all queries (and responses) made by a given student in a given course."""

@@ -329,3 +329,52 @@ class SQLRepository:
         return rows
 
 
+    # ======================================================
+    # QUERIES (Student Questions)
+    # ======================================================
+    def create_query_log(
+        self,
+        student_id: str,
+        course_id: str,
+        query_text: str,
+        response_text: str
+    ) -> str:
+        """
+        Logs a student's query and the generated system response.
+        Returns the new query record ID.
+        """
+        sql = """
+            INSERT INTO queries (student_id, course_id, query_text, response_text)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (student_id, course_id, query_text, response_text))
+
+    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
+        """
+        Retrieves all queries made by a specific student for a specific course.
+        Includes course name and timestamp.
+        """
+        sql = """
+            SELECT 
+                q.id AS query_id,
+                q.query_text,
+                q.response_text,
+                q.asked_at,
+                c.id AS course_id,
+                c.name AS course_name
+            FROM queries q
+            LEFT JOIN courses c ON q.course_id = c.id
+            WHERE q.student_id = %s AND q.course_id = %s
+            ORDER BY q.asked_at DESC;
+        """
+        rows = self.cm.select_all(sql, (student_id, course_id))
+
+        for r in rows:
+            r["query_id"] = str(r["query_id"])
+            if r.get("course_id"):
+                r["course_id"] = str(r["course_id"])
+            if "asked_at" in r and r["asked_at"]:
+                r["asked_at"] = str(r["asked_at"])
+
+        return rows
