@@ -92,3 +92,22 @@ class ISQLRepository(Protocol):
     def delete_instructor(self, instructor_id: str) -> Optional[dict]:
         """Delete an instructor by ID."""
         ...
+
+    # ======================================================
+    # STUDENTS
+    # ======================================================
+    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        """Add a new student."""
+        ...
+
+    def read_student(self, student_id: str) -> Optional[dict]:
+        """Retrieve an student by ID."""
+        ...
+
+    def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
+        """Retrieve all students, optionally filtered by course_id."""
+        ...
+
+    def delete_student(self, student_id: str) -> Optional[dict]:
+        """Delete an student by ID."""
+        ...
