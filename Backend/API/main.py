@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .Routers import questions_router, document_router, instructors_router, courses_router
+from .Routers import questions_router, document_router, instructors_router, courses_router,students_router
 from API.dependencies import get_connection_manager
 
 @asynccontextmanager
@@ -40,6 +40,7 @@ app.include_router(questions_router.router)
 app.include_router(document_router.router)
 app.include_router(instructors_router.router)
 app.include_router(courses_router.router)
+app.include_router(students_router.router)
 
 
 # cd Backend -> make db-init, uvicorn API.main:app --reload

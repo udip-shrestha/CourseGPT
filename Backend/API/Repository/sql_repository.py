@@ -250,3 +250,131 @@ class SQLRepository:
 
     def delete_course(self, course_id: str) -> None:
         self.cm.execute("DELETE FROM courses WHERE id = %s;", (course_id,))
+
+from typing import Protocol, List, Dict, Any, Optional
+
+class ISQLRepository(Protocol):
+    """Interface defining all SQL repository operations."""
+
+    # ======================================================
+    # FILE TYPES
+    # ======================================================
+    def read_file_type_by_mime(self, mime_type: str) -> Optional[Dict[str, Any]]:
+        """Return the file type record (id, mime_type, extension) matching a MIME type."""
+        ...
+
+    def read_file_type_by_extension(self, extension: str) -> Optional[Dict[str, Any]]:
+        """Return the file type record (id, mime_type, extension) matching a file extension."""
+        ...
+
+    # ======================================================
+    # DOCUMENTS
+    # ======================================================
+    def create_document(self, course_id: str, file_name: str, file_bytes: bytes, file_type_id: str) -> str:
+        """Save a single uploaded file (binary) in SQL DB and return its document ID."""
+        ...
+
+    def read_document(self, doc_id: str) -> Optional[dict]:
+        """Retrieve a file record by document ID."""
+        ...
+
+    def delete_document(self, doc_id: str) -> None:
+        """Delete a file record by its ID."""
+        ...
+
+    def read_all_documents(
+        self,
+        course_id: str,
+        file_type_id: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "uploaded_at",
+        order_dir: str = "desc"
+    ) -> List[dict]:
+        """Retrieve files with pagination, optional filters, and sorting."""
+        ...
+
+    # ======================================================
+    # COURSES
+    # ======================================================
+    def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int) -> str:
+        """Create a new course record."""
+    ...
+
+    def read_course(self, course_id: str) -> Optional[dict]:
+        """Retrieve a course record by ID."""
+        ...
+
+    def read_all_courses(self, instructor_id: Optional[str] = None) -> List[dict]:
+        """Retrieve all courses, optionally filtered by instructor."""
+        ...
+
+    def delete_course(self, course_id: str) -> None:
+        """Delete a course record by ID."""
+        ...
+
+    # ======================================================
+    # INSTRUCTORS
+    # ======================================================
+    def create_instructor(self, name: str, title: str, university: str, email: str) -> str:
+        """Add a new instructor."""
+        ...
+
+    def read_instructor(self, instructor_id: str) -> Optional[dict]:
+        """Retrieve an instructor by ID."""
+        ...
+
+    def read_instructor_by_email(self, email: str) -> Optional[dict]:
+        """Retrieve an instructor by Email."""
+        ...
+
+    def read_all_instructors(
+        self, 
+        name: Optional[str] = None, 
+        title: Optional[str] = None, 
+        university: Optional[str] = None,
+        email: Optional[str] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> List[dict]:
+        """Retrieve all instructors."""
+        ...
+
+    def delete_instructor(self, instructor_id: str) -> Optional[dict]:
+        """Delete an instructor by ID."""
+        ...
+
+    # ======================================================
+    # STUDENTS
+    # ======================================================
+    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        query = """
+            INSERT INTO students (name, discord_id, course_id)
+            VALUES (%s, %s, %s)
+            RETURNING student_id
+        """
+        self.cursor.execute(query, (name, discord_id, course_id))
+        student_id = self.cursor.fetchone()[0]
+        self.conn.commit()
+        return student_id
+
+    def read_student(self, student_id: str) -> Optional[dict]:
+        query = "SELECT * FROM students WHERE student_id = %s"
+        self.cursor.execute(query, (student_id,))
+        return self.cursor.fetchone()
+
+    def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
+        if course_id:
+            query = "SELECT * FROM students WHERE course_id = %s"
+            self.cursor.execute(query, (course_id,))
+        else:
+            query = "SELECT * FROM students"
+            self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def delete_student(self, student_id: str) -> None:
+        query = "DELETE FROM students WHERE student_id = %s"
+        self.cursor.execute(query, (student_id,))
+        self.conn.commit()

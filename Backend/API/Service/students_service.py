@@ -28,12 +28,12 @@ class StudentService:
         Create a new student record in the database.
         """
         # Optional: check if a student with the same Discord ID already exists for this course
-        existing_students = self.sql_repo.read_all_students(course_id=course_id)
-        if any(s["discord_id"] == discord_id for s in existing_students):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Student with discord_id={discord_id} already exists in this course."
-            )
+        # existing_students = self.sql_repo.read_all_students(course_id=course_id)
+        # if any(s["discord_id"] == discord_id for s in existing_students):
+        #     raise HTTPException(
+        #         status_code=status.HTTP_400_BAD_REQUEST,
+        #         detail=f"Student with discord_id={discord_id} already exists in this course."
+        #     )
 
         student_id = self.sql_repo.create_student(
             name=name,
