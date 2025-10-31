@@ -250,3 +250,131 @@ class SQLRepository:
 
     def delete_course(self, course_id: str) -> None:
         self.cm.execute("DELETE FROM courses WHERE id = %s;", (course_id,))
+
+    # ======================================================
+    # STUDENTS
+    # ======================================================
+    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        #Create student (if not exists)
+        sql_insert_student = """
+            INSERT INTO students (name, discord_id)
+            VALUES (%s, %s)
+            RETURNING id;
+        """
+        student_id = self.cm.insert_one(sql_insert_student, (name, discord_id))
+
+        #Link student to course
+        sql_link = """
+            INSERT INTO student_courses (student_id, course_id)
+            VALUES (%s, %s);
+        """
+        self.cm.execute(sql_link, (student_id, course_id))
+
+        return student_id
+
+    def read_student(self, student_id: str) -> Optional[dict]:
+        sql = """
+            SELECT s.id, s.name, s.discord_id, s.created_at, sc.course_id
+            FROM students s
+            LEFT JOIN student_courses sc ON s.id = sc.student_id
+            WHERE s.id = %s;
+        """
+        return self.cm.select_one(sql, (student_id,))
+
+    def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
+        if course_id:
+            sql = """
+                SELECT s.id, s.name, s.discord_id, s.created_at
+                FROM students s
+                JOIN student_courses sc ON s.id = sc.student_id
+                WHERE sc.course_id = %s;
+            """
+            return self.cm.select_all(sql, (course_id,))
+        else:
+            sql = "SELECT * FROM students;"
+            return self.cm.select_all(sql)
+
+    def delete_student(self, student_id: str) -> None:
+        # remove course links first
+        self.cm.execute("DELETE FROM student_courses WHERE student_id = %s;", (student_id,))
+        # remove student
+        self.cm.execute("DELETE FROM students WHERE id = %s;", (student_id,))
+
+    def read_courses_by_discord(self, discord_id: str) -> list[dict]:
+        """
+        Retrieve all courses a student (identified by their Discord ID) is registered in.
+        """
+        sql = """
+            SELECT 
+                c.id AS course_id,
+                c.name AS course_name,
+                c.institution,
+                c.year,
+                s.id AS student_id,
+                s.name AS student_name,
+                s.discord_id
+            FROM students s
+            JOIN student_courses sc ON s.id = sc.student_id
+            JOIN courses c ON sc.course_id = c.id
+            WHERE s.discord_id = %s
+        """
+        rows = self.cm.select_all(sql, (discord_id,))
+        
+        # convert UUIDs and integers to strings
+        for r in rows:
+            r["course_id"] = str(r["course_id"])
+            r["student_id"] = str(r["student_id"])
+            r["year"] = str(r["year"])
+        
+        return rows
+
+
+    # ======================================================
+    # QUERIES (Student Questions)
+    # ======================================================
+    def create_query_log(
+        self,
+        student_id: str,
+        course_id: str,
+        query_text: str,
+        response_text: str
+    ) -> str:
+        """
+        Logs a student's query and the generated system response.
+        Returns the new query record ID.
+        """
+        sql = """
+            INSERT INTO queries (student_id, course_id, query_text, response_text)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (student_id, course_id, query_text, response_text))
+
+    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
+        """
+        Retrieves all queries made by a specific student for a specific course.
+        Includes course name and timestamp.
+        """
+        sql = """
+            SELECT 
+                q.id AS query_id,
+                q.query_text,
+                q.response_text,
+                q.asked_at,
+                c.id AS course_id,
+                c.name AS course_name
+            FROM queries q
+            LEFT JOIN courses c ON q.course_id = c.id
+            WHERE q.student_id = %s AND q.course_id = %s
+            ORDER BY q.asked_at DESC;
+        """
+        rows = self.cm.select_all(sql, (student_id, course_id))
+
+        for r in rows:
+            r["query_id"] = str(r["query_id"])
+            if r.get("course_id"):
+                r["course_id"] = str(r["course_id"])
+            if "asked_at" in r and r["asked_at"]:
+                r["asked_at"] = str(r["asked_at"])
+
+        return rows

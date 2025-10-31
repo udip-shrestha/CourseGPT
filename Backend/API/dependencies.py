@@ -19,6 +19,7 @@ from API.Service.document_service import DocumentService
 from API.Service.rag_service import RAGService
 from API.Service.courses_service import CourseService
 from API.Service.instructors_service import InstructorService
+from API.Service.students_service import StudentService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import Loader
@@ -131,6 +132,12 @@ def get_instructor_service(
 ) -> InstructorService:
     """Provide an InstructorService using the SQL repository."""
     return InstructorService(sql_repo)
+
+def get_student_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> StudentService:
+    """Provide an StudentService using the SQL repository."""
+    return StudentService(sql_repo)
 
 
 def get_rag_service(

@@ -92,3 +92,42 @@ class ISQLRepository(Protocol):
     def delete_instructor(self, instructor_id: str) -> Optional[dict]:
         """Delete an instructor by ID."""
         ...
+
+    # ======================================================
+    # STUDENTS
+    # ======================================================
+    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        """Create a new student and link them to a course."""
+        ...
+
+    def read_student(self, student_id: str) -> Optional[dict]:
+        """Fetch a student by their ID."""
+        ...
+
+    def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
+        """Fetch all students, optionally filtering by course ID."""
+        ...
+
+    def delete_student(self, student_id: str) -> None:
+        """Delete a student and remove their course associations."""
+        ...
+
+    def read_courses_by_discord(self, discord_id: str) -> List[dict]:
+        """Get all courses a student is registered in by Discord ID."""
+        ...
+
+    # ======================================================
+    # Queries
+    # ======================================================
+    def create_query_log(
+        self,
+        student_id: str,
+        course_id: str,
+        query_text: str,
+        response_text: str
+    ) -> str:
+        """Log a student's question and the corresponding response, returning the new query ID."""
+        ...
+
+    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
+        """Fetch all queries (and responses) made by a given student in a given course."""
