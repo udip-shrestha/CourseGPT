@@ -63,7 +63,7 @@ class ISQLRepository(Protocol):
     # ======================================================
     # INSTRUCTORS
     # ======================================================
-    def create_instructor(self, name: str, title: str, university: str, email: str) -> str:
+    def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
         """Add a new instructor."""
         ...
 
@@ -76,19 +76,19 @@ class ISQLRepository(Protocol):
         ...
 
     def read_all_instructors(
-        self, 
-        name: Optional[str] = None, 
-        title: Optional[str] = None, 
+        self,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
         university: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
     ) -> List[dict]:
-        """Retrieve all instructors."""
+        """Retrieve all instructors, with optional filters and ordering."""
         ...
-
     def delete_instructor(self, instructor_id: str) -> Optional[dict]:
         """Delete an instructor by ID."""
         ...

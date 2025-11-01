@@ -112,40 +112,34 @@ class SQLRepository:
     # ======================================================
     # INSTRUCTORS
     # ======================================================
-    def create_instructor(self, name: str, title: str, university: str, email: str) -> str:
+    def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
         sql = """
-            INSERT INTO instructors (name, title, university, email)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO instructors (name, title, university, email, password, role_id)
+            VALUES (
+                %s, %s, %s, %s, %s,
+                (SELECT id FROM instructor_roles WHERE role_name = 'INSTRUCTOR')
+            )
             RETURNING id;
         """
-        return self.cm.insert_one(sql, (name, title, university, email))
+        return self.cm.insert_one(sql, (name, title, university, email, encrypted_password))
 
     def read_instructor(self, instructor_id: str) -> Optional[dict]:
         sql = """
-            SELECT id, name, title, university, email, created_at
-            FROM instructors
-            WHERE id = %s;
+            SELECT i.id, i.name, i.title, i.university, i.email, r.role_name AS role, i.created_at, i.updated_at
+            FROM instructors i
+            LEFT JOIN instructor_roles r ON i.role_id = r.id
+            WHERE i.id = %s;
         """
         return self.cm.select_one(sql, (instructor_id,))
 
     def read_instructor_by_email(self, email: str) -> Optional[dict]:
-        """
-        Safely fetch an instructor by email.
-        Returns None if no matching record exists.
-        """
         sql = """
-            SELECT id, name, title, university, email, created_at
-            FROM instructors
-            WHERE email = %s;
+            SELECT i.id, i.name, i.title, i.university, i.email, i.password, r.role_name AS role, i.created_at, i.updated_at
+            FROM instructors i
+            LEFT JOIN instructor_roles r ON i.role_id = r.id
+            WHERE i.email = %s;
         """
-        try:
-            row = self.cm.select_one(sql, (email,))
-            if not row:
-                return None
-            return row
-        except Exception as e:
-            print(f"[SQLRepository] Error reading instructor by email: {e}")
-            return None
+        return self.cm.select_one(sql, (email,))
 
     def read_all_instructors(
         self,
@@ -153,6 +147,7 @@ class SQLRepository:
         title: Optional[str] = None,
         university: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
@@ -162,32 +157,40 @@ class SQLRepository:
         params = []
 
         if name:
-            filters.append("name ILIKE %s")
+            filters.append("i.name ILIKE %s")
             params.append(f"%{name}%")
         if title:
-            filters.append("title ILIKE %s")
+            filters.append("i.title ILIKE %s")
             params.append(f"%{title}%")
         if university:
-            filters.append("university ILIKE %s")
+            filters.append("i.university ILIKE %s")
             params.append(f"%{university}%")
         if email:
-            filters.append("email ILIKE %s")
+            filters.append("i.email ILIKE %s")
             params.append(f"%{email}%")
+        if role:
+            filters.append("r.role_name = %s")
+            params.append(role)
+
+        allowed_order_by = {"created_at", "name", "email"}
+        allowed_order_dir = {"asc", "desc"}
+
+        if order_by not in allowed_order_by:
+            order_by = "created_at"
+        if order_dir.lower() not in allowed_order_dir:
+            order_dir = "desc"
 
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
         sql = f"""
-            SELECT id, name, title, university, email, created_at
-            FROM instructors
+            SELECT i.id, i.name, i.title, i.university, i.email, r.role_name AS role, i.created_at, i.updated_at
+            FROM instructors i
+            LEFT JOIN instructor_roles r ON i.role_id = r.id
             {where_clause}
-            ORDER BY {order_by} {order_dir}
+            ORDER BY i.{order_by} {order_dir}
             LIMIT %s OFFSET %s;
         """
         params.extend([limit, offset])
         return self.cm.select_all(sql, tuple(params))
-
-    def delete_instructor(self, instructor_id: str) -> None:
-        sql = "DELETE FROM instructors WHERE id = %s;"
-        self.cm.execute(sql, (instructor_id,))
 
     # ======================================================
     # COURSES

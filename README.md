@@ -54,7 +54,7 @@ Run this whenever you:
 -   Add or modify dependencies in `API/requirements.txt`
 
 ```
-make api-install
+make install
 ```
 
 ### Running the FastAPI Server

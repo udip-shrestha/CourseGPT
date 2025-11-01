@@ -7,13 +7,25 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- -----------------------------
 -- Instructors Table
 -- -----------------------------
+CREATE TABLE IF NOT EXISTS instructor_roles (
+    id SERIAL PRIMARY KEY,
+    role_name VARCHAR(50) UNIQUE NOT NULL
+);
+
+INSERT INTO instructor_roles (role_name)
+VALUES ('ADMIN'), ('INSTRUCTOR')
+ON CONFLICT (role_name) DO NOTHING;
+
 CREATE TABLE IF NOT EXISTS instructors (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(100) NOT NULL,
-    title VARCHAR(150),
-    university VARCHAR(150),
     email VARCHAR(150) UNIQUE NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    password TEXT NOT NULL,
+    role_id INTEGER REFERENCES instructor_roles(id) ON DELETE SET NULL,
+    university VARCHAR(150),
+    title VARCHAR(100),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 -- -----------------------------
@@ -55,7 +67,6 @@ INSERT INTO file_types (mime_type, extension)
 VALUES
 ('application/pdf', 'pdf'),
 ('text/plain', 'txt');
-
 
 -- -----------------------------
 -- Documents Table

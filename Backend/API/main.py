@@ -1,7 +1,7 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .Routers import queries_router, document_router, instructors_router, courses_router,students_router
+from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router
 from API.dependencies import get_connection_manager
 
 @asynccontextmanager
@@ -37,7 +37,7 @@ app.add_middleware(
 
 
 app.include_router(queries_router.router)
-app.include_router(document_router.router)
+app.include_router(documents_router.router)
 app.include_router(instructors_router.router)
 app.include_router(courses_router.router)
 app.include_router(students_router.router)
