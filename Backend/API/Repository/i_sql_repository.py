@@ -21,11 +21,11 @@ class ISQLRepository(Protocol):
         """Save a single uploaded file (binary) in SQL DB and return its document ID."""
         ...
 
-    def read_document(self, doc_id: str) -> Optional[dict]:
+    def read_document(self, course_id: str, doc_id: str) -> Optional[dict]:
         """Retrieve a file record by document ID."""
         ...
 
-    def delete_document(self, doc_id: str) -> None:
+    def delete_document(self, course_id: str, doc_id: str) -> None:
         """Delete a file record by its ID."""
         ...
 

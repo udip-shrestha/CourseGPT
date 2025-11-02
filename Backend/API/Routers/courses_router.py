@@ -6,7 +6,7 @@ from typing import Optional
 router = APIRouter(tags=["Courses"])
 
 @router.post(
-    "/courses/{instructor_id}",
+    "/instructors/{instructor_id}/courses",
     status_code=status.HTTP_200_OK,
     summary="Add a new course",
     description=(
@@ -15,7 +15,6 @@ router = APIRouter(tags=["Courses"])
         "**Returns:** JSON containing the created course's ID."
     ),
 )
-
 async def add_course(
     instructor_id: str = Path(
         ...,

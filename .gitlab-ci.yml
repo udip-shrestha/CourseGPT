@@ -36,11 +36,18 @@ test_backend:
     - pip install --upgrade pip
     - if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - echo "Run tests if present"
-    - if [ -f pytest.ini ] || [ -d tests ]; then pytest -q || true; fi
+    - if [ -f pytest.ini ] || [ -d tests ]; then pytest; fi
+  coverage: '/(?i)total.*? (100(?:\.0+)?\%|[1-9]?\d(?:\.\d+)?\%)$/'
   artifacts:
     when: always
+    paths:
+      - "Backend/htmlcov"
+      - "Backend/coverage.xml"
     reports:
-      junit: "$BACKEND_DIR/test-results.xml"
+      coverage_report:
+        coverage_format: cobertura
+        path: "Backend/coverage.xml"
+    expire_in: 2h
 
 deploy_backend:
   stage: deploybackend

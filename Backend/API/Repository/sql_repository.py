@@ -49,7 +49,7 @@ class SQLRepository:
         """
         return self.cm.insert_one(sql, (course_id, file_name, file_bytes, file_type_id))
 
-    def read_document(self, doc_id: str) -> Optional[dict]:
+    def read_document(self, course_id: str, doc_id: str) -> Optional[dict]:
         sql = """
             SELECT 
                 d.id,
@@ -61,23 +61,22 @@ class SQLRepository:
                 d.uploaded_at
             FROM documents d
             LEFT JOIN file_types ft ON d.file_type_id = ft.id
-            WHERE d.id = %s;
+            WHERE d.id = %s AND d.course_id = %s;
         """
 
-        row = self.cm.select_one(sql, (doc_id,))
+        row = self.cm.select_one(sql, (doc_id, course_id))
 
         if not row:
             return None
 
-        # Encode BYTEA → Base64 string
         if row.get("file_data") is not None:
             row["file_data"] = base64.b64encode(row["file_data"]).decode("utf-8")
 
         return row
 
-    def delete_document(self, doc_id: str) -> None:
-        sql = "DELETE FROM documents WHERE id = %s;"
-        self.cm.execute(sql, (doc_id,))
+    def delete_document(self, course_id: str, doc_id: str) -> None:
+        sql = "DELETE FROM documents WHERE id = %s AND course_id = %s;"
+        self.cm.execute(sql, (doc_id, course_id))
 
     def read_all_documents(
         self,
@@ -87,7 +86,15 @@ class SQLRepository:
         offset: int = 0,
         order_by: str = "uploaded_at",
         order_dir: str = "desc",
-    ) -> List[dict]:
+    ) -> dict:
+        allowed_order_by = {"uploaded_at", "file_name"}
+        allowed_order_dir = {"asc", "desc"}
+
+        if order_by not in allowed_order_by:
+            order_by = "uploaded_at"
+        if order_dir.lower() not in allowed_order_dir:
+            order_dir = "desc"
+
         filters = ["course_id = %s"]
         params = [course_id]
 
@@ -96,18 +103,34 @@ class SQLRepository:
             params.append(file_type_id)
 
         where_clause = f"WHERE {' AND '.join(filters)}"
-        sql = f"""
-            SELECT id, course_id, file_name, uploaded_at
-            FROM documents
-            {where_clause}
+
+        # --- Count total matching records (before pagination)
+        count_sql = f"SELECT COUNT(*) AS total FROM documents {where_clause};"
+        total_row = self.cm.select_one(count_sql, tuple(params))
+        total_count = total_row["total"] if total_row else 0
+
+        # --- Fetch paginated results
+        data_sql = f"""
+            SELECT 
+                d.id, 
+                d.course_id, 
+                d.file_name, 
+                d.uploaded_at,
+                ft.extension AS file_type
+            FROM documents d
+            LEFT JOIN file_types ft ON d.file_type_id = ft.id
+                {where_clause}
             ORDER BY {order_by} {order_dir}
             LIMIT %s OFFSET %s;
         """
-        
-        params.extend([limit, offset])
-        results = self.cm.select_all(sql, tuple(params))
+        data_params = params + [limit, offset]
+        results = self.cm.select_all(data_sql, tuple(data_params))
 
-        return results
+        return {
+            "total": total_count,
+            "documents": results or []
+        }
+
 
     # ======================================================
     # INSTRUCTORS
@@ -146,13 +169,22 @@ class SQLRepository:
         name: Optional[str] = None,
         title: Optional[str] = None,
         university: Optional[str] = None,
-        email: Optional[str] = None,
         role: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
-    ) -> List[dict]:
+    ) -> dict:
+        """Fetch instructors with optional filters, pagination, and total count."""
+
+        allowed_order_by = {"created_at", "name"}
+        allowed_order_dir = {"asc", "desc"}
+
+        if order_by not in allowed_order_by:
+            order_by = "created_at"
+        if order_dir.lower() not in allowed_order_dir:
+            order_dir = "desc"
+
         filters = []
         params = []
 
@@ -165,32 +197,37 @@ class SQLRepository:
         if university:
             filters.append("i.university ILIKE %s")
             params.append(f"%{university}%")
-        if email:
-            filters.append("i.email ILIKE %s")
-            params.append(f"%{email}%")
         if role:
             filters.append("r.role_name = %s")
             params.append(role)
 
-        allowed_order_by = {"created_at", "name", "email"}
-        allowed_order_dir = {"asc", "desc"}
-
-        if order_by not in allowed_order_by:
-            order_by = "created_at"
-        if order_dir.lower() not in allowed_order_dir:
-            order_dir = "desc"
-
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
-        sql = f"""
-            SELECT i.id, i.name, i.title, i.university, i.email, r.role_name AS role, i.created_at, i.updated_at
+
+        # --- Count query ---
+        count_sql = f"""
+            SELECT COUNT(*) AS total
+            FROM instructors i
+            LEFT JOIN instructor_roles r ON i.role_id = r.id
+            {where_clause};
+        """
+        total_row = self.cm.select_one(count_sql, tuple(params))
+        total_count = total_row["total"] if total_row else 0
+
+        # --- Data query ---
+        data_sql = f"""
+            SELECT i.id, i.name, i.title, i.university, i.email,
+                r.role_name AS role, i.created_at, i.updated_at
             FROM instructors i
             LEFT JOIN instructor_roles r ON i.role_id = r.id
             {where_clause}
             ORDER BY i.{order_by} {order_dir}
             LIMIT %s OFFSET %s;
         """
-        params.extend([limit, offset])
-        return self.cm.select_all(sql, tuple(params))
+        data_params = tuple(params + [limit, offset])
+        results = self.cm.select_all(data_sql, data_params)
+
+        return {"total": total_count, "instructors": results or []}
+
 
     # ======================================================
     # COURSES
@@ -229,7 +266,17 @@ class SQLRepository:
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
-    ) -> List[dict]:
+    ) -> dict:
+        """Fetch all courses with optional filters, pagination, and total count."""
+
+        allowed_order_by = {"created_at", "name", "year"}
+        allowed_order_dir = {"asc", "desc"}
+
+        if order_by not in allowed_order_by:
+            order_by = "created_at"
+        if order_dir.lower() not in allowed_order_dir:
+            order_dir = "desc"
+
         filters = []
         params = []
 
@@ -241,15 +288,30 @@ class SQLRepository:
             params.append(f"%{institution}%")
 
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
-        sql = f"""
-            SELECT id, instructor_id, name, institution, semester_id, year, created_at
-            FROM courses
+
+        # --- Count total matching records ---
+        count_sql = f"SELECT COUNT(*) AS total FROM courses {where_clause};"
+        total_row = self.cm.select_one(count_sql, tuple(params))
+        total_count = total_row["total"] if total_row else 0
+
+        # --- Fetch paginated results ---
+        data_sql = f"""
+            SELECT 
+                c.id, c.instructor_id, c.name, c.institution, 
+                c.semester_id, c.year, c.created_at, i.name AS instructor_name
+            FROM courses c
+            LEFT JOIN instructors i ON c.instructor_id = i.id
             {where_clause}
-            ORDER BY {order_by} {order_dir}
+            ORDER BY c.{order_by} {order_dir}
             LIMIT %s OFFSET %s;
         """
-        params.extend([limit, offset])
-        return self.cm.select_all(sql, tuple(params))
+        data_params = tuple(params + [limit, offset])
+        results = self.cm.select_all(data_sql, data_params)
+
+        return {
+            "total": total_count,
+            "courses": results or []
+        }
 
     def delete_course(self, course_id: str) -> None:
         self.cm.execute("DELETE FROM courses WHERE id = %s;", (course_id,))

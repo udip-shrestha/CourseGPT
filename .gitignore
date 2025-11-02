@@ -27,3 +27,9 @@
 
 # Ignore vite build dir dist
 **/dist
+
+# Coverage and testing artifacts
+**/.coverage
+**/coverage.xml
+**/htmlcov/
+**/.cache/
