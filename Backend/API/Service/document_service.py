@@ -29,6 +29,9 @@ class DocumentService:
         2️⃣ Extract and split file text into chunks.
         3️⃣ Store chunks in vector DB for semantic search.
         """
+        if not file_bytes:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
+
         # --- Step 1: Resolve file type ---
         file_type = self.sql_repo.read_file_type_by_mime(mime_type)
         if not file_type:
@@ -45,7 +48,7 @@ class DocumentService:
             self.rag_service.create_index(course_id, doc_id, "RecursiveCharacterTextSplitterType", file_name, file_type, file_bytes)
         except Exception as e:
             # Rollback SQL if vector indexing fails
-            self.sql_repo.delete_document(doc_id)
+            self.sql_repo.delete_document(course_id, doc_id)
             raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Vector indexing failed: {str(e)}")
 
         return {"doc_id": doc_id}
@@ -53,13 +56,10 @@ class DocumentService:
     @clean_service
     def read_document(self, course_id: str, doc_id: str) -> dict:
         """Fetch one document by ID."""
-        doc = self.sql_repo.read_document(doc_id)
-        
-        if not doc or doc["course_id"] != course_id:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Document with id={doc_id} not found."
-            )
+        doc = self.sql_repo.read_document(course_id, doc_id)
+
+        if not doc:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Document with id={doc_id} not found.")
 
         return doc
 
@@ -103,7 +103,7 @@ class DocumentService:
         Remove a document from both SQL and vector stores.
         Keeps systems consistent.
         """
-        self.sql_repo.delete_document(doc_id)
+        self.sql_repo.delete_document(course_id, doc_id)
         self.rag_service.delete_index(course_id, doc_id)
 
         return {"status": "deleted", "course_id": course_id, "doc_id": doc_id}

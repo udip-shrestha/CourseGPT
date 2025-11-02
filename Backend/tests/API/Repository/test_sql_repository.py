@@ -43,7 +43,7 @@ def test_create_and_read_document(repo, temp_course):
     assert doc_id is not None
 
     # Read it back
-    doc = repo.read_document(doc_id)
+    doc = repo.read_document(temp_course, doc_id)
     assert doc is not None
     assert doc["course_id"] == uuid.UUID(temp_course)
     assert doc["file_name"] == file_name
@@ -58,19 +58,19 @@ def test_read_all_documents_filters_and_pagination(repo, temp_course):
         )
 
     results = repo.read_all_documents(course_id=temp_course, limit=2, offset=0)
-    assert len(results) == 2
+    assert len(results["documents"]) == 2
 
     results_next = repo.read_all_documents(course_id=temp_course, limit=2, offset=2)
-    assert isinstance(results_next, list)
+    assert isinstance(results_next["documents"], list)
 
 
 def test_delete_document(repo, temp_course):
     doc_id = repo.create_document(temp_course, "temp.txt", b"hello", file_type_id=2)
-    assert repo.read_document(doc_id) is not None
+    assert repo.read_document(temp_course, doc_id) is not None
 
-    # Delete it
-    repo.delete_document(doc_id)
-    assert repo.read_document(doc_id) is None
+    repo.delete_document(course_id=temp_course, doc_id=doc_id)
+    assert repo.read_document(temp_course, doc_id) is None
+
 
 
 # ==========================================================
@@ -110,19 +110,21 @@ def test_read_instructor(repo: ISQLRepository):
 
 def test_read_all_instructors_features(repo: ISQLRepository, temp_instructor: str):
     """Should support filtering, ordering, and pagination."""
-    instructors = repo.read_all_instructors()   
+    result = repo.read_all_instructors()
+    instructors = result["instructors"]
     assert isinstance(instructors, list)
     if instructors:
         assert "email" in instructors[0] and "role" in instructors[0]
 
-    filtered = repo.read_all_instructors(role="INSTRUCTOR")
+    filtered = repo.read_all_instructors(role="INSTRUCTOR")["instructors"]
     assert all(inst["role"] == "INSTRUCTOR" for inst in filtered)
 
-    limited = repo.read_all_instructors(limit=1)
+    limited = repo.read_all_instructors(limit=1)["instructors"]
     assert len(limited) <= 1
 
-    invalid = repo.read_all_instructors(order_by="invalid_field")
+    invalid = repo.read_all_instructors(order_by="invalid_field")["instructors"]
     assert isinstance(invalid, list)
+
 
 
 # ==========================================================
@@ -144,7 +146,7 @@ def test_create_and_read_course(repo, temp_instructor):
 
 
 def test_read_all_courses(repo):
-    results = repo.read_all_courses()
+    results = repo.read_all_courses()["courses"]
     assert isinstance(results, list)
 
 
