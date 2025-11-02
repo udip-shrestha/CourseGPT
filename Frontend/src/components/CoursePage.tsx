@@ -3,10 +3,10 @@ import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Plus, Eye, Download, Trash2 } from "lucide-react";
 import { useState, useEffect } from "react"; // Added useEffect
-// --- FIX: Removed unused DialogTrigger ---
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { FileUpload } from "./FileUpload";
-// Removed unused Badge import
+
 
 // --- Define Interfaces ---
 // Interface for the detailed course data (adjust based on actual GET /courses/{id} response)
@@ -29,10 +29,10 @@ interface Document {
     id: string;
     file_name: string;
     uploaded_at: string;
-    // --- FIX: Add the properties created in the .map() function ---
+    // Add the properties created in the .map() function ---
     name: string;       // Added from mapping doc.file_name
     uploadDate: string; // Added from mapping new Date(...)
-    // -----------------------------------------------------------
+
     type?: string;
     size?: string;
 }

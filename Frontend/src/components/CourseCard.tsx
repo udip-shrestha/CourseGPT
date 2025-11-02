@@ -1,9 +1,9 @@
 import { BookOpen, Calendar, Building } from 'lucide-react'; // Changed icons
 import { Card, CardContent, CardHeader } from './ui/card';
-// Removed Badge import
+
 import { Button } from './ui/button';
 import type {CourseSummary} from './InstructorCourses'; // Import the interface reflecting API data
-// Import the interface reflecting API data
+
 
 // Interface for props using the API data structure
 interface CourseCardProps {

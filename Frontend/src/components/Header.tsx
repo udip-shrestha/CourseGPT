@@ -19,7 +19,7 @@ export function Header() {
     const instructorId = getInstructorIdFromPath(path);
 
 
-    // This logic is great!
+
     const onInstructorRoute = path.startsWith("/instructors/");
     const onLoginPage = path === "/login";
     const onRegisterPage = path === "/register";

@@ -19,12 +19,12 @@ interface CourseRegisterDialogProps {
     onClose: () => void; // Callback to close dialog from parent state
 }
 
-// Simple mapping - ADJUST THESE IDs if your backend expects different numbers
+
 // Based on Swagger, Fall=4, but usually Spring=1, Summer=2, Fall=3. Double-check your DB/backend logic.
 const semesterMap: { [key: string]: number } = {
     "Spring": 1, // Placeholder
     "Summer": 2, // Placeholder
-    "Fall": 4    // Based on your Swagger example for POST /courses
+    "Fall": 3    // Based on POST /courses
 };
 const semesterOptions = ["Spring", "Summer", "Fall"]; // Options for the dropdown
 
