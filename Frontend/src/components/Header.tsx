@@ -1,27 +1,35 @@
 import { GraduationCap, User, Upload, LogIn, UserPlus } from "lucide-react";
-import { useLocation, useParams, useNavigate } from "react-router-dom";
+// Import 'useLocation' and 'useNavigate', but REMOVE 'useParams'
+import { useLocation, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
+
+// Helper function to extract the ID from the path
+function getInstructorIdFromPath(path: string): string | undefined {
+    const match = path.match(/\/instructors\/([a-f0-9-]+)/);
+    return match ? match[1] : undefined;
+}
 
 export function Header() {
     const location = useLocation();
     const navigate = useNavigate();
-    // Use generic to be explicit with TypeScript
-    const { instructorId } = useParams<{ instructorId: string }>();
-
     const path = location.pathname;
+
+    // --- THIS IS THE FIX ---
+    // Manually parse the instructorId from the URL path
+    const instructorId = getInstructorIdFromPath(path);
+    // --- END OF FIX ---
 
     // This logic is great!
     const onInstructorRoute = path.startsWith("/instructors/");
     const onLoginPage = path === "/login";
     const onRegisterPage = path === "/register";
     const onHomePage = path === "/";
+    // Check for other pages (like /courses/:courseId)
     const onOtherPage = !onInstructorRoute && !onLoginPage && !onRegisterPage && !onHomePage;
 
     return (
         <header className="border-b bg-card">
-            {/* Updated container classes to match App.tsx's <main> for perfect alignment */}
             <div className="w-full max-w-[1920px] mx-auto px-6 sm:px-8 py-4">
-                {/* Stack content on mobile, side-by-side on larger screens */}
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     {/* Logo - Added click to go home */}
                     <div
@@ -34,8 +42,10 @@ export function Header() {
 
                     {/* Conditional Navigation */}
                     <nav className="flex flex-wrap justify-center sm:justify-end gap-2 sm:gap-4">
+
                         {/* Instructor route: Profile + Courses */}
-                        {onInstructorRoute && (
+                        {/* This block will now work correctly */}
+                        {onInstructorRoute && instructorId && (
                             <>
                                 <Button
                                     variant={path.endsWith("/profile") ? "default" : "ghost"}
@@ -85,7 +95,7 @@ export function Header() {
                             </Button>
                         )}
 
-                        {/* Home page or other pages (like /courses/:id): show both Login + Register */}
+                        {/* Home page or other pages: show both Login + Register */}
                         {(onHomePage || onOtherPage) && (
                             <>
                                 <Button
