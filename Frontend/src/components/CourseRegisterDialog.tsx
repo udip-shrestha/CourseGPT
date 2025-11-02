@@ -24,7 +24,7 @@ interface CourseRegisterDialogProps {
 const semesterMap: { [key: string]: number } = {
     "Spring": 1, // Placeholder
     "Summer": 2, // Placeholder
-    "Fall": 3    // Based on POST /courses
+    "Fall": 4    // Based on POST /courses
 };
 const semesterOptions = ["Spring", "Summer", "Fall"]; // Options for the dropdown
 

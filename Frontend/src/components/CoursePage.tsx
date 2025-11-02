@@ -36,9 +36,9 @@ interface Document {
     type?: string;
     size?: string;
 }
-// --- End Interfaces ---
 
-// --- Helper Functions ---
+
+
 // Helper to convert semester ID to string (Ensure consistency)
 function semesterIdToString(id: number | undefined): string {
     if (id === undefined) return "N/A";
@@ -50,7 +50,7 @@ function semesterIdToString(id: number | undefined): string {
         default: return "Unknown";
     }
 }
-// --- End Helper Functions ---
+
 
 
 export function CoursePage() {
@@ -65,7 +65,6 @@ export function CoursePage() {
     const [courseError, setCourseError] = useState<string | null>(null);
     const [docsError, setDocsError] = useState<string | null>(null);
     const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
-    // --- End State ---
 
 
     // --- Fetch Course Details ---
