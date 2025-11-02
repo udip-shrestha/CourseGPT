@@ -1,9 +1,10 @@
 import base64
 from typing import Optional, List, Dict, Any
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
+from API.Repository.i_sql_repository import ISQLRepository
 
 
-class SQLRepository:
+class SQLRepository(ISQLRepository):
     """
     Central repository for all SQL-based database interactions.
     Each method corresponds to a specific domain (documents, courses, etc.).
@@ -169,12 +170,13 @@ class SQLRepository:
         name: Optional[str] = None,
         title: Optional[str] = None,
         university: Optional[str] = None,
+        email: Optional[str] = None,
         role: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
-    ) -> dict:
+    ) -> List[dict]:
         """Fetch instructors with optional filters, pagination, and total count."""
 
         allowed_order_by = {"created_at", "name"}
@@ -197,6 +199,9 @@ class SQLRepository:
         if university:
             filters.append("i.university ILIKE %s")
             params.append(f"%{university}%")
+        if email:
+            filters.append("i.email ILIKE %s")
+            params.append(f"%{email}%")
         if role:
             filters.append("r.role_name = %s")
             params.append(role)
@@ -227,6 +232,14 @@ class SQLRepository:
         results = self.cm.select_all(data_sql, data_params)
 
         return {"total": total_count, "instructors": results or []}
+
+    def delete_instructor(self, instructor_id: str) -> None:
+        """Delete an instructor by their UUID."""
+        sql = """
+            DELETE FROM instructors
+            WHERE id = %s;
+        """
+        self.cm.execute(sql, (instructor_id,))
 
 
     # ======================================================

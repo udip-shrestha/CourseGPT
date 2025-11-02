@@ -88,6 +88,7 @@ def test_create_instructor(repo: ISQLRepository):
     # Empty fields might be allowed by schema, so no exception expected
     repo.create_instructor("", "", "", "unique@example.com", "pw")
 
+
 def test_read_instructor(repo: ISQLRepository):
     """Should fetch instructors by ID/email and handle not-found cases."""
     instructor_id = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "fake-hash")
@@ -125,6 +126,28 @@ def test_read_all_instructors_features(repo: ISQLRepository, temp_instructor: st
     invalid = repo.read_all_instructors(order_by="invalid_field")["instructors"]
     assert isinstance(invalid, list)
 
+
+def test_delete_instructor(repo: ISQLRepository):
+    """Should delete an instructor and handle not-found cases safely."""
+    # Create an instructor
+    instructor_id = repo.create_instructor("Dr. John Doe", "Lecturer", "MIT", "john.doe@mit.edu", "secure-hash")
+    assert instructor_id is not None
+
+    # Verify it exists before deletion
+    instructor = repo.read_instructor(instructor_id)
+    assert instructor is not None
+    assert instructor["email"] == "john.doe@mit.edu"
+
+    # Delete the instructor
+    repo.delete_instructor(instructor_id)
+
+    # Verify it was deleted
+    deleted = repo.read_instructor(instructor_id)
+    assert deleted is None
+
+    # Deleting again should not raise an error
+    # (depending on your DB constraint handling)
+    repo.delete_instructor(instructor_id)
 
 
 # ==========================================================
