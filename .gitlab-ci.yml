@@ -9,6 +9,7 @@ variables:
   FRONTEND_DIR: "Frontend"
   BACKEND_DEPLOY_SCRIPT: "Backend/Script/deploy_backend.sh"
   FRONTEND_DEPLOY_DIR: "/var/www/sdmay26-37/"
+  VITE_API_BASE_URL: "http://sdmay26-37.ece.iastate.edu:8000"
 
 build_frontend:
   image: node:20

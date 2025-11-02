@@ -1,50 +1,35 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import useNavigate
+import { useNavigate } from "react-router-dom"; 
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
-// import './login.css'; // Assuming this might contain custom styles you want to keep
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { useApiClient } from "./../ApiClientContext";
 
 export function LoginPage() {
-    const navigate = useNavigate(); // Initialize useNavigate
+    const navigate = useNavigate();
+    const apiClient = useApiClient();
+  
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null); // State for login errors
-
+    const [error, setError] = useState<string | null>(null);
+  
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
-        setError(null); // Clear previous errors
-
-        // --- Replace with your actual Login API call ---
-        try {
-            console.log("Login attempt:", { email, password });
-            // Example:
-            // const response = await fetch('/api/login', { /* ... */ });
-            // if (!response.ok) {
-            //   const errorData = await response.json();
-            //   throw new Error(errorData.detail || 'Login failed');
-            // }
-            // const userData = await response.json();
-            // // Handle successful login (e.g., store token, update auth context)
-            // // Example: navigate(`/instructors/${userData.instructorId}/profile`);
-
-            // Simulate API call
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            console.log("Simulated login successful");
-            // Example navigation after successful login
-            const mockInstructorId = "1"; // Replace with actual ID from API response if applicable
-            navigate(`/instructors/${mockInstructorId}/profile`); // Navigate to profile or dashboard
-
-        } catch (err: any) {
-            console.error("Login failed:", err);
-            setError(err.message || "Login failed. Please check your email and password.");
-        } finally {
-            setIsLoading(false);
+        setError(null);
+    
+        const { data, errorMessage } = await apiClient.login(email, password);
+    
+        if (errorMessage) {
+            setError(errorMessage);
         }
-        // --- End of API call section ---
+
+        const instructorId = data.instructor_id;
+        navigate(`/instructors/${instructorId}/profile`);
+    
+        setIsLoading(false);
     };
 
     return (
