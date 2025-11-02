@@ -53,7 +53,7 @@ export function InstructorCourses() {
         setError(null); // Clear previous errors
 
         const fetchCourses = async () => {
-            const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
+            const url = `http://localhost:8000/instructors/${instructorId}/courses`;
             console.log("Fetching courses from:", url);
 
             try {

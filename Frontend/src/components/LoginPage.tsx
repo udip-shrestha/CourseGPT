@@ -49,6 +49,7 @@ export function LoginPage() {
 
                 // 4. Navigate to the instructor's profile page
                 navigate(`/instructors/${foundInstructor.id}/profile`);
+                //navigate(`/instructors/${foundInstructor.id}/courses`);
 
             } else {
                 // Instructor email not found
