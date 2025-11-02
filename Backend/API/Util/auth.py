@@ -5,7 +5,9 @@ from datetime import datetime, timedelta, timezone
 import jwt
 from pwdlib import PasswordHash
 import os
+from dotenv import load_dotenv
 
+load_dotenv()
 
 SECRET_KEY =  os.environ["JWT_SECRET_KEY"]
 ALGORITHM = os.environ["JWT_ALGORITHM"]
