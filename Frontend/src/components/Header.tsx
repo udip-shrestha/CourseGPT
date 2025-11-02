@@ -14,10 +14,10 @@ export function Header() {
     const navigate = useNavigate();
     const path = location.pathname;
 
-    // --- THIS IS THE FIX ---
+
     // Manually parse the instructorId from the URL path
     const instructorId = getInstructorIdFromPath(path);
-    // --- END OF FIX ---
+
 
     // This logic is great!
     const onInstructorRoute = path.startsWith("/instructors/");
