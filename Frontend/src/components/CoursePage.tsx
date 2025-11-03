@@ -1,45 +1,51 @@
-import { useParams } from "react-router-dom"; // Removed useNavigate
+import { useParams, useNavigate } from "react-router-dom"; // Added useNavigate
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-import { Plus, Eye, Download, Trash2 } from "lucide-react";
-import { useState, useEffect } from "react"; // Added useEffect
-
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+// --- ADDED Imports ---
+import { Plus, Eye, Download, Trash2, Settings, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogClose,
+    DialogFooter,
+    DialogTrigger
+} from "./ui/dialog"; // Added all dialog components
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"; // Added Popover
+// --- END ADDED Imports ---
 import { FileUpload } from "./FileUpload";
 
-
 // --- Define Interfaces ---
-// Interface for the detailed course data (adjust based on actual GET /courses/{id} response)
 interface CourseDetail {
     id: string;
-    instructor_id: string; // Assuming API returns this
+    instructor_id: string; // Now required
     name: string;
-    institution?: string; // Add if API returns it
-    semester_id?: number; // Add if API returns it
-    year?: number;       // Add if API returns it
-    code?: string;       // Keep if API returns it
-    semester?: string;   // Keep if API returns it (or derive from semester_id)
-    studentCount?: number; // Placeholder - Fetch separately if needed
-    documentCount?: number;// Placeholder - Fetch separately if needed
-    // created_at?: string; // Add if needed
+    institution: string; // Now required
+    semester_id: number; // Now required
+    year: number;       // Now required
+    created_at: string; // Now required
+    // Removed optional/mock fields
+    code?: string;
+    semester?: string;
+    studentCount?: number;
+    documentCount?: number;
 }
 
-// Interface for document data (adjust based on actual GET /courses/{id}/documents response)
 interface Document {
     id: string;
     file_name: string;
     uploaded_at: string;
-    // Add the properties created in the .map() function ---
-    name: string;       // Added from mapping doc.file_name
-    uploadDate: string; // Added from mapping new Date(...)
-
+    name: string;
+    uploadDate: string;
     type?: string;
     size?: string;
 }
+// --- End Interfaces ---
 
-
-
-// Helper to convert semester ID to string (Ensure consistency)
+// --- Helper Functions ---
 function semesterIdToString(id: number | undefined): string {
     if (id === undefined) return "N/A";
     switch (id) {
@@ -50,12 +56,12 @@ function semesterIdToString(id: number | undefined): string {
         default: return "Unknown";
     }
 }
-
+// --- End Helper Functions ---
 
 
 export function CoursePage() {
     const { courseId } = useParams<{ courseId: string }>();
-    // const navigate = useNavigate(); // Removed this line
+    const navigate = useNavigate(); // Added navigate
 
     // --- State ---
     const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -65,6 +71,14 @@ export function CoursePage() {
     const [courseError, setCourseError] = useState<string | null>(null);
     const [docsError, setDocsError] = useState<string | null>(null);
     const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
+
+    // --- ADDED State for Popover and Dialogs ---
+    const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [isFinalDeleteDialogOpen, setIsFinalDeleteDialogOpen] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+    // --- End State ---
 
 
     // --- Fetch Course Details ---
@@ -78,31 +92,26 @@ export function CoursePage() {
             setIsLoadingCourse(true);
             setCourseError(null);
             try {
-                // --- TODO: Replace with ACTUAL GET /courses/{courseId} endpoint ---
-                console.warn(`Fetching course details for ${courseId} - using placeholder`);
-                // const response = await fetch(`http://localhost:8000/courses/${courseId}`);
-                // if (!response.ok) throw new Error('Failed to fetch course details');
-                // const data: CourseDetail = await response.json();
-
-                // --- MOCK DATA FOR NOW ---
-                await new Promise(res => setTimeout(res, 500)); // Simulate fetch time
-                // Make mock data slightly more consistent with potential API
-                const mockData: CourseDetail = {
-                    id: courseId,
-                    instructor_id: "mock-instructor-id", // Needed for Back button potentially
-                    name: `Course ${courseId} Details`, // Example Name
-                    institution: "Mock University",
-                    semester_id: 3, // Fall
-                    year: 2024,
-                    code: `CS ${courseId}01`, // Mock Code
-                    semester: "Fall 2024", // Mock Semester String
-                    studentCount: 50 + Number(courseId || 0), // Mock Count
-                    documentCount: 5 + Number(courseId || 0), // Mock Count (will be replaced by actual count below)
-                };
-                setCourse(mockData);
-                // --- END MOCK DATA ---
+                // --- REPLACED MOCK DATA WITH REAL FETCH ---
+                console.log(`Fetching course details for ${courseId}...`);
+                const response = await fetch(`http://localhost:8000/courses/${courseId}`);
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error(`Course with ID ${courseId} not found.`);
+                    }
+                    let errorDetail = `Failed to fetch course (Status: ${response.status})`;
+                    try {
+                        const errorData = await response.json();
+                        errorDetail = errorData.detail || errorDetail;
+                    } catch (_) {}
+                    throw new Error(errorDetail);
+                }
+                const data: CourseDetail = await response.json();
+                setCourse(data);
+                // --- END REAL FETCH ---
 
             } catch (err: any) {
+                console.error("Fetch course details error:", err);
                 setCourseError(err.message || "Failed to load course details.");
             } finally {
                 setIsLoadingCourse(false);
@@ -120,6 +129,7 @@ export function CoursePage() {
             setIsLoadingDocs(false);
             return;
         }
+        // ... (fetchDocuments logic remains the same) ...
         const fetchDocuments = async () => {
             setIsLoadingDocs(true);
             setDocsError(null);
@@ -131,13 +141,12 @@ export function CoursePage() {
                     throw new Error(`Failed to fetch documents (Status: ${response.status})`);
                 }
                 const data: Document[] = await response.json();
-                // Map API data to UI structure
                 setDocuments(data.map(doc => ({
                     ...doc,
-                    name: doc.file_name, // Map field name
+                    name: doc.file_name,
                     uploadDate: new Date(doc.uploaded_at).toLocaleDateString(),
                     type: doc.file_name.split('.').pop()?.toUpperCase() || 'FILE',
-                    size: 'N/A' // Size not provided by list endpoint
+                    size: 'N/A'
                 })));
             } catch (err: any) {
                 console.error("Fetch documents error:", err);
@@ -146,11 +155,6 @@ export function CoursePage() {
                 } else {
                     setDocsError(err.message || "Failed to load documents.");
                 }
-                // Also set mock data on error if needed for testing UI
-                // const mockDocs: Document[] = [
-                //     { id: 'doc1', name: 'Lecture 1.pdf', type: 'PDF', size: '2.5 MB', uploadDate: '2024-01-15', courseId: courseId },
-                // ];
-                // setDocuments(mockDocs);
             } finally {
                 setIsLoadingDocs(false);
             }
@@ -162,11 +166,54 @@ export function CoursePage() {
 
     // --- Handlers ---
     const handleFilesSelected = (files: File[]) => {
+        // ... (handleFilesSelected logic remains the same) ...
         console.log('Files selected for upload:', files);
-        // TODO: Implement file upload logic to POST /courses/{courseId}/documents
         alert(`Simulating upload for ${files.length} file(s). Check console.`);
         setIsAddDocumentOpen(false);
-        // Consider re-fetching documents list after successful upload
+    };
+
+    // --- ADDED Delete Course Handler ---
+    const handleDeleteCourse = async () => {
+        if (!courseId || !course) {
+            setDeleteError("Cannot delete: Course ID or instructor ID is missing.");
+            return;
+        }
+
+        setIsDeleting(true);
+        setDeleteError(null);
+
+        try {
+            const response = await fetch(`http://localhost:8000/courses/${courseId}`, {
+                method: 'DELETE',
+                headers: { 'accept': '*/*' } // As per Swagger
+            });
+
+            // 204 No Content is a successful deletion
+            if (response.status === 204 || response.ok) {
+                console.log(`Course ${courseId} deleted successfully.`);
+                setIsFinalDeleteDialogOpen(false);
+                setIsDeleteDialogOpen(false);
+                setIsSettingsOpen(false);
+                // Navigate back to the instructor's course list
+                navigate(`/instructors/${course.instructor_id}/courses`);
+            } else {
+                let errorDetail = `Failed to delete course (Status: ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorDetail;
+                } catch (_) {}
+                throw new Error(errorDetail);
+            }
+        } catch (err: any) {
+            console.error("Failed to delete course:", err);
+            let userError = err.message || "An unexpected error occurred.";
+            if (err instanceof TypeError && err.message === "Failed to fetch") {
+                userError = "Could not connect to the server.";
+            }
+            setDeleteError(userError); // Set error to display in the dialog
+        } finally {
+            setIsDeleting(false);
+        }
     };
     // --- End Handlers ---
 
@@ -183,50 +230,137 @@ export function CoursePage() {
     }
     // --- End States ---
 
-
-    // --- Main Render ---
     return (
-        // Removed outer container/mx-auto
         <div className="space-y-6">
             {/* Course header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="text-center sm:text-left">
-                    {/* Back button (optional, depends on navigation flow) */}
-                    {/* <Button variant="ghost" onClick={() => navigate(-1)} className="mb-2 hidden sm:inline-flex">← Back</Button> */}
+                    {/* --- ADDED Back Button --- */}
+                    <Button
+                        variant="ghost"
+                        onClick={() => navigate(`/instructors/${course.instructor_id}/courses`)}
+                        className="mb-2 -ml-4" // Use negative margin to align
+                    >
+                        ← Back to Courses
+                    </Button>
+                    {/* --------------------- */}
                     <h1 className="text-2xl sm:text-3xl font-bold break-words">
                         {course.name}
                     </h1>
                     <p className="text-muted-foreground text-sm sm:text-base">
-                        {/* Display code if available, otherwise semester/year */}
                         {course.code ? `${course.code} • ` : ''}
                         {course.semester || semesterIdToString(course.semester_id)} {course.year}
                     </p>
                 </div>
-                <div className="flex justify-center sm:justify-end">
+
+                {/* --- UPDATED Button Group --- */}
+                <div className="flex justify-center sm:justify-end gap-2">
                     <Button className="w-full sm:w-auto" onClick={() => setIsAddDocumentOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Document
                     </Button>
+
+                    {/* --- ADDED Settings Popover --- */}
+                    <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="icon" aria-label="Course Settings">
+                                <Settings className="h-5 w-5" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-48 p-2">
+                            <div className="grid gap-1">
+                                <Button
+                                    variant="ghost"
+                                    className="w-full justify-start text-sm h-8"
+                                    disabled // Disabled until backend endpoint exists
+                                    onClick={() => {
+                                        console.log("Update course clicked");
+                                        setIsSettingsOpen(false);
+                                    }}
+                                >
+                                    Update Course
+                                </Button>
+                                {/* --- Delete Option (Triggers First Dialog) --- */}
+                                <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                                    <DialogTrigger asChild>
+                                        <Button
+                                            variant="ghost"
+                                            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-sm h-8"
+                                            onClick={() => setIsSettingsOpen(false)} // Close popover
+                                        >
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete Course
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Delete "{course.name}"?</DialogTitle>
+                                            <DialogDescription>
+                                                This action cannot be undone immediately. Do you want to proceed?
+                                            </DialogDescription>
+                                        </DialogHeader>
+                                        <DialogFooter className="gap-2 sm:justify-end">
+                                            <DialogClose asChild>
+                                                <Button variant="outline">Cancel</Button>
+                                            </DialogClose>
+                                            {/* --- Second Confirmation Dialog (Nested Trigger) --- */}
+                                            <Dialog open={isFinalDeleteDialogOpen} onOpenChange={setIsFinalDeleteDialogOpen}>
+                                                <DialogTrigger asChild>
+                                                    <Button variant="destructive">Confirm Delete</Button>
+                                                </DialogTrigger>
+                                                <DialogContent>
+                                                    <DialogHeader>
+                                                        <DialogTitle className="flex items-center gap-2">
+                                                            <AlertTriangle className="text-destructive h-5 w-5"/> Final Confirmation
+                                                        </DialogTitle>
+                                                        <DialogDescription>
+                                                            Deleting this course is permanent and will remove all associated documents.
+                                                            {deleteError && <p className="text-sm text-destructive mt-4">Error: {deleteError}</p>}
+                                                        </DialogDescription>
+                                                    </DialogHeader>
+                                                    <DialogFooter className="gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => setIsFinalDeleteDialogOpen(false)}
+                                                            disabled={isDeleting}
+                                                        >
+                                                            Cancel
+                                                        </Button>
+                                                        <Button
+                                                            variant="destructive"
+                                                            onClick={handleDeleteCourse} // Calls API
+                                                            disabled={isDeleting}
+                                                        >
+                                                            {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
+                                                        </Button>
+                                                    </DialogFooter>
+                                                </DialogContent>
+                                            </Dialog>
+                                        </DialogFooter>
+                                    </DialogContent>
+                                </Dialog>
+                            </div>
+                        </PopoverContent>
+                    </Popover>
+                    {/* --- End Settings --- */}
                 </div>
+                {/* --- END UPDATED Button Group --- */}
             </div>
 
             {/* Course Stats - RATING REMOVED */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4"> {/* Changed to sm:grid-cols-2 */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <Card className="text-center">
                     <CardContent className="p-4">
-                        {/* Use placeholder or fetched data */}
                         <div className="text-2xl font-bold">{course.studentCount ?? 'N/A'}</div>
                         <div className="text-sm text-muted-foreground">Students Enrolled</div>
                     </CardContent>
                 </Card>
                 <Card className="text-center">
                     <CardContent className="p-4">
-                        {/* Use actual length of fetched documents array */}
                         <div className="text-2xl font-bold">{isLoadingDocs ? '...' : documents.length}</div>
                         <div className="text-sm text-muted-foreground">Documents</div>
                     </CardContent>
                 </Card>
-                {/* Rating card completely removed */}
             </div>
 
             {/* Course Documents */}
@@ -237,38 +371,31 @@ export function CoursePage() {
                     </CardTitle>
                 </CardHeader>
                 <CardContent>
-                    {/* Documents Loading State */}
+                    {/* ... (Document list rendering remains the same) ... */}
                     {isLoadingDocs && <p className="text-sm text-muted-foreground text-center py-4">Loading documents...</p>}
-                    {/* Documents Error State */}
                     {docsError && !isLoadingDocs && <p className="text-sm text-destructive text-center py-4">Error: {docsError}</p>}
-                    {/* Documents List */}
                     {!isLoadingDocs && !docsError && (
                         <div className="space-y-3">
                             {documents.map((doc) => (
                                 <div
                                     key={doc.id}
-                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors" // Added hover effect
+                                    className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 border rounded-lg hover:bg-muted/50 transition-colors"
                                 >
-                                    {/* Doc Info */}
                                     <div className="flex items-center gap-3 overflow-hidden">
                                         <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center flex-shrink-0">
                                             <span className="text-xs font-medium uppercase">{doc.type || 'FILE'}</span>
                                         </div>
-                                        <div className="min-w-0"> {/* Helps with truncation */}
-                                            {/* --- NO ERROR HERE ANYMORE --- */}
+                                        <div className="min-w-0">
                                             <p className="font-medium text-sm sm:text-base truncate" title={doc.name}>
-                                                {doc.name || doc.file_name}
+                                                {doc.name}
                                             </p>
-                                            {/* --- NO ERROR HERE ANYMORE --- */}
                                             <p className="text-xs sm:text-sm text-muted-foreground">
                                                 {doc.size ? `${doc.size} • ` : ''}
-                                                Uploaded: {doc.uploadDate || new Date(doc.uploaded_at).toLocaleDateString()}
+                                                Uploaded: {doc.uploadDate}
                                             </p>
                                         </div>
                                     </div>
-                                    {/* Doc Actions */}
                                     <div className="flex justify-end sm:justify-start gap-1 sm:gap-2 flex-shrink-0">
-                                        {/* TODO: Implement action handlers */}
                                         <Button variant="ghost" size="sm" title="View Document (Not Implemented)">
                                             <Eye className="h-4 w-4" />
                                         </Button>
@@ -281,7 +408,6 @@ export function CoursePage() {
                                     </div>
                                 </div>
                             ))}
-                            {/* No Documents Message */}
                             {documents.length === 0 && (
                                 <p className="text-sm text-muted-foreground text-center py-4">
                                     No documents uploaded for this course yet.
@@ -296,12 +422,12 @@ export function CoursePage() {
             <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
                 <DialogContent className="max-w-md sm:max-w-2xl">
                     <DialogHeader>
-                        <DialogTitle>Upload Documents for {course?.name || 'this course'}</DialogTitle>
+                        <DialogTitle>Upload Documents for {course.name}</DialogTitle>
                     </DialogHeader>
-                    <div className="py-4"> {/* Added padding */}
+                    <div className="py-4">
                         <FileUpload onFilesSelected={handleFilesSelected} />
                     </div>
-                    <div className="flex flex-col sm:flex-row justify-end gap-2"> {/* Footer area */}
+                    <div className="flex flex-col sm:flex-row justify-end gap-2">
                         <Button
                             variant="outline"
                             onClick={() => setIsAddDocumentOpen(false)}
@@ -309,8 +435,6 @@ export function CoursePage() {
                         >
                             Cancel
                         </Button>
-                        {/* Upload action is triggered by onFilesSelected in this setup */}
-                        {/* <Button className="w-full sm:w-auto">Upload</Button> */}
                     </div>
                 </DialogContent>
             </Dialog>
