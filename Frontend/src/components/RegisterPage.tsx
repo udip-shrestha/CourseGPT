@@ -4,89 +4,76 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+// --- 1. Import the ApiClient hook ---
+import { useApiClient } from "../ApiClientContext";
 
 // Renamed component for clarity
 export function RegisterPage() {
     const navigate = useNavigate();
+    // --- 2. Initialize the ApiClient ---
+    const apiClient = useApiClient();
+
+    // --- 3. Add state for all required fields ---
     const [name, setName] = useState("");
     const [title, setTitle] = useState("");
     const [university, setUniversity] = useState("");
     const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    // --- End state ---
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // --- 4. Replace the entire handleSubmit function ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        // Basic Validation
-        if (!name || !title || !university || !email ) {
+        // --- Basic Validation ---
+        if (!name || !title || !university || !email || !password || !confirmPassword) {
             setError("Please fill out all fields.");
             setIsLoading(false);
             return;
         }
+        if (password !== confirmPassword) {
+            setError("Passwords do not match.");
+            setIsLoading(false);
+            return;
+        }
+        // --- End Validation ---
 
-        // --- CONSTRUCT URL WITH QUERY PARAMETERS ---
-        const params = new URLSearchParams();
-        params.append('name', name);
-        params.append('title', title);
-        params.append('university', university);
-        params.append('email', email);
+        console.log("Submitting new instructor registration...");
 
-        const url = `http://localhost:8000/instructors?${params.toString()}`;
-        console.log("Submitting Instructor Registration via URL:", url);
-        // --- END URL CONSTRUCTION ---
-
-        // --- API CALL (Sending data via Query Params) ---
+        // --- ACTUAL API CALL using ApiClient ---
         try {
-            const response = await fetch(url, { // Use the constructed URL
-                method: 'POST',
-                headers: {
-                    'accept': 'application/json' // Often needed for FastAPI
-                    // No 'Content-Type' or 'body' needed for query params
-                },
-                // No body property needed here
-            });
+            // ApiClient.register handles the form-urlencoded part
+            const { data, errorMessage } = await apiClient.register(
+                name,
+                title,
+                university,
+                email,
+                password
+            );
 
-            if (!response.ok) {
-                let errorDetail = `Registration failed with status: ${response.status}. Please try again.`;
-                try {
-                    // Try to parse error detail even if status indicates failure
-                    const errorData = await response.json();
-                    errorDetail = errorData.detail || errorDetail;
-                    if (Array.isArray(errorData.detail)) { // Handle FastAPI validation errors
-                        errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
-                    }
-                } catch (jsonError) {
-                    console.error("Could not parse error response:", jsonError);
-                    errorDetail = await response.text() || errorDetail;
-                }
-                console.error("Backend Error Detail:", errorDetail);
-                throw new Error(errorDetail);
+            if (errorMessage) {
+                // If the backend sends an error, display it
+                throw new Error(errorMessage);
             }
 
-            // Status 201 Created is typical for successful POST
-            if (response.status === 201) {
-                const result = await response.json();
-                console.log('Instructor registration successful:', result);
-                navigate('/login');
-            } else {
-                // Handle unexpected successful status codes if needed
-                const responseText = await response.text();
-                console.warn("Unexpected success status:", response.status, responseText);
-                // Still navigate, or show a warning?
-                navigate('/login');
-            }
+            // ApiClient.register automatically sets the token and instructor ID
+            console.log('Instructor registration successful:', data.instructor_id);
 
+            // Navigate to login after successful registration
+            navigate('/login');
 
         } catch (err: any) {
-            console.error("Instructor registration failed (fetch error):", err);
+            console.error("Instructor registration failed:", err);
             if (err instanceof TypeError && err.message === "Failed to fetch") {
-                setError("Could not connect to the server. Please ensure it's running and check CORS settings.");
+                setError("Could not connect to the server. Please ensure it's running.");
             } else {
-                setError(err.message || "An unexpected error occurred during registration.");
+                setError(err.message || "An unexpected error occurred.");
             }
         } finally {
             setIsLoading(false);
@@ -98,9 +85,8 @@ export function RegisterPage() {
         // Centering container
         <div className="w-full flex items-center justify-center p-4">
             {/* Responsive Card */}
-            <Card className="w-full max-w-md shadow-md"> {/* Consistent width */}
+            <Card className="w-full max-w-md shadow-md">
                 <CardHeader>
-                    {/* Updated Title */}
                     <CardTitle>Register as Instructor</CardTitle>
                     <CardDescription>Enter your professional details.</CardDescription>
                 </CardHeader>
@@ -155,12 +141,37 @@ export function RegisterPage() {
                             />
                         </div>
 
+                        {/* --- 5. Add Password and Confirm Password fields --- */}
+                        <div className="grid gap-2">
+                            <Label htmlFor="password">Password</Label>
+                            <Input
+                                id="password"
+                                type="password"
+                                placeholder="********"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        <div className="grid gap-2">
+                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                            <Input
+                                id="confirmPassword"
+                                type="password"
+                                placeholder="********"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                            />
+                        </div>
+                        {/* --- End of added fields --- */}
+
                         {/* Error Message */}
                         {error && <p className="text-sm text-destructive">{error}</p>}
 
                         {/* Submit Button */}
                         <Button type="submit" className="w-full" disabled={isLoading}>
-                            {isLoading ? "Registering..." : "Register Instructor Profile"}
+                            {isLoading ? "Registering..." : "Create Account"}
                         </Button>
 
                         {/* Link back to Login */}
@@ -168,7 +179,7 @@ export function RegisterPage() {
                             type="button"
                             variant="link"
                             className="w-full text-sm"
-                            onClick={() => navigate('/login')} // Navigate back to login
+                            onClick={() => navigate('/login')}
                         >
                             Already registered? Sign In
                         </Button>
