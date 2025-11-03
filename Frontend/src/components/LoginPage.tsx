@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { useApiClient } from "../ApiClientContext";
 
 // --- 2. REMOVED the old 'Instructor' interface ---
-// (No longer needed, as we aren't fetching the whole list)
+// (No longer needed)
 
 export function LoginPage() {
     const navigate = useNavigate();
@@ -26,11 +26,21 @@ export function LoginPage() {
         setIsLoading(true);
         setError(null);
 
+        // --- 5. ADDED VALIDATION (Your Suggestion) ---
+        // Check if the input looks like an email before sending
+        if (!email.includes('@')) {
+            setError("Please use your email address to log in, not your name.");
+            setIsLoading(false);
+            return;
+        }
+        // --- END OF ADDED VALIDATION ---
+
         // This now calls the real login endpoint from ApiClient.ts
         try {
             console.log("Login attempt for:", email);
 
             // This one line handles the API call and password check
+            // It correctly sends 'email' as the 'username' field
             const { data, errorMessage } = await apiClient.login(email, password);
 
             if (errorMessage) {
@@ -50,6 +60,7 @@ export function LoginPage() {
             if (err instanceof TypeError && err.message === "Failed to fetch") {
                 setError("Could not connect to the server. Please ensure it's running and check CORS settings.");
             } else {
+                // Display the specific error from the backend (e.g., "Invalid credentials")
                 setError(err.message || "Login failed. Please check your email and password.");
             }
         } finally {
