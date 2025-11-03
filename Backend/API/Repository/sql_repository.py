@@ -358,31 +358,36 @@ class SQLRepository(ISQLRepository):
     # STUDENTS
     # ======================================================
     def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        # Step 1: Check if the student already exists by Discord ID
         existing_sql = "SELECT id FROM students WHERE discord_id = %s;"
         existing = self.cm.select_one(existing_sql, (discord_id,))
-        if existing:
-            # Student exists — check if already linked to course
-            link_sql = "SELECT 1 FROM student_courses WHERE student_id = %s AND course_id = %s;"
-            linked = self.cm.select_one(link_sql, (existing['id'], course_id))
-            if linked:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail=f"Student with discord_id={discord_id} already registered in this course."
-                )
-            # Just link to new course
-            self.cm.execute("INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
-                            (existing['id'], course_id))
-            return existing['id']
 
-        # Create new student
+        if existing:
+            student_id = existing["id"]
+
+            # Step 2: Check if already registered for this course
+            link_sql = "SELECT 1 FROM student_courses WHERE student_id = %s AND course_id = %s;"
+            linked = self.cm.select_one(link_sql, (student_id, course_id))
+
+            if not linked:
+                # Register this student in the new course
+                self.cm.execute(
+                    "INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
+                    (student_id, course_id),
+                )
+            # Either way, return the same ID (no error)
+            return str(student_id)
+
+        # Step 3: Student doesn’t exist yet → create and link
         sql_insert_student = """
             INSERT INTO students (name, discord_id)
             VALUES (%s, %s)
             RETURNING id;
         """
         student_id = self.cm.insert_one(sql_insert_student, (name, discord_id))
-        self.cm.execute("INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);", (student_id, course_id))
-        return student_id
+        self.cm.execute("INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
+                        (student_id, course_id))
+        return str(student_id)
 
     def read_student(self, student_id: str) -> Optional[dict]:
         sql = """
