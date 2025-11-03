@@ -59,6 +59,10 @@ class ISQLRepository(Protocol):
     def delete_course(self, course_id: str) -> None:
         """Delete a course record by ID."""
         ...
+    
+    def get_course_by_name(self, course_name: str) -> Optional[dict]:
+        """Get a CourseId by Name"""
+        ...
 
     # ======================================================
     # INSTRUCTORS

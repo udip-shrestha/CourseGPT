@@ -329,6 +329,19 @@ class SQLRepository(ISQLRepository):
     def delete_course(self, course_id: str) -> None:
         self.cm.execute("DELETE FROM courses WHERE id = %s;", (course_id,))
 
+    def get_course_by_name(self, course_name: str) -> Optional[dict]:
+        """
+        Retrieve a single course record by its exact name.
+        """
+        sql = """
+            SELECT 
+                id, instructor_id, name, institution, semester_id, year, created_at
+            FROM courses
+            WHERE name = %s
+            LIMIT 1;
+        """
+        return self.cm.select_one(sql, (course_name,))
+
     # ======================================================
     # STUDENTS
     # ======================================================

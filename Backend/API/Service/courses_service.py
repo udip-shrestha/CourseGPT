@@ -122,3 +122,20 @@ class CourseService:
         self.vector_repo.delete_collection(course_id)
 
         return {"status": "deleted", "course_id": course_id}
+    
+    # ------------------------------------------------------
+    # Get Course ID by Name
+    # ------------------------------------------------------
+    @clean_service
+    def get_course_id_by_name(self, course_name: str) -> dict:
+        """
+        Retrieve the unique course_id for a given course name.
+        """
+        course = self.sql_repo.get_course_by_name(course_name)
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Course with name='{course_name}' not found."
+            )
+
+        return {"course_id": course["id"]}
