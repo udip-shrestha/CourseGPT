@@ -1,5 +1,5 @@
 import { useState } from 'react'; // Import useState
-import {  Calendar, Building, Settings, Trash2, AlertTriangle, Eye } from 'lucide-react'; // Import new icons
+import { Calendar, Building, Settings, Trash2, AlertTriangle, Eye } from 'lucide-react'; // Import new icons
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import type { CourseSummary } from './InstructorCourses';
@@ -22,8 +22,9 @@ import {
 // Interface for props using the API data structure
 interface CourseCardProps {
     course: CourseSummary;
-    onViewCourse: (courseId: string) => void;
-    onDelete: () => Promise<void>; // --- ADD THIS LINE ---
+    // --- 1. FIX: Updated prop to match InstructorCourses ---
+    onViewCourse: () => void;
+    onDelete: () => Promise<void>;
 }
 
 // Helper to convert semester ID to string (Adjust mapping if needed based on your backend)
@@ -40,38 +41,35 @@ function semesterIdToString(id: number): string {
 export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) {
     const semesterString = semesterIdToString(course.semester_id);
 
-    // --- ADDED STATE FOR DELETE FLOW ---
+    // --- State for Delete Flow ---
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isFinalDeleteDialogOpen, setIsFinalDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
-    // --- END ADDED STATE ---
+    // --- End State ---
 
-    // --- ADDED DELETE HANDLER ---
+    // --- Delete Handler ---
     const handleDelete = async () => {
         setIsDeleting(true);
         setDeleteError(null);
         try {
-            // Call the onDelete prop passed from the parent
             await onDelete();
-            // If successful, close all dialogs (parent handles list refresh)
             setIsFinalDeleteDialogOpen(false);
             setIsDeleteDialogOpen(false);
             setIsSettingsOpen(false);
         } catch (err: any) {
-            // If the parent throws an error, catch it and display it
             console.error("CourseCard delete error:", err);
             setDeleteError(err.message || "An error occurred.");
         } finally {
             setIsDeleting(false);
         }
     };
-    // --- END DELETE HANDLER ---
+    // --- End Delete Handler ---
 
     return (
-        <Card className="hover:shadow-md transition-shadow relative"> {/* Added relative */}
-            {/* --- ADDED SETTINGS POPOVER --- */}
+        <Card className="hover:shadow-md transition-shadow relative">
+            {/* --- Settings Popover --- */}
             <div className="absolute top-2 right-2 z-10">
                 <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                     <PopoverTrigger asChild>
@@ -85,8 +83,9 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                             <Button
                                 variant="ghost"
                                 className="w-full justify-start text-sm h-8"
+                                // --- 2. FIX: Updated onClick ---
                                 onClick={() => {
-                                    onViewCourse(course.id);
+                                    onViewCourse(); // Call the prop directly
                                     setIsSettingsOpen(false);
                                 }}
                             >
@@ -130,7 +129,6 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                                                     </DialogTitle>
                                                     <DialogDescription>
                                                         This will permanently delete the course and all its documents. This action cannot be recovered.
-                                                        {/* Display local delete error */}
                                                         {deleteError && <p className="text-sm text-destructive mt-4">Error: {deleteError}</p>}
                                                     </DialogDescription>
                                                 </DialogHeader>
@@ -144,7 +142,7 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                                                     </Button>
                                                     <Button
                                                         variant="destructive"
-                                                        onClick={handleDelete} // Calls local delete handler
+                                                        onClick={handleDelete}
                                                         disabled={isDeleting}
                                                     >
                                                         {isDeleting ? "Deleting..." : "Yes, Delete Permanently"}
@@ -162,7 +160,7 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
             </div>
             {/* --- END SETTINGS POPOVER --- */}
 
-            <CardHeader className="pb-3 pr-10"> {/* Added right padding to avoid overlap */}
+            <CardHeader className="pb-3 pr-10">
                 <div className="space-y-1">
                     <h3 className="font-semibold leading-tight text-lg">{course.name}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -177,9 +175,7 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
             </CardHeader>
 
             <CardContent className="pt-2">
-                {/* --- "View Course" button is in the popover --- */}
-                {/* small preview/summary */}
-                <div className="pt-4 mt-4 border-t"> {/* Added border-t for separation */}
+                <div className="pt-4 mt-4 border-t">
                     <p className="text-xs text-muted-foreground">
                         Created: {new Date(course.created_at).toLocaleDateString()}
                     </p>

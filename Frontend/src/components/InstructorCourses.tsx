@@ -1,12 +1,12 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react"; // --- 1. IMPORT useCallback ---
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Filter, Plus, AlertCircle } from "lucide-react"; // Added AlertCircle
+import { Search, Filter, Plus, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { CourseCard } from "./CourseCard";
 import { CourseRegisterDialog } from "./CourseRegisterDialog";
 import { Dialog, DialogTrigger } from "./ui/dialog";
-import { Alert, AlertDescription, AlertTitle } from "./ui/alert"; // Added Alert
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
 export interface CourseSummary {
     id: string;
@@ -18,6 +18,24 @@ export interface CourseSummary {
     created_at: string;
 }
 
+// --- ADDED: Define the API response structure ---
+interface CourseApiResponse {
+    total: number;
+    courses: CourseSummary[];
+}
+
+// --- ADDED: Helper function ---
+function semesterIdToString(id: number | undefined): string {
+    if (id === undefined) return "N/A";
+    switch (id) {
+        case 1: return "Spring";
+        case 2: return "Summer";
+        case 3: return "Fall";
+        case 4: return "Fall"; // Handling the '4' seen in Swagger example
+        default: return "Unknown";
+    }
+}
+
 export function InstructorCourses() {
     const { instructorId } = useParams<{ instructorId: string }>();
     console.log("InstructorCourses mounted with instructorId:", instructorId);
@@ -25,14 +43,14 @@ export function InstructorCourses() {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [courses, setCourses] = useState<CourseSummary[]>([]);
+    const [total, setTotal] = useState(0); // --- ADDED: State for total count ---
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [deleteError, setDeleteError] = useState<string | null>(null); // State for delete errors
+    const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
 
-    // --- Fetch Courses Effect ---
-    const fetchCourses = async () => {
-        // Clear delete error on refresh
+    // --- 2. FIX: Moved fetchCourses outside useEffect and wrapped in useCallback ---
+    const fetchCourses = useCallback(async () => {
         setDeleteError(null);
 
         if (!instructorId || instructorId === "undefined") {
@@ -46,7 +64,7 @@ export function InstructorCourses() {
         setIsLoading(true);
         setError(null);
 
-        const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`; // Added sorting
+        const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
         console.log("Fetching courses from:", url);
 
         try {
@@ -65,9 +83,14 @@ export function InstructorCourses() {
                 }
                 throw new Error(errorDetail);
             }
-            const data: CourseSummary[] = await response.json();
+
+            // --- FIX: Correctly parse the API response object ---
+            const data: CourseApiResponse = await response.json();
             console.log("Fetched courses successfully:", data);
-            setCourses(data);
+            setCourses(data.courses); // Set courses from the 'courses' property
+            setTotal(data.total);     // Set total from the 'total' property
+            // --- END FIX ---
+
         } catch (err: any) {
             console.error("Fetch courses error:", err);
             if (err instanceof TypeError && err.message === "Failed to fetch") {
@@ -76,36 +99,36 @@ export function InstructorCourses() {
                 setError(err.message || "An error occurred while fetching courses.");
             }
             setCourses([]);
+            setTotal(0); // Reset total on error
         } finally {
             console.log("Fetch finished, setting loading to false.");
             setIsLoading(false);
         }
-    };
+    }, [instructorId]); // --- END MOVED FUNCTION ---
 
+    // --- Fetch Courses Effect ---
     useEffect(() => {
+        // --- 3. FIX: Call the stable fetchCourses function ---
         fetchCourses();
-    }, [instructorId]);
+    }, [fetchCourses]); // Use the useCallback function as dependency
     // --- End Fetch Courses ---
 
     // --- Delete Course Handler ---
     const handleDeleteCourse = async (courseId: string) => {
         console.log(`Attempting to delete course ${courseId}`);
-        setDeleteError(null); // Clear previous delete errors
+        setDeleteError(null);
         try {
             const response = await fetch(`http://localhost:8000/courses/${courseId}`, {
                 method: 'DELETE',
-                headers: { 'accept': '*/*' } // As per Swagger
+                headers: { 'accept': '*/*' }
             });
 
-            // 204 No Content is a successful deletion
             if (response.status === 204) {
                 console.log(`Course ${courseId} deleted successfully.`);
-                // Refresh the course list
-                await fetchCourses();
-                return; // Success
+                await fetchCourses(); // Refresh the course list
+                return;
             }
 
-            // Handle other non-ok responses
             if (!response.ok) {
                 let errorDetail = `Failed to delete course (Status: ${response.status})`;
                 try {
@@ -121,22 +144,30 @@ export function InstructorCourses() {
             if (err instanceof TypeError && err.message === "Failed to fetch") {
                 userError = "Could not connect to the server. Please ensure it's running.";
             }
-            // Set the delete error to display it in an alert
             setDeleteError(userError);
-
-            // Re-throw the error to be caught by the card's local handler
-            throw err;
+            throw err; // Re-throw for the card's local handler
         }
     };
     // --- End Delete Course Handler ---
 
-    const handleViewCourse = (courseId: string) => {
-        navigate(`/courses/${courseId}`);
+    const handleViewCourse = (course: CourseSummary) => { // Updated to pass full object
+        console.log("Navigating to view course:", course.name);
+
+        // Pass course info in navigation state to fix "ugly name" issue
+        navigate(`/courses/${course.id}`, {
+            state: {
+                courseName: course.name,
+                institution: course.institution,
+                semester: semesterIdToString(course.semester_id), // Send the string name
+                year: course.year,
+                courseCode: `CS ${course.semester_id}01` // Example, adjust as needed
+            }
+        });
     };
 
     const handleCourseCreated = () => {
         setIsRegisterDialogOpen(false);
-        fetchCourses(); // Re-fetch the course list
+        fetchCourses(); // Re-fetch the course list (This will now work)
     };
 
     const filteredCourses = courses.filter((course) =>
@@ -148,7 +179,6 @@ export function InstructorCourses() {
         return <div className="text-center p-10">Loading courses... (ID: {instructorId || 'pending'})</div>;
     }
 
-    // Display general fetch error only
     if (error && !isLoading) {
         return <div className="text-center text-destructive p-10">Error: {error}</div>;
     }
@@ -177,7 +207,6 @@ export function InstructorCourses() {
                 </Dialog>
             </div>
 
-            {/* Display Delete Error Alert if it exists */}
             {deleteError && (
                 <Alert variant="destructive">
                     <AlertCircle className="h-4 w-4" />
@@ -208,8 +237,8 @@ export function InstructorCourses() {
                     <CourseCard
                         key={course.id}
                         course={course}
-                        onViewCourse={handleViewCourse}
-                        // Pass the delete handler to each card
+                        onViewCourse={() => handleViewCourse(course)}
+                        // --- 4. FIX: Pass the required 'onDelete' prop ---
                         onDelete={() => handleDeleteCourse(course.id)}
                     />
                 ))}
@@ -220,7 +249,8 @@ export function InstructorCourses() {
                     No courses match your search term.
                 </p>
             )}
-            {!isLoading && courses.length === 0 && !error && (
+            {/* --- FIX: Use 'total' to check for no courses --- */}
+            {!isLoading && total === 0 && !error && (
                 <p className="text-center text-muted-foreground mt-10">
                     You haven't registered any courses yet.
                 </p>
