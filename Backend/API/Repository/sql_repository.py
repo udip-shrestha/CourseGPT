@@ -2,6 +2,7 @@ import base64
 from typing import Optional, List, Dict, Any
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Repository.i_sql_repository import ISQLRepository
+from fastapi import HTTPException, status
 
 
 class SQLRepository(ISQLRepository):
@@ -137,6 +138,13 @@ class SQLRepository(ISQLRepository):
     # INSTRUCTORS
     # ======================================================
     def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
+        existing = self.read_instructor_by_email(email)
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Instructor with email={email} already exists."
+            )
+
         sql = """
             INSERT INTO instructors (name, title, university, email, password, role_id)
             VALUES (
@@ -245,14 +253,18 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     # COURSES
     # ======================================================
-    def create_course(
-        self,
-        instructor_id: str,
-        name: str,
-        institution: str,
-        semester_id: int,
-        year: int
-    ) -> str:
+    def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int) -> str:
+        existing_sql = """
+            SELECT id FROM courses
+            WHERE name = %s AND institution = %s AND year = %s AND semester_id = %s;
+        """
+        existing = self.cm.select_one(existing_sql, (name, institution, year, semester_id))
+        if existing:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Course '{name}' at '{institution}' for {year} semester {semester_id} already exists."
+            )
+
         sql = """
             INSERT INTO courses (instructor_id, name, institution, semester_id, year)
             VALUES (%s, %s, %s, %s, %s)
@@ -346,22 +358,36 @@ class SQLRepository(ISQLRepository):
     # STUDENTS
     # ======================================================
     def create_student(self, name: str, discord_id: str, course_id: str) -> str:
-        #Create student (if not exists)
+        # Step 1: Check if the student already exists by Discord ID
+        existing_sql = "SELECT id FROM students WHERE discord_id = %s;"
+        existing = self.cm.select_one(existing_sql, (discord_id,))
+
+        if existing:
+            student_id = existing["id"]
+
+            # Step 2: Check if already registered for this course
+            link_sql = "SELECT 1 FROM student_courses WHERE student_id = %s AND course_id = %s;"
+            linked = self.cm.select_one(link_sql, (student_id, course_id))
+
+            if not linked:
+                # Register this student in the new course
+                self.cm.execute(
+                    "INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
+                    (student_id, course_id),
+                )
+            # Either way, return the same ID (no error)
+            return str(student_id)
+
+        # Step 3: Student doesn’t exist yet → create and link
         sql_insert_student = """
             INSERT INTO students (name, discord_id)
             VALUES (%s, %s)
             RETURNING id;
         """
         student_id = self.cm.insert_one(sql_insert_student, (name, discord_id))
-
-        #Link student to course
-        sql_link = """
-            INSERT INTO student_courses (student_id, course_id)
-            VALUES (%s, %s);
-        """
-        self.cm.execute(sql_link, (student_id, course_id))
-
-        return student_id
+        self.cm.execute("INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
+                        (student_id, course_id))
+        return str(student_id)
 
     def read_student(self, student_id: str) -> Optional[dict]:
         sql = """
