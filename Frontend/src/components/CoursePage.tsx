@@ -1,7 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom"; // Added useNavigate
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
-// --- ADDED Imports ---
 import { Plus, Eye, Download, Trash2, Settings, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import {
@@ -13,9 +12,8 @@ import {
     DialogClose,
     DialogFooter,
     DialogTrigger
-} from "./ui/dialog"; // Added all dialog components
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover"; // Added Popover
-// --- END ADDED Imports ---
+} from "./ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { FileUpload } from "./FileUpload";
 
 // --- Define Interfaces ---
@@ -27,7 +25,6 @@ interface CourseDetail {
     semester_id: number; // Now required
     year: number;       // Now required
     created_at: string; // Now required
-    // Removed optional/mock fields
     code?: string;
     semester?: string;
     studentCount?: number;
@@ -61,7 +58,7 @@ function semesterIdToString(id: number | undefined): string {
 
 export function CoursePage() {
     const { courseId } = useParams<{ courseId: string }>();
-    const navigate = useNavigate(); // Added navigate
+    const navigate = useNavigate();
 
     // --- State ---
     const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -72,7 +69,7 @@ export function CoursePage() {
     const [docsError, setDocsError] = useState<string | null>(null);
     const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
 
-    // --- ADDED State for Popover and Dialogs ---
+    // --- State for Popover and Dialogs ---
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isFinalDeleteDialogOpen, setIsFinalDeleteDialogOpen] = useState(false);
@@ -92,23 +89,37 @@ export function CoursePage() {
             setIsLoadingCourse(true);
             setCourseError(null);
             try {
-                // --- REPLACED MOCK DATA WITH REAL FETCH ---
-                console.log(`Fetching course details for ${courseId}...`);
-                const response = await fetch(`http://localhost:8000/courses/${courseId}`);
-                if (!response.ok) {
-                    if (response.status === 404) {
-                        throw new Error(`Course with ID ${courseId} not found.`);
-                    }
-                    let errorDetail = `Failed to fetch course (Status: ${response.status})`;
-                    try {
-                        const errorData = await response.json();
-                        errorDetail = errorData.detail || errorDetail;
-                    } catch (_) {}
-                    throw new Error(errorDetail);
-                }
-                const data: CourseDetail = await response.json();
-                setCourse(data);
-                // --- END REAL FETCH ---
+                // --- REVERTED TO MOCK DATA ---
+                // The 405 error showed the GET /courses/{id} endpoint doesn't exist.
+                // We will use mock data for the page, but fetch the *real* documents.
+                console.warn(`Using MOCK DATA for course details: ${courseId}`);
+
+                // --- COMMENTED OUT FAILING FETCH ---
+                // const response = await fetch(`http://localhost:8000/courses/${courseId}`);
+                // if (!response.ok) { ... }
+                // const data: CourseDetail = await response.json();
+
+                // --- MOCK DATA BLOCK (Restored) ---
+                await new Promise(res => setTimeout(res, 500)); // Simulate fetch time
+                const mockData: CourseDetail = {
+                    id: courseId,
+                    // !!! IMPORTANT: We must get the instructor_id from somewhere.
+                    // For now, I'm hardcoding a placeholder.
+                    // In a real app, the GET /courses/{id} response *must* provide this.
+                    // Or, we could pass it from the InstructorCourses page via state.
+                    instructor_id: "76dcf3ac-b500-4787-8ef7-f2ed2843f1f7", // !! PLACEHOLDER UUID !!
+                    name: `Course ${courseId} Details`,
+                    institution: "Mock University",
+                    semester_id: 3,
+                    year: 2024,
+                    created_at: new Date().toISOString(),
+                    code: `CS ${courseId}01`,
+                    semester: "Fall 2024",
+                    studentCount: 50 + Number(courseId || 0),
+                    documentCount: 5 + Number(courseId || 0),
+                };
+                setCourse(mockData);
+                // --- END MOCK DATA ---
 
             } catch (err: any) {
                 console.error("Fetch course details error:", err);
@@ -129,7 +140,7 @@ export function CoursePage() {
             setIsLoadingDocs(false);
             return;
         }
-        // ... (fetchDocuments logic remains the same) ...
+        // This endpoint IS working according to your logs (200 OK)
         const fetchDocuments = async () => {
             setIsLoadingDocs(true);
             setDocsError(null);
@@ -166,16 +177,15 @@ export function CoursePage() {
 
     // --- Handlers ---
     const handleFilesSelected = (files: File[]) => {
-        // ... (handleFilesSelected logic remains the same) ...
         console.log('Files selected for upload:', files);
         alert(`Simulating upload for ${files.length} file(s). Check console.`);
         setIsAddDocumentOpen(false);
     };
 
-    // --- ADDED Delete Course Handler ---
+    // --- Delete Course Handler ---
     const handleDeleteCourse = async () => {
-        if (!courseId || !course) {
-            setDeleteError("Cannot delete: Course ID or instructor ID is missing.");
+        if (!courseId || !course?.instructor_id) { // Check for instructor_id from course state
+            setDeleteError("Cannot delete: Course ID or Instructor ID is missing.");
             return;
         }
 
@@ -183,18 +193,18 @@ export function CoursePage() {
         setDeleteError(null);
 
         try {
+            // This endpoint IS working according to your Swagger
             const response = await fetch(`http://localhost:8000/courses/${courseId}`, {
                 method: 'DELETE',
-                headers: { 'accept': '*/*' } // As per Swagger
+                headers: { 'accept': '*/*' }
             });
 
-            // 204 No Content is a successful deletion
             if (response.status === 204 || response.ok) {
                 console.log(`Course ${courseId} deleted successfully.`);
                 setIsFinalDeleteDialogOpen(false);
                 setIsDeleteDialogOpen(false);
                 setIsSettingsOpen(false);
-                // Navigate back to the instructor's course list
+                // Use the instructor_id from the course state to navigate back
                 navigate(`/instructors/${course.instructor_id}/courses`);
             } else {
                 let errorDetail = `Failed to delete course (Status: ${response.status})`;
@@ -210,7 +220,7 @@ export function CoursePage() {
             if (err instanceof TypeError && err.message === "Failed to fetch") {
                 userError = "Could not connect to the server.";
             }
-            setDeleteError(userError); // Set error to display in the dialog
+            setDeleteError(userError);
         } finally {
             setIsDeleting(false);
         }
@@ -235,11 +245,11 @@ export function CoursePage() {
             {/* Course header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div className="text-center sm:text-left">
-                    {/* --- ADDED Back Button --- */}
+                    {/* --- Back Button (uses mock instructor_id for now) --- */}
                     <Button
                         variant="ghost"
                         onClick={() => navigate(`/instructors/${course.instructor_id}/courses`)}
-                        className="mb-2 -ml-4" // Use negative margin to align
+                        className="mb-2 -ml-4"
                     >
                         ← Back to Courses
                     </Button>
@@ -253,14 +263,14 @@ export function CoursePage() {
                     </p>
                 </div>
 
-                {/* --- UPDATED Button Group --- */}
+                {/* --- Button Group --- */}
                 <div className="flex justify-center sm:justify-end gap-2">
                     <Button className="w-full sm:w-auto" onClick={() => setIsAddDocumentOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Add Document
                     </Button>
 
-                    {/* --- ADDED Settings Popover --- */}
+                    {/* --- Settings Popover --- */}
                     <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" size="icon" aria-label="Course Settings">
@@ -272,7 +282,7 @@ export function CoursePage() {
                                 <Button
                                     variant="ghost"
                                     className="w-full justify-start text-sm h-8"
-                                    disabled // Disabled until backend endpoint exists
+                                    disabled // Update endpoint not implemented
                                     onClick={() => {
                                         console.log("Update course clicked");
                                         setIsSettingsOpen(false);
