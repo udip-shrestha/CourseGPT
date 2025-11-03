@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from "react-router-dom"; // Added useNavigate
+import { useParams, useNavigate, useLocation } from "react-router-dom"; // 1. Added useLocation and useNavigate
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Plus, Eye, Download, Trash2, Settings, AlertTriangle } from "lucide-react";
@@ -53,12 +53,31 @@ function semesterIdToString(id: number | undefined): string {
         default: return "Unknown";
     }
 }
-// --- End Helper Functions ---
+
+// --- ADDED HELPER ---
+// Converts string name back to ID. Adjust mapping to be the reverse of semesterIdToString
+function semesterIdToNumber(semester: string | undefined): number {
+    if (semester === "Spring") return 1;
+    if (semester === "Summer") return 2;
+    if (semester === "Fall") return 4; // Based on Swagger/CourseCard
+    return 4; // Default to Fall
+}
+// --- END HELPER ---
 
 
 export function CoursePage() {
     const { courseId } = useParams<{ courseId: string }>();
-    const navigate = useNavigate();
+    const navigate = useNavigate(); // 2. Re-added navigate
+    const location = useLocation(); // 3. Get location to read state
+
+    // 4. Try to get course name/code from navigation state
+    const navigatedState = location.state as { courseName?: string, courseCode?: string, institution?: string, semester?: string, year?: number };
+    const initialCourseName = navigatedState?.courseName || `Course ${courseId} Details`; // Fallback
+    const initialCourseCode = navigatedState?.courseCode || `CS ${courseId}01`; // Fallback
+    const initialInstitution = navigatedState?.institution || "Mock University";
+    const initialSemesterId = navigatedState?.semester ? semesterIdToNumber(navigatedState.semester) : 4; // Use helper
+    const initialYear = navigatedState?.year || new Date().getFullYear(); // Default to current year
+    // --- (End of changes) ---
 
     // --- State ---
     const [course, setCourse] = useState<CourseDetail | null>(null);
@@ -90,8 +109,6 @@ export function CoursePage() {
             setCourseError(null);
             try {
                 // --- REVERTED TO MOCK DATA ---
-                // The 405 error showed the GET /courses/{id} endpoint doesn't exist.
-                // We will use mock data for the page, but fetch the *real* documents.
                 console.warn(`Using MOCK DATA for course details: ${courseId}`);
 
                 // --- COMMENTED OUT FAILING FETCH ---
@@ -99,24 +116,26 @@ export function CoursePage() {
                 // if (!response.ok) { ... }
                 // const data: CourseDetail = await response.json();
 
-                // --- MOCK DATA BLOCK (Restored) ---
+                // --- MOCK DATA BLOCK (Updated) ---
                 await new Promise(res => setTimeout(res, 500)); // Simulate fetch time
                 const mockData: CourseDetail = {
                     id: courseId,
-                    // !!! IMPORTANT: We must get the instructor_id from somewhere.
-                    // For now, I'm hardcoding a placeholder.
-                    // In a real app, the GET /courses/{id} response *must* provide this.
-                    // Or, we could pass it from the InstructorCourses page via state.
+                    // !!! IMPORTANT: Using a placeholder UUID for navigation.
+                    // This MUST be provided by your GET /courses/{id} endpoint eventually.
                     instructor_id: "76dcf3ac-b500-4787-8ef7-f2ed2843f1f7", // !! PLACEHOLDER UUID !!
-                    name: `Course ${courseId} Details`,
-                    institution: "Mock University",
-                    semester_id: 3,
-                    year: 2024,
+
+                    // --- 5. Use name/code from navigation state ---
+                    name: initialCourseName,
+                    institution: initialInstitution,
+                    semester_id: initialSemesterId,
+                    year: initialYear,
                     created_at: new Date().toISOString(),
-                    code: `CS ${courseId}01`,
-                    semester: "Fall 2024",
-                    studentCount: 50 + Number(courseId || 0),
-                    documentCount: 5 + Number(courseId || 0),
+                    code: initialCourseCode,
+                    semester: semesterIdToString(initialSemesterId),
+                    // --- (End of changes) ---
+
+                    studentCount: 50 + Number(courseId || 0), // Mock Count
+                    documentCount: 5 + Number(courseId || 0), // Mock Count (will be replaced by actual count below)
                 };
                 setCourse(mockData);
                 // --- END MOCK DATA ---
@@ -129,7 +148,7 @@ export function CoursePage() {
             }
         };
         fetchCourseDetails();
-    }, [courseId]);
+    }, [courseId, initialCourseName, initialCourseCode, initialInstitution, initialSemesterId, initialYear]); // 6. Added new dependencies
     // --- End Fetch Course Details ---
 
 
@@ -248,7 +267,7 @@ export function CoursePage() {
                     {/* --- Back Button (uses mock instructor_id for now) --- */}
                     <Button
                         variant="ghost"
-                        onClick={() => navigate(`/instructors/${course.instructor_id}/courses`)}
+                        onClick={() => navigate(`/instructors/${course.instructor_id}/courses`)} // 7. Added Back Button logic
                         className="mb-2 -ml-4"
                     >
                         ← Back to Courses
