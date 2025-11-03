@@ -68,12 +68,12 @@ def temp_instructor(connection_manager):
     """Insert a temporary instructor and return its ID."""
     instructor_id = str(uuid.uuid4())
     sql = """
-        INSERT INTO instructors (id, name, title, university, email)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO instructors (id, name, title, university, email, password, role_id)
+        VALUES (%s, %s, %s, %s, %s, %s, (SELECT id FROM instructor_roles WHERE role_name = 'INSTRUCTOR'))
     """
     connection_manager.execute(
         sql,
-        (instructor_id, "Dr. Test Instructor", "Professor", "Test U", f"{instructor_id}@example.com")
+        (instructor_id, "Dr. Test Instructor", "Professor", "Test U", f"{instructor_id}@example.com", "$argon2id$v=19$m=65536,t=3,p=4$placeholder$hashplaceholder")
     )
     return instructor_id
 

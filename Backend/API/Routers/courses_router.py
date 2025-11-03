@@ -6,7 +6,7 @@ from typing import Optional
 router = APIRouter(tags=["Courses"])
 
 @router.post(
-    "/courses/{instructor_id}",
+    "/instructors/{instructor_id}/courses",
     status_code=status.HTTP_200_OK,
     summary="Add a new course",
     description=(
@@ -15,7 +15,6 @@ router = APIRouter(tags=["Courses"])
         "**Returns:** JSON containing the created course's ID."
     ),
 )
-
 async def add_course(
     instructor_id: str = Path(
         ...,
@@ -127,3 +126,23 @@ def delete_course(
 ):
     """Deletes a course from the system."""
     return service.delete_course(course_id)
+
+@router.get(
+    "/courses",
+    status_code=status.HTTP_200_OK,
+    summary="Get course ID by course name",
+    description=(
+        "**Action:** Retrieves the unique course ID for a given course name.\n\n"
+        "**Returns:** JSON containing the course ID if found."
+    ),
+)
+def get_course_id_by_name(
+    course_name: str = Query(
+        ...,
+        description="Exact name of the course to look up (e.g., 'Data Structures').",
+        example="Data Structures"
+    ),
+    service: CourseService = Depends(get_course_service),
+):
+    """Retrieve a course's ID based on its name."""
+    return service.get_course_id_by_name(course_name)

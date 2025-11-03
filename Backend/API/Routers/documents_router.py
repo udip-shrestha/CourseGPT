@@ -2,7 +2,7 @@ from fastapi import APIRouter, UploadFile, File, Query, Depends, status, Path
 from typing import Optional
 from langchain_core.documents import Document
 from API.Service.document_service import DocumentService
-from API.dependencies import get_document_service
+from API.dependencies import authorize_course, get_document_service
 
 router = APIRouter(tags=["Documents"])
 
@@ -25,6 +25,7 @@ async def upload_document(
         ...,
         description="Select a file to upload, e.g., `Backend_Knowledge.pdf` (application/pdf)."
     ),
+    _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service)
 ):
     content = await file.read()
@@ -54,6 +55,7 @@ def get_document(
         ...,
         description="UUID of the document, e.g., the uploaded 'Backend_Knowledge.pdf'.",
     ),
+    _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
 ):
     """Fetch a specific document record by ID (validated against course_id)."""
@@ -103,6 +105,7 @@ def get_all_documents(
         example="desc",
         regex="^(asc|desc)$",  # only allow these two values
     ),
+    _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
 ):
     """Retrieve all documents with optional filters and pagination."""
@@ -135,6 +138,7 @@ def delete_document(
         ...,
         description="UUID of the document to delete.",
     ),
+    _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
 ):
     """Deletes a document from the system."""

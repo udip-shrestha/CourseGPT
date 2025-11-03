@@ -1,0 +1,35 @@
+#ignore all .idea
+**/.idea/
+
+#ignore all .vscode
+**/.vscode/
+
+# ignore macOS Finder settings file
+**/.DS_Store
+
+# Environment Variables
+**/.env
+
+# Ignore all virtual environments
+**/.venv/
+
+# Ignore all pycaches
+**/__pycache__/
+
+# Ignore all pycaches
+**/.pytest_cache/
+
+# Ignore chroma data
+**/.chroma_data
+
+# Ignore npm modules
+**/node_modules
+
+# Ignore vite build dir dist
+**/dist
+
+# Coverage and testing artifacts
+**/.coverage
+**/coverage.xml
+**/htmlcov/
+**/.cache/
