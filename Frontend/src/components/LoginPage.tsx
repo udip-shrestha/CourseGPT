@@ -4,60 +4,49 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+// --- 1. IMPORT THE API CLIENT HOOK ---
+import { useApiClient } from "../ApiClientContext";
 
-// Define an interface for the Instructor data structure from the API
-interface Instructor {
-    id: string;
-    name: string;
-    title: string;
-    university: string;
-    email: string;
-    created_at: string; // Assuming created_at is returned
-}
+// --- 2. REMOVED the old 'Instructor' interface ---
+// (No longer needed, as we aren't fetching the whole list)
 
 export function LoginPage() {
     const navigate = useNavigate();
+    // --- 3. INITIALIZE THE API CLIENT ---
+    const apiClient = useApiClient();
+
     const [email, setEmail] = useState("");
-    const [password, setPassword] = useState(""); // Still collect password, even if not checked yet
+    const [password, setPassword] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // --- 4. REPLACED 'handleSubmit' with the new version ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        // --- LOGIN USING GET /instructors ---
+        // This now calls the real login endpoint from ApiClient.ts
         try {
-            console.log("Simulated login attempt for:", email);
+            console.log("Login attempt for:", email);
 
-            // 1. Fetch ALL instructors
-            const response = await fetch('http://localhost:8000/instructors'); // Adjust URL if needed
-            if (!response.ok) {
-                throw new Error('Failed to fetch instructor list.');
+            // This one line handles the API call and password check
+            const { data, errorMessage } = await apiClient.login(email, password);
+
+            if (errorMessage) {
+                throw new Error(errorMessage); // Throw error if login fails
             }
-            const instructors: Instructor[] = await response.json();
 
-            // 2. Find instructor matching the entered email
-            const foundInstructor = instructors.find(inst => inst.email.toLowerCase() === email.toLowerCase());
+            // On success, the apiClient has stored the token
+            // and returned the instructor_id
+            const instructorId = data.instructor_id;
+            console.log("Login successful for instructor:", instructorId);
 
-            // 3. Check if instructor was found (and SIMULATE password check)
-            if (foundInstructor) {
-                // In a real app, I  would verify the password here!
-                // For now, I am assuming success if the email exists.
-                console.log("Simulated login successful for instructor:", foundInstructor.id);
-
-                // 4. Navigate to the instructor's profile page
-                navigate(`/instructors/${foundInstructor.id}/profile`);
-                //navigate(`/instructors/${foundInstructor.id}/courses`);
-
-            } else {
-                // Instructor email not found
-                throw new Error("Login failed. Email not found or password incorrect."); // Generic error
-            }
+            // Navigate to the instructor's profile page
+            navigate(`/instructors/${instructorId}/profile`);
 
         } catch (err: any) {
-            console.error("Login simulation failed:", err);
+            console.error("Login failed:", err);
             if (err instanceof TypeError && err.message === "Failed to fetch") {
                 setError("Could not connect to the server. Please ensure it's running and check CORS settings.");
             } else {
@@ -66,13 +55,12 @@ export function LoginPage() {
         } finally {
             setIsLoading(false);
         }
-        // --- End of LOGIN ---
+        // --- End of new handleSubmit ---
     };
 
     return (
-        // Centering container
+        // The JSX (visual part) remains exactly the same
         <div className="w-full flex items-center justify-center p-4">
-            {/* Responsive Card */}
             <Card className="w-full max-w-md shadow-md">
                 <CardHeader>
                     <CardTitle>Login</CardTitle>
@@ -125,10 +113,6 @@ export function LoginPage() {
                         >
                             Create New Account
                         </Button>
-                        {/* Optional: Forgot Password Link */}
-                        {/* <Button type="button" variant="link" className="w-full text-sm mt-2">
-                            Forgot password?
-                        </Button> */}
                     </form>
                 </CardContent>
             </Card>

@@ -19,6 +19,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "./ui/dialog";
+import { useApiClient } from "../ApiClientContext";
 
 // Define an interface for the expected API response data
 interface Instructor {
@@ -33,10 +34,11 @@ interface Instructor {
 export function InstructorProfile() {
     const { instructorId } = useParams<{ instructorId: string }>();
     const navigate = useNavigate();
+    const apiClient = useApiClient();
 
     const [instructor, setInstructor] = useState<Instructor | null>(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const [error, setError] = useState<string | null>(null); // For page load error
 
     // State for Popover and Dialogs
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -44,8 +46,11 @@ export function InstructorProfile() {
     const [isFinalDeleteDialogOpen, setIsFinalDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
 
+    // --- FIX: Added state for delete-specific errors ---
+    const [deleteError, setDeleteError] = useState<string | null>(null);
+
+    // --- 'useEffect' to fetch instructor (uses apiClient) ---
     useEffect(() => {
-        // ... (fetchInstructor effect remains the same) ...
         if (!instructorId) {
             setError("Instructor ID not found in URL.");
             setIsLoading(false);
@@ -56,20 +61,19 @@ export function InstructorProfile() {
             setIsLoading(true);
             setError(null);
             try {
-                const response = await fetch(`http://localhost:8000/instructors/${instructorId}`);
-                if (!response.ok) {
-                    if (response.status === 404) {
+                const { data, errorStatus, errorMessage } = await apiClient.request<Instructor>(
+                    "GET",
+                    `/instructors/${instructorId}`
+                );
+
+                if (errorMessage) {
+                    if (errorStatus === 404) {
                         throw new Error(`Instructor with ID ${instructorId} not found.`);
                     }
-                    let errorDetail = `Failed to fetch instructor (Status: ${response.status})`;
-                    try {
-                        const errorData = await response.json();
-                        errorDetail = errorData.detail || errorDetail;
-                    } catch (_) { /* Ignore if response isn't JSON */ }
-                    throw new Error(errorDetail);
+                    throw new Error(errorMessage);
                 }
-                const data: Instructor = await response.json();
-                setInstructor(data);
+
+                setInstructor(data || null);
             } catch (err: any) {
                 console.error("Failed to fetch instructor:", err);
                 if (err instanceof TypeError && err.message === "Failed to fetch") {
@@ -82,30 +86,25 @@ export function InstructorProfile() {
             }
         };
         fetchInstructor();
-    }, [instructorId]);
+    }, [instructorId, apiClient]);
 
 
-    // --- Delete Handler ---
+    // --- 'handleDelete' (uses apiClient and setDeleteError) ---
     const handleDelete = async () => {
-        // ... (handleDelete function remains the same) ...
         if (!instructorId) return;
 
         setIsDeleting(true);
-        setError(null);
+        // --- FIX: Use the 'deleteError' state setter ---
+        setDeleteError(null);
 
         try {
-            const response = await fetch(`http://localhost:8000/instructors/${instructorId}`, {
-                method: 'DELETE',
-                headers: { 'accept': 'application/json' }
-            });
+            const { errorMessage } = await apiClient.request(
+                "DELETE",
+                `/instructors/${instructorId}`
+            );
 
-            if (!response.ok) {
-                let errorDetail = `Failed to delete instructor (Status: ${response.status})`;
-                try {
-                    const errorData = await response.json();
-                    errorDetail = errorData.detail || errorDetail;
-                } catch (_) {}
-                throw new Error(errorDetail);
+            if (errorMessage) {
+                throw new Error(errorMessage);
             }
 
             console.log(`Instructor ${instructorId} deleted successfully.`);
@@ -116,16 +115,18 @@ export function InstructorProfile() {
 
         } catch (err: any) {
             console.error("Failed to delete instructor:", err);
+            let userError: string;
             if (err instanceof TypeError && err.message === "Failed to fetch") {
-                setError("Could not connect to the server. Please ensure it's running.");
+                userError = "Could not connect to the server. Please ensure it's running.";
             } else {
-                setError(err.message || "An unexpected error occurred during deletion.");
+                userError = err.message || "An unexpected error occurred during deletion.";
             }
+            // --- FIX: Use the 'deleteError' state setter ---
+            setDeleteError(userError);
         } finally {
             setIsDeleting(false);
         }
     };
-
 
     // --- Render Loading State ---
     if (isLoading) {
@@ -144,7 +145,6 @@ export function InstructorProfile() {
 
     // --- Render Profile Data ---
     const getInitials = (name: string): string => {
-        // ... (getInitials function remains the same) ...
         return name
             .split(' ')
             .map(n => n[0])
@@ -155,7 +155,7 @@ export function InstructorProfile() {
 
     return (
         <div className="space-y-8">
-            <Card className="relative"> {/* Added relative positioning */}
+            <Card className="relative">
                 <CardContent className="p-8">
 
                     {/* --- Settings Popover Button --- */}
@@ -167,10 +167,10 @@ export function InstructorProfile() {
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-48 p-2">
-                                <div className="grid gap-1"> {/* Reduced gap */}
+                                <div className="grid gap-1">
                                     <Button
                                         variant="ghost"
-                                        className="w-full justify-start text-sm h-8" // Adjusted styles
+                                        className="w-full justify-start text-sm h-8"
                                         disabled // Keep disabled for now
                                         onClick={() => {
                                             console.log("Update profile clicked");
@@ -181,13 +181,13 @@ export function InstructorProfile() {
                                     </Button>
 
                                     {/* --- Delete Option (Triggers First Dialog) --- */}
-                                    {/* Wrap the trigger logic inside the PopoverContent */}
                                     <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                                         <DialogTrigger asChild>
                                             <Button
                                                 variant="ghost"
-                                                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-sm h-8" // Adjusted styles
-                                                // Removed onClick from here, DialogTrigger handles opening
+                                                className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-sm h-8"
+                                                // --- FIX: Clear old errors when opening ---
+                                                onClick={() => setDeleteError(null)}
                                             >
                                                 <Trash2 className="mr-2 h-4 w-4" />
                                                 Delete Profile
@@ -201,14 +201,13 @@ export function InstructorProfile() {
                                                     This action cannot be undone immediately. Do you want to proceed with deleting your profile?
                                                 </DialogDescription>
                                             </DialogHeader>
-                                            <DialogFooter className="gap-2 sm:justify-end"> {/* Use justify-end */}
+                                            <DialogFooter className="gap-2 sm:justify-end">
                                                 <DialogClose asChild>
                                                     <Button variant="outline">Cancel</Button>
                                                 </DialogClose>
                                                 {/* --- Second Confirmation Dialog (Nested Trigger) --- */}
                                                 <Dialog open={isFinalDeleteDialogOpen} onOpenChange={setIsFinalDeleteDialogOpen}>
                                                     <DialogTrigger asChild>
-                                                        {/* This button OPENS the final confirmation */}
                                                         <Button variant="destructive">Confirm Delete</Button>
                                                     </DialogTrigger>
                                                     <DialogContent>
@@ -218,15 +217,14 @@ export function InstructorProfile() {
                                                             </DialogTitle>
                                                             <DialogDescription>
                                                                 Deleting your profile is permanent and will remove all associated data. This action cannot be recovered.
-                                                                {/* Display delete error here */}
-                                                                {error && <p className="text-sm text-destructive mt-4">Error: {error}</p>}
+                                                                {/* --- FIX: Display the 'deleteError' state --- */}
+                                                                {deleteError && <p className="text-sm text-destructive mt-4">Error: {deleteError}</p>}
                                                             </DialogDescription>
                                                         </DialogHeader>
                                                         <DialogFooter className="gap-2">
-                                                            {/* This CLOSE button only closes the FINAL dialog */}
                                                             <Button
                                                                 variant="outline"
-                                                                onClick={() => setIsFinalDeleteDialogOpen(false)} // Explicitly close this dialog
+                                                                onClick={() => setIsFinalDeleteDialogOpen(false)}
                                                                 disabled={isDeleting}
                                                             >
                                                                 Cancel
@@ -241,36 +239,28 @@ export function InstructorProfile() {
                                                         </DialogFooter>
                                                     </DialogContent>
                                                 </Dialog>
-                                                {/* --- End Second Dialog --- */}
                                             </DialogFooter>
                                         </DialogContent>
-                                        {/* --- End First Dialog --- */}
                                     </Dialog>
-                                    {/* --- End Delete Option --- */}
                                 </div>
                             </PopoverContent>
                         </Popover>
                     </div>
                     {/* --- End Settings Popover Button --- */}
 
-                    {/* ... Rest of the Profile Card Content (Avatar, Name, Title, etc.) ... */}
+                    {/* ... Rest of the Profile Card Content ... */}
                     <div className="flex flex-col md:flex-row gap-6 items-start">
-                        {/* Avatar */}
                         <Avatar className="h-32 w-32">
                             <AvatarFallback className="text-4xl">
                                 {getInitials(instructor.name)}
                             </AvatarFallback>
                         </Avatar>
-
                         <div className="flex-1 space-y-4">
-                            {/* Basic Info */}
                             <div>
                                 <h1 className="text-3xl font-bold">{instructor.name}</h1>
                                 <p className="text-xl text-muted-foreground">{instructor.title}</p>
                                 <p className="text-lg text-muted-foreground">{instructor.university}</p>
                             </div>
-
-                            {/* Contact Info */}
                             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                     <Mail className="h-4 w-4" />
