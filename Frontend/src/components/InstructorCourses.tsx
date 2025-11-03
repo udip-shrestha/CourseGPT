@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Search, Filter, Plus } from "lucide-react";
+import { Search, Filter, Plus, AlertCircle } from "lucide-react"; // Added AlertCircle
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { CourseCard } from "./CourseCard";
 import { CourseRegisterDialog } from "./CourseRegisterDialog";
 import { Dialog, DialogTrigger } from "./ui/dialog";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert"; // Added Alert
 
 export interface CourseSummary {
     id: string;
@@ -18,153 +19,154 @@ export interface CourseSummary {
 }
 
 export function InstructorCourses() {
-    // --- Get instructorId from URL ---
     const { instructorId } = useParams<{ instructorId: string }>();
-    // --- ADDED LOG: Log ID on initial render ---
-    console.log("--- InstructorCourses Component Render ---");
-    console.log("instructorId from useParams:", instructorId);
-    // ------------------------------------------
+    console.log("InstructorCourses mounted with instructorId:", instructorId);
 
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [courses, setCourses] = useState<CourseSummary[]>([]);
-    const [isLoading, setIsLoading] = useState(true); // Default to true
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null); // State for delete errors
     const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
 
     // --- Fetch Courses Effect ---
-    useEffect(() => {
-        console.log("--- useEffect Running ---");
-        console.log("instructorId inside useEffect:", instructorId);
+    const fetchCourses = async () => {
+        // Clear delete error on refresh
+        setDeleteError(null);
 
-        // --- Robust Guard ---
         if (!instructorId || instructorId === "undefined") {
             console.error("GUARD: Instructor ID is missing or invalid, stopping fetch.", instructorId);
-            // Don't set loading to false here immediately if it might become valid later
-            // setError("Instructor ID is missing or invalid in URL.");
-            // setIsLoading(false); // Let's remove this for now
-            return; // Stop the effect
+            setError("Instructor ID is missing or invalid in URL.");
+            setIsLoading(false);
+            return;
         }
-        // --- End Guard ---
 
-        // If we pass the guard, proceed with fetch
         console.log("GUARD PASSED: Proceeding with fetch for instructorId:", instructorId);
-        setIsLoading(true); // Ensure loading is true before fetch starts
-        setError(null); // Clear previous errors
+        setIsLoading(true);
+        setError(null);
 
-        const fetchCourses = async () => {
-            const url = `http://localhost:8000/instructors/${instructorId}/courses`;
-            console.log("Fetching courses from:", url);
+        const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`; // Added sorting
+        console.log("Fetching courses from:", url);
 
-            try {
-                const response = await fetch(url);
-                if (!response.ok) {
-                    let errorDetail = `Failed to fetch courses (Status: ${response.status})`;
-                    // ... (rest of error parsing remains the same) ...
-                    try {
-                        const errorData = await response.json();
-                        if (Array.isArray(errorData.detail)) {
-                            errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
-                        } else if (errorData.detail) {
-                            errorDetail = errorData.detail;
-                        }
-                    } catch (_) {
-                        errorDetail = (await response.text()) || errorDetail;
+        try {
+            const response = await fetch(url);
+            if (!response.ok) {
+                let errorDetail = `Failed to fetch courses (Status: ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    if (Array.isArray(errorData.detail)) {
+                        errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
+                    } else if (errorData.detail) {
+                        errorDetail = errorData.detail;
                     }
-                    throw new Error(errorDetail);
+                } catch (_) {
+                    errorDetail = (await response.text()) || errorDetail;
                 }
-                const data: CourseSummary[] = await response.json();
-                console.log("Fetched courses successfully:", data);
-                setCourses(data);
-            } catch (err: any) {
-                console.error("Fetch courses error:", err);
-                if (err instanceof TypeError && err.message === "Failed to fetch") {
-                    setError("Could not connect to the server.");
-                } else {
-                    setError(err.message || "An error occurred while fetching courses.");
-                }
-                setCourses([]); // Clear courses on error
-            } finally {
-                console.log("Fetch finished, setting loading to false.");
-                setIsLoading(false);
+                throw new Error(errorDetail);
             }
-        };
+            const data: CourseSummary[] = await response.json();
+            console.log("Fetched courses successfully:", data);
+            setCourses(data);
+        } catch (err: any) {
+            console.error("Fetch courses error:", err);
+            if (err instanceof TypeError && err.message === "Failed to fetch") {
+                setError("Could not connect to the server.");
+            } else {
+                setError(err.message || "An error occurred while fetching courses.");
+            }
+            setCourses([]);
+        } finally {
+            console.log("Fetch finished, setting loading to false.");
+            setIsLoading(false);
+        }
+    };
 
+    useEffect(() => {
         fetchCourses();
-
-    }, [instructorId]); // Dependency array remains correct
+    }, [instructorId]);
     // --- End Fetch Courses ---
 
+    // --- Delete Course Handler ---
+    const handleDeleteCourse = async (courseId: string) => {
+        console.log(`Attempting to delete course ${courseId}`);
+        setDeleteError(null); // Clear previous delete errors
+        try {
+            const response = await fetch(`http://localhost:8000/courses/${courseId}`, {
+                method: 'DELETE',
+                headers: { 'accept': '*/*' } // As per Swagger
+            });
 
-    // Navigate to the full course page
+            // 204 No Content is a successful deletion
+            if (response.status === 204) {
+                console.log(`Course ${courseId} deleted successfully.`);
+                // Refresh the course list
+                await fetchCourses();
+                return; // Success
+            }
+
+            // Handle other non-ok responses
+            if (!response.ok) {
+                let errorDetail = `Failed to delete course (Status: ${response.status})`;
+                try {
+                    const errorData = await response.json();
+                    errorDetail = errorData.detail || errorDetail;
+                } catch (_) {}
+                throw new Error(errorDetail);
+            }
+
+        } catch (err: any) {
+            console.error("Failed to delete course:", err);
+            let userError = err.message || "An unexpected error occurred during deletion.";
+            if (err instanceof TypeError && err.message === "Failed to fetch") {
+                userError = "Could not connect to the server. Please ensure it's running.";
+            }
+            // Set the delete error to display it in an alert
+            setDeleteError(userError);
+
+            // Re-throw the error to be caught by the card's local handler
+            throw err;
+        }
+    };
+    // --- End Delete Course Handler ---
+
     const handleViewCourse = (courseId: string) => {
         navigate(`/courses/${courseId}`);
     };
 
-    // Callback function for when a new course is created by the dialog
     const handleCourseCreated = () => {
-        setIsRegisterDialogOpen(false); // Close the dialog
-        // Re-fetch courses immediately after creation
-        if (instructorId && instructorId !== "undefined") {
-            console.log("Course created, re-fetching courses...");
-            const fetchAgain = async () => {
-                setIsLoading(true); // Show loading indicator again
-                setError(null);
-                const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
-                try {
-                    const response = await fetch(url);
-                    if (!response.ok) throw new Error("Failed to re-fetch courses");
-                    const data: CourseSummary[] = await response.json();
-                    setCourses(data);
-                    console.log("Courses re-fetched successfully.");
-                } catch (err: any) {
-                    console.error("Re-fetch failed:", err);
-                    setError(err.message || "Failed to refresh courses.");
-                } finally {
-                    setIsLoading(false);
-                }
-            };
-            fetchAgain(); // Call the re-fetch function
-        } else {
-            console.error("Cannot re-fetch, instructorId is invalid after course creation:", instructorId);
-        }
+        setIsRegisterDialogOpen(false);
+        fetchCourses(); // Re-fetch the course list
     };
 
-
-    // Client-side filtering based on search term
     const filteredCourses = courses.filter((course) =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.institution.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Loading State: Show only if truly loading initial data and ID is valid or potentially becoming valid
-    if (isLoading && courses.length === 0 && (!error || error === "Instructor ID is missing or invalid in URL.")) {
+    if (isLoading && courses.length === 0) {
         return <div className="text-center p-10">Loading courses... (ID: {instructorId || 'pending'})</div>;
     }
 
-    // Error State: Show if an error occurred (and we're not actively loading)
+    // Display general fetch error only
     if (error && !isLoading) {
         return <div className="text-center text-destructive p-10">Error: {error}</div>;
     }
-    // Explicit check if ID remained invalid after loading attempt
     if (!isLoading && (!instructorId || instructorId === "undefined")) {
         return <div className="text-center text-destructive p-10">Error: Invalid Instructor ID provided in URL.</div>;
     }
 
-    // --- Main Render ---
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex items-center justify-between">
                 <h1 className="text-2xl font-bold">My Courses</h1>
                 <Dialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
                     <DialogTrigger asChild>
-                        <Button disabled={!instructorId || instructorId === "undefined"}> {/* Disable if no valid ID */}
+                        <Button disabled={!instructorId || instructorId === "undefined"}>
                             <Plus className="h-4 w-4 mr-2" />
                             Register New Course
                         </Button>
                     </DialogTrigger>
-                    {/* Ensure instructorId is valid before rendering dialog */}
                     {instructorId && instructorId !== "undefined" && (
                         <CourseRegisterDialog
                             instructorId={instructorId}
@@ -175,7 +177,15 @@ export function InstructorCourses() {
                 </Dialog>
             </div>
 
-            {/* Search + Filter */}
+            {/* Display Delete Error Alert if it exists */}
+            {deleteError && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Delete Error</AlertTitle>
+                    <AlertDescription>{deleteError}</AlertDescription>
+                </Alert>
+            )}
+
             <div className="flex gap-4">
                 <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -192,19 +202,19 @@ export function InstructorCourses() {
                 </Button>
             </div>
 
-            {/* Course Grid */}
-            {isLoading && courses.length > 0 && <p className="text-center text-muted-foreground">Refreshing courses...</p>} {/* Show refresh only if courses were previously loaded */}
+            {isLoading && courses.length > 0 && <p className="text-center text-muted-foreground">Refreshing courses...</p>}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {filteredCourses.map((course) => (
                     <CourseCard
                         key={course.id}
                         course={course}
                         onViewCourse={handleViewCourse}
+                        // Pass the delete handler to each card
+                        onDelete={() => handleDeleteCourse(course.id)}
                     />
                 ))}
             </div>
 
-            {/* No Courses Messages */}
             {!isLoading && filteredCourses.length === 0 && courses.length > 0 && (
                 <p className="text-center text-muted-foreground mt-10">
                     No courses match your search term.
