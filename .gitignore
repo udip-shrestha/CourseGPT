@@ -34,3 +34,8 @@
 **/coverage.xml
 **/htmlcov/
 **/.cache/
+
+# Ignore binary files
+*.bin
+/bin/
+
