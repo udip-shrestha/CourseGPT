@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "./ui/card";
+import { Card, CardContent } from "./ui/card";
 import { Plus, Download, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { FileUpload } from "./FileUpload";
 import { useApiClient } from "../ApiClientContext.tsx";
-import { toast } from "sonner";
 
 export function CourseDocPage({ course }: { course: any }) {
     const apiClient = useApiClient();
@@ -15,7 +14,10 @@ export function CourseDocPage({ course }: { course: any }) {
     const [docToDelete, setDocToDelete] = useState<string | null>(null);
     const [documents, setDocuments] = useState<any[]>([]);
     const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [uploadError, setUploadError] = useState<string | null>(null);
+    const [deleteError, setDeleteError] = useState<string | null>(null);
 
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
@@ -24,6 +26,7 @@ export function CourseDocPage({ course }: { course: any }) {
     const fetchDocuments = useCallback(async () => {
         if (!course?.id) return;
 
+        setError(null);
         setLoading(true);
         const offset = (page - 1) * limit;
 
@@ -35,9 +38,9 @@ export function CourseDocPage({ course }: { course: any }) {
         });
 
         if (errorMessage) {
-            toast.error("Failed to load documents: " + errorMessage);
             setDocuments([]);
             setTotal(0);
+            setError(errorMessage);
         } else if (data) {
             setDocuments(data.documents || []);
             setTotal(data.total || 0);
@@ -46,31 +49,33 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(false);
     }, [course?.id, page]);
 
-
     useEffect(() => {
         fetchDocuments();
     }, [fetchDocuments]);
 
     async function handleUpload() {
         if (selectedFiles.length === 0) {
-            toast.warning("Please select a file to upload.");
+            setUploadError("Please select a file to upload.");
             return;
         }
 
+        setUploadError(null);
         setLoading(true);
         try {
             for (const file of selectedFiles) {
                 const { errorMessage } = await apiClient.uploadDocument(course.id, file);
-                if (errorMessage)
-                    toast.error(`Failed to upload ${file.name}: ${errorMessage}`);
-                else toast.success(`Uploaded ${file.name}`);
+                if (errorMessage) {
+                    setUploadError(`Failed to upload ${file.name}: ${errorMessage}`);
+                    setLoading(false);
+                    return; // keep dialog open
+                }
             }
 
             setPage(1);
             await fetchDocuments();
             setIsAddDocumentOpen(false);
         } catch {
-            toast.error("Unexpected error while uploading.");
+            setUploadError("Unexpected error while uploading. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -79,18 +84,18 @@ export function CourseDocPage({ course }: { course: any }) {
     async function handleConfirmDelete() {
         if (!docToDelete) return;
         setLoading(true);
+        setDeleteError(null);
 
         const { errorMessage } = await apiClient.deleteDocument(course.id, docToDelete);
-        console.log(errorMessage)
-        if (errorMessage) toast.error("Failed to delete document.");
-        else {
-            toast.success("Document deleted.");
-            await fetchDocuments(); // Refresh list
+        if (errorMessage) {
+            setDeleteError("Failed to delete document. Please try again.");
+        } else {
+            await fetchDocuments();
+            setIsDeleteDialogOpen(false);
         }
 
         setLoading(false);
         setDocToDelete(null);
-        setIsDeleteDialogOpen(false);
     }
 
     function openDeleteDialog(docId: string) {
@@ -98,11 +103,10 @@ export function CourseDocPage({ course }: { course: any }) {
         setIsDeleteDialogOpen(true);
     }
 
-
     async function handleDownload(docId: string, fileName: string) {
         const { data, errorMessage } = await apiClient.getDocument(course.id, docId);
         if (errorMessage || !data?.file_data) {
-            toast.error("Failed to download document.");
+            setError("Failed to download document.");
             return;
         }
 
@@ -127,37 +131,49 @@ export function CourseDocPage({ course }: { course: any }) {
 
     return (
         <>
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                <div className="text-center sm:text-left">
-                    <h1 className="text-2xl sm:text-3xl font-bold break-words">{course.name}</h1>
-                    <p className="text-muted-foreground text-sm sm:text-base">
-                        {course.code} • {course.semester}
-                    </p>
-                </div>
-                <div className="flex justify-center sm:justify-end">
-                    <Button
-                        className="w-full sm:w-auto"
-                        onClick={() => setIsAddDocumentOpen(true)}
-                        disabled={loading}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Document
-                    </Button>
-                </div>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+                <h2 className="text-xl font-semibold">Course Documents</h2>
+                <Button
+                    className="mt-3 sm:mt-0 w-full sm:w-auto"
+                    onClick={() => setIsAddDocumentOpen(true)}
+                    disabled={loading}
+                >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Document
+                </Button>
             </div>
 
             <Card>
-                <CardHeader className="pb-2">
-                    <CardTitle className="text-lg sm:text-xl">Course Documents</CardTitle>
-                </CardHeader>
                 <CardContent>
                     {loading ? (
-                        <p className="text-center text-muted-foreground">Loading...</p>
+                        <div className="flex flex-col items-center justify-center py-16">
+                            <p className="text-muted-foreground">Loading documents...</p>
+                        </div>
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <p className="text-destructive font-medium mb-2">
+                                Failed to load course documents.
+                            </p>
+                            <p className="text-sm text-muted-foreground mb-4">{error}</p>
+                            <Button variant="outline" onClick={fetchDocuments} disabled={loading}>
+                                Retry
+                            </Button>
+                        </div>
                     ) : documents.length === 0 ? (
-                        <p className="text-center text-muted-foreground">No documents uploaded yet.</p>
+                        <div className="flex flex-col items-center justify-center py-20 text-center">
+                            <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mb-3">
+                                <Plus className="h-6 w-6 text-muted-foreground" />
+                            </div>
+                            <p className="font-medium text-gray-800 dark:text-gray-200">
+                                No documents uploaded yet
+                            </p>
+                            <p className="text-sm text-muted-foreground mt-1 mb-4 max-w-sm">
+                                Upload PDFs or notes to make them available for CourseGPT to reference.
+                            </p>
+                        </div>
                     ) : (
                         <>
-                            <div className="space-y-3">
+                            <div className="space-y-3 py-7">
                                 {documents.map((doc) => (
                                     <div
                                         key={doc.id}
@@ -165,9 +181,9 @@ export function CourseDocPage({ course }: { course: any }) {
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                        <span className="text-xs font-medium">
-                          {(doc.file_type || "FILE").toUpperCase()}
-                        </span>
+                                                <span className="text-xs font-medium">
+                                                    {(doc.file_type || "FILE").toUpperCase()}
+                                                </span>
                                             </div>
                                             <div>
                                                 <p className="font-medium">{doc.file_name}</p>
@@ -207,8 +223,8 @@ export function CourseDocPage({ course }: { course: any }) {
                                 </Button>
 
                                 <span className="text-sm text-muted-foreground">
-                  Page {page} of {totalPages}
-                </span>
+                                    Page {page} of {totalPages}
+                                </span>
 
                                 <Button
                                     variant="outline"
@@ -224,12 +240,26 @@ export function CourseDocPage({ course }: { course: any }) {
                 </CardContent>
             </Card>
 
+            {/* Upload Dialog */}
             <Dialog open={isAddDocumentOpen} onOpenChange={setIsAddDocumentOpen}>
                 <DialogContent className="max-w-md sm:max-w-2xl">
                     <DialogHeader>
                         <DialogTitle>Upload Documents for {course.name}</DialogTitle>
                     </DialogHeader>
-                    <FileUpload onFilesSelected={setSelectedFiles} />
+
+                    <FileUpload
+                        onFilesSelected={(files) => {
+                            setSelectedFiles(files);
+                            setUploadError(null);
+                        }}
+                    />
+
+                    {uploadError && (
+                        <p className="text-sm text-destructive mt-2 bg-destructive/10 border border-destructive/30 rounded-md p-2">
+                            {uploadError}
+                        </p>
+                    )}
+
                     <div className="flex justify-end gap-2 mt-4">
                         <Button variant="outline" onClick={() => setIsAddDocumentOpen(false)}>
                             Cancel
@@ -241,16 +271,20 @@ export function CourseDocPage({ course }: { course: any }) {
                 </DialogContent>
             </Dialog>
 
+            {/* Delete Dialog */}
             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle className="text-destructive">
-                            Delete Document
-                        </DialogTitle>
+                        <DialogTitle className="text-destructive">Delete Document</DialogTitle>
                     </DialogHeader>
+                    {deleteError && (
+                        <p className="text-sm text-destructive bg-destructive/10 border border-destructive/30 rounded-md p-2 mb-2">
+                            {deleteError}
+                        </p>
+                    )}
                     <p className="text-sm text-muted-foreground">
-                        Are you sure you want to permanently delete this document?
-                        This action <strong>cannot be undone</strong>.
+                        Are you sure you want to permanently delete this document? This action{" "}
+                        <strong>cannot be undone</strong>.
                     </p>
                     <div className="flex justify-end gap-2 mt-4">
                         <Button

@@ -276,9 +276,11 @@ class SQLRepository(ISQLRepository):
         sql = """
             SELECT 
                 c.id, c.name, c.institution, c.semester_id, c.year, c.created_at,
-                i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email
+                i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email,
+                s.name AS semester_name
             FROM courses c
             LEFT JOIN instructors i ON c.instructor_id = i.id
+            LEFT JOIN semesters s ON c.semester_id = s.id
             WHERE c.id = %s;
         """
         return self.cm.select_one(sql, (course_id,))
