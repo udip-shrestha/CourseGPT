@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"; // --- 1. IMPORT useCallback ---
+import { useState, useEffect, useCallback } from "react"; // 1. IMPORT useCallback
 import { useParams, useNavigate } from "react-router-dom";
 import { Search, Filter, Plus, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
@@ -18,13 +18,15 @@ export interface CourseSummary {
     created_at: string;
 }
 
-// --- ADDED: Define the API response structure ---
+// --- 2. DEFINE THE API RESPONSE STRUCTURE ---
 interface CourseApiResponse {
     total: number;
     courses: CourseSummary[];
 }
+// --- END ---
 
-// --- ADDED: Helper function ---
+// --- 3. ADD THIS HELPER FUNCTION ---
+// (This fixes the 'semesterIdToString' not found error in handleViewCourse)
 function semesterIdToString(id: number | undefined): string {
     if (id === undefined) return "N/A";
     switch (id) {
@@ -35,6 +37,7 @@ function semesterIdToString(id: number | undefined): string {
         default: return "Unknown";
     }
 }
+// --- END OF ADDED FUNCTION ---
 
 export function InstructorCourses() {
     const { instructorId } = useParams<{ instructorId: string }>();
@@ -43,13 +46,16 @@ export function InstructorCourses() {
     const navigate = useNavigate();
     const [searchTerm, setSearchTerm] = useState("");
     const [courses, setCourses] = useState<CourseSummary[]>([]);
-    const [total, setTotal] = useState(0); // --- ADDED: State for total count ---
+    // --- 4. ADD STATE FOR TOTAL ---
+    const [total, setTotal] = useState(0);
+    // --- END ---
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
 
-    // --- 2. FIX: Moved fetchCourses outside useEffect and wrapped in useCallback ---
+    // --- 5. FIX: Moved fetchCourses outside useEffect and wrapped in useCallback ---
+    // (This fixes the 'Cannot find name fetchCourses' error)
     const fetchCourses = useCallback(async () => {
         setDeleteError(null);
 
@@ -84,7 +90,7 @@ export function InstructorCourses() {
                 throw new Error(errorDetail);
             }
 
-            // --- FIX: Correctly parse the API response object ---
+            // --- 6. FIX: Correctly parse the API response object ---
             const data: CourseApiResponse = await response.json();
             console.log("Fetched courses successfully:", data);
             setCourses(data.courses); // Set courses from the 'courses' property
@@ -108,7 +114,7 @@ export function InstructorCourses() {
 
     // --- Fetch Courses Effect ---
     useEffect(() => {
-        // --- 3. FIX: Call the stable fetchCourses function ---
+        // --- 7. FIX: Call the stable fetchCourses function ---
         fetchCourses();
     }, [fetchCourses]); // Use the useCallback function as dependency
     // --- End Fetch Courses ---
@@ -145,7 +151,7 @@ export function InstructorCourses() {
                 userError = "Could not connect to the server. Please ensure it's running.";
             }
             setDeleteError(userError);
-            throw err; // Re-throw for the card's local handler
+            throw err;
         }
     };
     // --- End Delete Course Handler ---
@@ -170,6 +176,7 @@ export function InstructorCourses() {
         fetchCourses(); // Re-fetch the course list (This will now work)
     };
 
+    // This line will no longer crash
     const filteredCourses = courses.filter((course) =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.institution.toLowerCase().includes(searchTerm.toLowerCase())
@@ -238,7 +245,7 @@ export function InstructorCourses() {
                         key={course.id}
                         course={course}
                         onViewCourse={() => handleViewCourse(course)}
-                        // --- 4. FIX: Pass the required 'onDelete' prop ---
+                        // --- 8. FIX: Pass the required 'onDelete' prop ---
                         onDelete={() => handleDeleteCourse(course.id)}
                     />
                 ))}
@@ -249,7 +256,7 @@ export function InstructorCourses() {
                     No courses match your search term.
                 </p>
             )}
-            {/* --- FIX: Use 'total' to check for no courses --- */}
+            {/* --- 9. FIX: Use 'total' to check for no courses --- */}
             {!isLoading && total === 0 && !error && (
                 <p className="text-center text-muted-foreground mt-10">
                     You haven't registered any courses yet.

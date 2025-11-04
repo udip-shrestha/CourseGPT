@@ -9,8 +9,10 @@ import {
     DialogHeader,
     DialogTitle,
     DialogFooter,
-    DialogClose // Import DialogClose
+    DialogClose
 } from "./ui/dialog";
+// --- 1. IMPORT THE API CLIENT HOOK ---
+import { useApiClient } from "../ApiClientContext";
 
 // Define props for the dialog
 interface CourseRegisterDialogProps {
@@ -30,6 +32,9 @@ const semesterOptions = ["Spring", "Summer", "Fall"]; // Options for the dropdow
 
 
 export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }: CourseRegisterDialogProps) {
+    // --- 2. INITIALIZE THE API CLIENT ---
+    const apiClient = useApiClient();
+
     const [name, setName] = useState("");
     const [institution, setInstitution] = useState("");
     const [semesterName, setSemesterName] = useState(""); // Store the selected name (e.g., "Fall")
@@ -38,18 +43,19 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
+    // --- 3. REPLACED 'handleSubmit' TO USE 'apiClient' ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        // --- Validation ---
+        // --- Validation (remains the same) ---
         if (!name || !institution || !semesterName || !year) {
             setError("Please fill out all fields.");
             setIsLoading(false);
             return;
         }
-        const semesterId = semesterMap[semesterName]; // Get the numeric ID from the selected name
+        const semesterId = semesterMap[semesterName];
         if (semesterId === undefined) {
             setError("Invalid semester selected.");
             setIsLoading(false);
@@ -63,55 +69,36 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
         }
         // --- End Validation ---
 
+        // Data object to pass to the API client
+        const courseData = {
+            name: name,
+            institution: institution,
+            semester_id: semesterId,
+            year: numericYear
+        };
 
-        // --- CONSTRUCT URL WITH QUERY PARAMETERS ---
-        const params = new URLSearchParams();
-        params.append('name', name);
-        params.append('institution', institution);
-        params.append('semester_id', semesterId.toString()); // Convert ID to string for URL
-        params.append('year', numericYear.toString()); // Convert year to string for URL
+        console.log("Submitting New Course via ApiClient with data:", courseData);
 
-        // URL includes instructorId in the path
-        const url = `http://localhost:8000/courses/${instructorId}?${params.toString()}`;
-        console.log("Submitting New Course via URL:", url);
-        // --- END URL CONSTRUCTION ---
-
-        // --- API CALL ---
+        // --- API CALL using ApiClient ---
         try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'accept': 'application/json' },
-                // No body needed as data is in query parameters
-            });
+            // This now calls the 'createCourse' function from ApiClient.ts
+            // which handles the query params, auth token, and
+            // uses the CORRECT URL: /instructors/{id}/courses
+            const { data, errorMessage } = await apiClient.createCourse(instructorId, courseData);
 
-            if (!response.ok) { // Check if response status is 2xx
-                let errorDetail = `Course creation failed (Status: ${response.status})`;
-                try {
-                    // Try to parse more specific error from backend JSON response
-                    const errorData = await response.json();
-                    if (Array.isArray(errorData.detail)) { // Handle FastAPI validation errors (list of objects)
-                        errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
-                    } else if (errorData.detail) { // Handle single string detail errors
-                        errorDetail = errorData.detail;
-                    }
-                } catch (_) {
-                    // If response isn't JSON, try getting plain text
-                    errorDetail = await response.text() || errorDetail;
-                }
-                throw new Error(errorDetail);
+            if (errorMessage) {
+                // If the backend sends an error, display it
+                throw new Error(errorMessage);
             }
 
-            // Assuming 200 OK or 201 Created signifies success based on Swagger
-            const result = await response.json();
-            console.log('Course creation successful:', result);
-            onCourseCreated(); // Trigger refresh in parent component and close dialog
+            console.log('Course creation successful:', data);
+            onCourseCreated(); // Trigger refresh in parent and close dialog
 
         } catch (err: any) {
             console.error("Course creation failed:", err);
             if (err instanceof TypeError && err.message === "Failed to fetch") {
                 setError("Could not connect to the server. Please ensure it's running and check CORS settings.");
             } else {
-                // Display the error message from the backend or the fetch error
                 setError(err.message || "An unexpected error occurred.");
             }
         } finally {

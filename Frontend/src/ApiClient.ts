@@ -80,7 +80,9 @@ export class APIClient {
 
             // --- Construct headers ---
             const finalHeaders = new Headers(headers || {});
+            // --- FIX: Automatically add auth token to all requests ---
             if (this.token) finalHeaders.set('Authorization', `Bearer ${this.token}`);
+            // --------------------------------------------------------
             if (isJson && !(body instanceof FormData)) {
                 finalHeaders.set('Content-Type', 'application/json');
             }
@@ -302,6 +304,33 @@ export class APIClient {
             }
         );
     }
+
+    // --- ADDED THIS FUNCTION ---
+    async createCourse(
+        instructorId: string,
+        params: {
+            name: string;
+            institution: string;
+            semester_id: number;
+            year: number;
+        }
+    ) {
+        if (!instructorId) {
+            return { errorMessage: "Instructor ID is required." };
+        }
+
+        // Pass parameters as query, not body
+        return this.request(
+            'POST',
+            `/courses/${instructorId}`, // Endpoint from Swagger
+            {
+                query: params, // Send data as query parameters
+                isJson: false, // Not a JSON request
+                operationId: `course-create-${instructorId}`,
+            }
+        );
+    }
+    // --- END OF ADDED FUNCTION ---
 }
 
 /**
@@ -309,3 +338,4 @@ export class APIClient {
  * Base URL is resolved from environment, falling back to localhost.
  */
 export const apiClient = new APIClient(import.meta.env.VITE_API_BASE_URL || "http://localhost:8000");
+
