@@ -89,3 +89,15 @@ class StudentService:
 
         self.sql_repo.delete_student(student_id)
         return {"status": "deleted", "student_id": student_id}
+
+
+    def unregister_student(self, discord_id: str, course_id: str) -> bool:
+        """
+        Removes a student-course mapping.
+        Returns True if successful, False otherwise.
+        """
+        student = self.sql_repo.read_student_by_discord(discord_id)
+        if not student:
+            return False
+
+        return self.sql_repo.remove_student_from_course(student["id"], course_id)

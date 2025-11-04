@@ -1,5 +1,6 @@
 import base64
 from typing import Optional, List, Dict, Any
+from unittest import result
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Repository.i_sql_repository import ISQLRepository
 from fastapi import HTTPException, status
@@ -417,6 +418,13 @@ class SQLRepository(ISQLRepository):
         # remove student
         self.cm.execute("DELETE FROM students WHERE id = %s;", (student_id,))
 
+    def read_student_by_discord(self, discord_id: str) -> Optional[dict]:
+        """
+        Retrieve a student by their Discord ID.
+        """
+        sql = "SELECT * FROM students WHERE discord_id = %s;"
+        return self.cm.select_one(sql, (discord_id,))
+
     def read_courses_by_discord(self, discord_id: str) -> list[dict]:
         """
         Retrieve all courses a student (identified by their Discord ID) is registered in.
@@ -436,7 +444,7 @@ class SQLRepository(ISQLRepository):
             WHERE s.discord_id = %s
         """
         rows = self.cm.select_all(sql, (discord_id,))
-        
+
         # convert UUIDs and integers to strings
         for r in rows:
             r["course_id"] = str(r["course_id"])
@@ -444,6 +452,31 @@ class SQLRepository(ISQLRepository):
             r["year"] = str(r["year"])
         
         return rows
+
+    def remove_student_from_course(self, student_id: str, course_id: str) -> bool:
+        """
+        Deletes a record linking a student to a course in the junction table.
+        """
+        query = """
+            DELETE FROM student_courses
+            WHERE student_id = %s AND course_id = %s;
+        """
+        try:
+            affected_rows = self.cm.execute(query, (student_id, course_id))
+            print("[DEBUG] Affected rows:", affected_rows)
+            return affected_rows > 0
+        except Exception as e:
+            print("[DEBUG] remove_student_from_course error:", e)
+            raise
+
+
+        
+        
+
+    
+
+
+
 
 
     # ======================================================
