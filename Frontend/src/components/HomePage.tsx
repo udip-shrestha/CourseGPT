@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+// import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 // Import Dialog components
@@ -14,7 +14,7 @@ import {
 import { Info, X } from 'lucide-react'; // Kept Info, X
 
 export function HomePage() {
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
     const [showInstructions, setShowInstructions] = useState(true);
     // State for the second help dialog
     const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
