@@ -322,7 +322,7 @@ export class APIClient {
         // Pass parameters as query, not body
         return this.request(
             'POST',
-            `/courses/${instructorId}`, // Endpoint from Swagger
+            `/instructors/${instructorId}/courses`, // Endpoint from Swagger
             {
                 query: params, // Send data as query parameters
                 isJson: false, // Not a JSON request
