@@ -62,7 +62,7 @@ def get_student_queries(
 # Log a Student Query
 # ------------------------------------------------------
 @router.post(
-    "students/log_query", 
+    "/students/log_query", 
     summary="Log a query made by a student",
     description="Stores a student's question and the corresponding system response."
 )

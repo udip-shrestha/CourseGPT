@@ -1,171 +1,168 @@
 import discord
-import requests
-import json
 import os
 from discord import app_commands
 from discord.ext import commands
 from datetime import datetime
 import uuid
 from dotenv import load_dotenv
+from cybot_service import *
 
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
-HF_TOKEN = os.getenv("HF_TOKEN")
-H_MODEL = "deepset/roberta-base-squad2"
-
-STUDENTS_FILE = "students.json"
-QUERIES_FILE = "queries.json"
-
-def load_json(filename):
-    if not os.path.exists(filename):
-        with open(filename, "w") as f:
-            json.dump({"students": []} if "students" in filename else {"queries": []}, f)
-    with open(filename, "r") as f:
-        return json.load(f)
-
-def save_json(filename, data):
-    with open(filename, "w") as f:
-        json.dump(data, f, indent=2)
-
-# Check registration
-def is_registered(discord_id, course_id):
-    data = load_json(STUDENTS_FILE)
-    for student in data["students"]:
-        if student["discord_id"] == str(discord_id):
-            for course in student["courses"]:
-                if course["course_id"] == course_id:
-                    return True, student["student_id"]
-    return False, None
-
-# Log queries
-def log_query(student_id, course_id, query_text, response_text):
-    data = load_json(QUERIES_FILE)
-    query_id = str(uuid.uuid4())
-    data["queries"].append({
-        "query_id": query_id,
-        "student_id": student_id,
-        "course_id": course_id,
-        "query_text": query_text,
-        "response_text": response_text,
-        "asked_at": datetime.now().isoformat()
-    })
-    save_json(QUERIES_FILE, data)
-
-
-def is_student_registered(student_id, filename="students.json"):
-    try:
-        with open(filename, "r") as f:
-            data = json.load(f)
-        
-        for student in data.get("students", []):
-            if student.get("student_id") == student_id:
-                return True
-        return False
-    
-    except FileNotFoundError:
-        print(f"File {filename} not found.")
-        return False
-    except json.JSONDecodeError:
-        print(f"File {filename} is not a valid JSON.")
-        return False
-
-# ML model call
-def ask_backend(question: str, student_id: str, course_id: str):
-    try:
-        url = "http://127.0.0.1:8000/answer"
-        payload = {
-            "question": question,
-            "student_id": student_id,
-            "course_id": course_id
-        }
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(url, json=payload, headers=headers, timeout=15)
-
-        if response.status_code != 200:
-            return f"⚠️ Backend error ({response.status_code}): {response.text}"
-
-        data = response.json()
-        answer = data.get("answer", "🤖 Sorry, I couldn't find an answer.")
-        sources = data.get("sources", [])
-        return f"{answer}\n\n📚 **Sources:** {sources}"
-
-    except requests.Timeout:
-        return "⚠️ Request timed out. Please try again later."
-    except Exception as e:
-        return f"Error connecting to backend: {str(e)}"
     
 # Discord setup
 intents = discord.Intents.default()
 intents.message_content = True
+intents.members = True
 bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
     await bot.tree.sync()
     print(f"{bot.user} is online!")
+    # register existing members when bot starts
+    for guild in bot.guilds:
+        for member in guild.members:
+            if not member.bot:
+                await auto_register_member(member)
 
 @bot.event
 async def on_member_join(member):
-    general_channel = discord.utils.get(member.guild.text_channels, name='general')
-    if general_channel:
-        await general_channel.send(f"👋 Welcome {member.mention}! Please register to this course by sending the /register command")
+    if not member.bot:
+        await auto_register_member(member)
+        await member.send(
+            f"👋 Welcome {member.display_name}! You’ve been auto-registered for {member.guild.name}."
+        )
+
+@bot.event
+async def on_guild_join(guild):
+    print(f"Bot added to guild: {guild.name}")
+    for member in guild.members:
+        if not member.bot:
+            await auto_register_member(member)
 
 # Ask command
 @bot.tree.command(name="ask", description="Ask a question to the bot")
 async def ask(interaction: discord.Interaction, question: str):
-    course_id = interaction.guild.name.replace(" ", "").upper()  # using server name as course_id
-    registered, student_id = is_registered(interaction.user.id, course_id)
+    # Get course_id from guild name using API
+    guild_name = interaction.guild.name if interaction.guild else ""
+    course_id = await get_course_id(guild_name)
+    
+    if not course_id:
+        await interaction.response.send_message(
+            "🚫 Course not found. Please ask an instructor to create the course first.",
+            ephemeral=True
+        )
+        return
 
+    # Check if student is registered
+    registered, student_id = await is_registered(str(interaction.user.id), course_id)
     if not registered:
         await interaction.response.send_message(
-            f"🚫 You are not registered for {course_id}. Please register to this course by sending the /register command",
+            f"🚫 You are not registered for this course. Please try registering using the /register command first.",
             ephemeral=True
         )
         return
     
-    # Only defer if registered
+    # Defer response while we wait for AI
     await interaction.response.defer(thinking=True)
 
-    answer = ask_backend(question, student_id, course_id)
-    log_query(student_id, course_id, question, answer)
-    await interaction.followup.send(f"🤖 {answer}")
+    # Get answer from AI model
+    answer, sources = await ask_AI_model(question, course_id)
+    
+    # Log the query
+    await log_query(student_id, course_id, question, answer)
+    
+    # Format response with sources if available
+    response = answer
+    if sources:
+        response += "\n\n📚 **Sources:**\n"
+        for source in sources:
+            response += f"• {source}\n"
 
-# Register to the course         ->>>>>>>>>>>>> could I clean this using a modal/form for the student?
+    await interaction.followup.send(response)
+
+# Register to the course        
 @bot.tree.command(name="register", description="Register for the course")
 async def register(interaction: discord.Interaction):
-    course_id = interaction.guild.name.replace(" ", "").upper()
-    data = load_json(STUDENTS_FILE)
+    await interaction.response.defer(thinking=True, ephemeral=True)
+    # Get course_id from guild name using API
+    guild_name = interaction.guild.name if interaction.guild else ""
+    course_id = await get_course_id(guild_name)
+    
+    if not course_id:
+        await interaction.followup.send(
+            "🚫 Course not found. Please ask an instructor to create the course first."
+        )
+        return
+    
+    # Check if student is already registered
+    registered = await is_registered(str(interaction.user.id), course_id)
+    if registered:
+        await interaction.followup.send(
+            "🚫 You are already registered for this course."
+        )
+        return
+    
+    # Register student using API
+    success, message, student_id = await register_student(
+        str(interaction.user.id),
+        interaction.user.name,
+        course_id
+    )
 
-    for student in data["students"]:
-        if student["discord_id"] == str(interaction.user.id):
-            for course in student["courses"]:
-                if course["course_id"] == course_id:
-                    await interaction.response.send_message(
-                        f"✅ You are already registered for {course_id}.",
-                        ephemeral=True
-                    )
-                    return
-            student["courses"].append({
-                "course_id": course_id,
-                "registered_at": datetime.now().isoformat()
-            })
-            save_json(STUDENTS_FILE, data)
-            await interaction.response.send_message(f"✅ Successfully registered for {course_id}!", ephemeral=True)
-            return
+    # Send response based on registration result
+    emoji = "✅" if success else "🚫"
+    await interaction.followup.send(f"{emoji} {message}")
 
-    new_student = {
-        "student_id": str(uuid.uuid4()),
-        "discord_id": str(interaction.user.id),
-        "name": interaction.user.name,
-        "courses": [{
-            "course_id": course_id,
-            "registered_at": datetime.now().isoformat()
-        }]
-    }
-    data["students"].append(new_student)
-    save_json(STUDENTS_FILE, data)
-    await interaction.response.send_message(f"✅ Successfully registered for {course_id}!", ephemeral=True)
+# Check registration status
+@bot.tree.command(name="status", description="Check if you are registered for this course")
+async def status(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True, ephemeral=True)
+    # Get course_id from guild name
+    guild_name = interaction.guild.name if interaction.guild else ""
+    course_id = await get_course_id(guild_name)
+    
+    if not course_id:
+        await interaction.followup.send(
+            "🚫 Course not found. Please ask an instructor to create the course first."
+        )
+        return
+    
+    # Check if student is registered
+    registered, _ = await is_registered(str(interaction.user.id), course_id)
+    if registered:
+        await interaction.followup.send(
+            "✅ You are registered for this course."
+        )
+    else: 
+        await interaction.followup.send(
+            "🚫 You are not registered for this course."
+        )
+        return
+
+# Check registered courses
+@bot.tree.command(name="courses", description="Check which courses you are registered in")
+async def courses(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True, ephemeral=True)
+
+    discord_id = str(interaction.user.id)
+    courses = await get_student_courses(discord_id)
+
+    if not courses:
+        await interaction.followup.send("🚫 You are not registered in any courses yet.", ephemeral=True)
+        return
+
+    # Build a formatted message for all courses
+    message = "📘 **Courses you are registered in:**\n"
+    for c in courses:
+        course_name = c.get("course_name", "Unknown")
+        year = c.get("year", "")
+        institution = c.get("institution", "")
+        message += f"- **{course_name}** ({institution}, {year})\n"
+
+    await interaction.followup.send(message, ephemeral=True)
 
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")
@@ -173,9 +170,10 @@ async def help_command(interaction: discord.Interaction):
     await interaction.response.send_message(
         "📚 **CyBot Help Menu**\n\n"
         "Here are the available commands:\n"
-        "• `/register` → Register yourself for this course so you can start asking questions.\n"
-        "• `/ask [question]` → Ask a course-related question and get an ML-generated answer.\n"
-        "• `/status` → Check which courses you are registered in (coming soon).\n"
+        "• `/register` → (Optional) Manually register yourself for this course if not auto-registered.\n"
+        "• `/ask [question]` → Ask a course-related question and get an AI-generated answer.\n"
+        "• `/status` → Check your registration status for this course (coming soon).\n"
+        "• `/courses` → Check which courses you are registered in.\n"
         "• `/help` → Show this menu.\n\n"
         "⚠️ Note: You must be registered for the course before you can use `/ask`."
     )
