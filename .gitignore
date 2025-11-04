@@ -21,6 +21,7 @@
 
 # Ignore chroma data
 **/.chroma_data
+**/.chroma_db
 
 # Ignore npm modules
 **/node_modules
@@ -33,3 +34,8 @@
 **/coverage.xml
 **/htmlcov/
 **/.cache/
+
+# Ignore binary files
+*.bin
+/bin/
+

@@ -108,6 +108,29 @@ def get_all_courses(
     )
 
 
+@router.get(
+    "/courses/{course_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Get course details by ID",
+    description=(
+        "**Action:** Fetch a single course by its unique ID. "
+        "Includes instructor and semester details.\n\n"
+        "**Returns:** JSON containing course metadata such as name, institution, "
+        "semester, year, instructor info, and timestamps."
+    ),
+)
+def get_course_by_id(
+    course_id: str = Path(
+        ...,
+        description="UUID of the course to retrieve.",
+        example="a4e7b4a9-8423-4d34-b8b2-4a07f4448dc9"
+    ),
+    service: CourseService = Depends(get_course_service),
+):
+    """Retrieve one course by its unique ID."""
+    return service.read_course(course_id)
+
+
 @router.delete(
     "/courses/{course_id}",
     status_code=status.HTTP_204_NO_CONTENT,

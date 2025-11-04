@@ -74,3 +74,31 @@ def get_registered_courses(
         return {"courses": courses}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve courses: {e}")
+    
+
+
+# Unregister a Student from a Course
+@router.delete(
+    "/unregister",
+    status_code=status.HTTP_200_OK,
+    summary="Unregister a student from a specific course",
+    description=(
+        "Removes a student's registration from a course using their Discord ID and Course ID.\n\n"
+        "**Returns:** JSON message indicating success or failure."
+    ),
+)
+def unregister_student(
+    discord_id: str = Query(..., description="Discord ID of the student."),
+    course_id: str = Query(..., description="Course ID to remove the student from."),
+    service: StudentService = Depends(get_student_service)
+) -> Dict[str, str]:
+    try:
+        success = service.unregister_student(discord_id=discord_id, course_id=course_id)
+        if success:
+            return {"message": "Student successfully unregistered from course"}
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Student not found or not enrolled in this course"
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to unregister student: {e}")

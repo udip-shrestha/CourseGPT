@@ -7,6 +7,7 @@ import { CourseCard } from "./CourseCard";
 import { CourseRegisterDialog } from "./CourseRegisterDialog";
 import { Dialog, DialogTrigger } from "./ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { API_BASE_URL } from "../ApiClient";
 
 export interface CourseSummary {
     id: string;
@@ -70,7 +71,7 @@ export function InstructorCourses() {
         setIsLoading(true);
         setError(null);
 
-        const url = `http://localhost:8000/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
+        const url = `${API_BASE_URL}/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
         console.log("Fetching courses from:", url);
 
         try {
@@ -124,7 +125,7 @@ export function InstructorCourses() {
         console.log(`Attempting to delete course ${courseId}`);
         setDeleteError(null);
         try {
-            const response = await fetch(`http://localhost:8000/courses/${courseId}`, {
+            const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
                 method: 'DELETE',
                 headers: { 'accept': '*/*' }
             });

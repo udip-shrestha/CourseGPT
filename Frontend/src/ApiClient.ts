@@ -7,6 +7,7 @@ export class APIClient {
 
     constructor(baseUrl: string) {
         this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl; // normalize trailing slash
+        this.loadToken();
     }
 
     // ===== TOKEN MANAGEMENT =====
@@ -18,6 +19,15 @@ export class APIClient {
     loadToken() {
         this.token = localStorage.getItem(this.storageKey);
     }
+
+    getToken(): string | null {
+        if (this.token == null) this.loadToken();
+        return this.token;
+    }
+      
+    isAuthenticated(): boolean {
+        return !!this.getToken();
+    } 
 
     clearToken() {
         this.token = null;
@@ -33,6 +43,15 @@ export class APIClient {
         return localStorage.getItem(this.instructorKey);
     }
 
+    // ===== FUNCTION TO LOGOUT ========
+    logout(): void {
+        this.clearToken();
+        localStorage.removeItem(this.instructorKey);
+        // cancel any in-flight requests
+        for (const c of this.controllers.values()) c.abort();
+        this.controllers.clear();
+    }
+      
     // ===== INTERNAL: CONTROLLER MANAGEMENT =====
     private getController(operationId: string): AbortController {
         if (this.controllers.has(operationId)) {
@@ -80,9 +99,7 @@ export class APIClient {
 
             // --- Construct headers ---
             const finalHeaders = new Headers(headers || {});
-            // --- FIX: Automatically add auth token to all requests ---
             if (this.token) finalHeaders.set('Authorization', `Bearer ${this.token}`);
-            // --------------------------------------------------------
             if (isJson && !(body instanceof FormData)) {
                 finalHeaders.set('Content-Type', 'application/json');
             }
@@ -140,6 +157,11 @@ export class APIClient {
 
             return { data: null as T };
         } catch (err: any) {
+            // Ignore intentional aborts
+            if (err.name === "AbortError") {
+                return { errorStatus: 0, errorMessage: undefined };
+            }
+            
             return { errorStatus: -1, errorMessage: err.message };
         }
     }
@@ -305,7 +327,34 @@ export class APIClient {
         );
     }
 
-    // --- ADDED THIS FUNCTION ---
+    async getCourse(courseId: string) {
+        if (!courseId) {
+            return { errorMessage: "Course ID is required." };
+        }
+    
+        return this.request(
+            "GET",
+            `/courses/${courseId}`,
+            {
+                operationId: `course-get-${courseId}`,
+            }
+        );
+    }
+
+    async deleteCourse(courseId: string) {
+        if (!courseId) {
+            return { errorMessage: "Course ID is required." };
+        }
+    
+        return this.request(
+            "DELETE",
+            `/courses/${courseId}`,
+            {
+                operationId: `course-delete-${courseId}`,
+            }
+        );
+    }
+
     async createCourse(
         instructorId: string,
         params: {
@@ -318,24 +367,25 @@ export class APIClient {
         if (!instructorId) {
             return { errorMessage: "Instructor ID is required." };
         }
-
-        // Pass parameters as query, not body
+    
         return this.request(
-            'POST',
-            `/instructors/${instructorId}/courses`, // Endpoint from Swagger
+            "POST",
+            `/instructors/${instructorId}/courses`,
             {
-                query: params, // Send data as query parameters
-                isJson: false, // Not a JSON request
+                query: params,
+                isJson: false,
                 operationId: `course-create-${instructorId}`,
             }
         );
     }
-    // --- END OF ADDED FUNCTION ---
+
 }
 
 /**
  * Default API client instance.
  * Base URL is resolved from environment, falling back to localhost.
  */
-export const apiClient = new APIClient(import.meta.env.VITE_API_BASE_URL || "http://localhost:8000");
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+export const apiClient = new APIClient(API_BASE_URL);
+
 
