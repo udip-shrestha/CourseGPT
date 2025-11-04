@@ -33,7 +33,7 @@ export function HomePage() {
 
     return (
         // Make the main container relative to position elements inside it
-        <div className="relative min-h-[calc(100vh-theme(spacing.40))] w-full"> {/* Adjust min-height based on header/footer */}
+        <div className="relative w-full flex flex-col items-center justify-center py-16 sm:py-24 space-y-4 text-center">
 
             {/* Main Content (Centered) */}
             <div className="flex flex-col items-center justify-center pt-16 sm:pt-24 space-y-4 text-center">

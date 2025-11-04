@@ -11,10 +11,15 @@ import {
 } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
+import { LayoutDashboard, LogOut } from "lucide-react";
+import { useApiClient } from "../ApiClientContext";
+
 
 export function Header() {
     const location = useLocation();
     const navigate = useNavigate();
+    const apiClient = useApiClient();
+
     // This now works because Header is inside the Layout route in App.tsx
     const { instructorId, courseId } = useParams();
 
@@ -22,6 +27,13 @@ export function Header() {
     const path = location.pathname.endsWith("/")
         ? location.pathname.slice(0, -1)
         : location.pathname;
+
+    const isAuthenticated = !!apiClient.getToken?.();
+    const currentInstructorId = apiClient.getInstructorId?.();
+    const handleLogout = () => {
+        apiClient.logout?.();
+        navigate("/login", { replace: true });
+    };
 
     // --- Logic from 'main' branch ---
     const onInstructorRoute = path.startsWith("/instructors/");
@@ -31,6 +43,7 @@ export function Header() {
     // Check for root path (which can be "/" or "")
     const onHomePage = path === "" || path === "/";
     // --- End of logic from 'main' ---
+
 
     return (
         <header className="border-b bg-card">
@@ -159,22 +172,47 @@ export function Header() {
                         {/* Auth navigation: Home Page */}
                         {onHomePage && (
                             <>
-                                <Button
-                                    variant="ghost"
-                                    className="flex items-center gap-2 w-full sm:w-auto justify-center"
-                                    onClick={() => navigate("/login")}
-                                >
-                                    <LogIn className="h-4 w-4" />
-                                    Login
-                                </Button>
-                                <Button
-                                    variant="ghost"
-                                    className="flex items-center gap-2 w-full sm:w-auto justify-center"
-                                    onClick={() => navigate("/register")}
-                                >
-                                    <UserPlus className="h-4 w-4" />
-                                    Register
-                                </Button>
+                                {!isAuthenticated ? (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                                            onClick={() => navigate("/login")}
+                                        >
+                                            <LogIn className="h-4 w-4" />
+                                            Login
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                                            onClick={() => navigate("/register")}
+                                        >
+                                            <UserPlus className="h-4 w-4" />
+                                            Register
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <>
+                                        <Button
+                                            variant="ghost"
+                                            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                                            onClick={() =>
+                                                navigate(`/instructors/${currentInstructorId}/courses`)
+                                            }
+                                        >
+                                            <LayoutDashboard className="h-4 w-4" />
+                                            Dashboard
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                                            onClick={handleLogout}
+                                        >
+                                            <LogOut className="h-4 w-4" />
+                                            Sign Out
+                                        </Button>
+                                    </>
+                                )}
                             </>
                         )}
                     </nav>
