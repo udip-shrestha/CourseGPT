@@ -83,6 +83,13 @@ class RAGService:
         """
         # --- Step 1: Retrieve relevant chunks ---
         retrieved = self.vector_repo.query(course_id, question)
+        # 🔍 DEBUG LOGGING: Check retrieval
+        print(f"[RAG DEBUG] Retrieved {len(retrieved)} chunks for course {course_id}")
+        for i, (doc, score) in enumerate(retrieved):
+            print(f"[RAG DEBUG] #{i+1} Source: {getattr(doc.metadata, 'get', lambda k, d=None: doc.metadata[k] if k in doc.metadata else d)('source', 'unknown')}")
+            print(f"[RAG DEBUG] Similarity Score: {score}")
+            print(f"[RAG DEBUG] Preview: {doc.page_content[:200]}...\n")
+
         if not retrieved:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No relevant information found for this course.")
 

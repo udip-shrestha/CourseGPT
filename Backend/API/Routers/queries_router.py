@@ -37,7 +37,13 @@ def ask_question(
     if not question.strip():
         return {"answer": "Question cannot be empty.", "sources": ""}
 
-    return rag_service.query(course_id, question)
+    # return rag_service.query(course_id, question)
+
+    try:
+        answer = rag_service.llm.invoke(question)
+        return {"answer": answer, "sources": []}
+    except Exception as e:
+        return {"error": str(e), "sources": []}
 
 # ------------------------------------------------------
 # Get All Queries by Student
