@@ -54,7 +54,7 @@ def test_create_document_vector_index_fails(document_service: DocumentService, m
             mime_type="application/pdf",
         )
 
-    mock_sql_repo.delete_document.assert_called_once_with("doc-123")
+    mock_sql_repo.delete_document.assert_called_once_with("c1", "doc-123")
     assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
     assert "Vector indexing failed" in exc_info.value.detail
 
@@ -65,7 +65,7 @@ def test_read_document_success(document_service: DocumentService, mock_sql_repo:
 
     doc = document_service.read_document("c1", "doc-1")
 
-    mock_sql_repo.read_document.assert_called_once_with("doc-1")
+    mock_sql_repo.read_document.assert_called_once_with("c1", "doc-1")
     assert doc["id"] == "doc-1"
     assert doc["file_name"] == "hw1.pdf"
 
@@ -82,14 +82,16 @@ def test_read_document_not_found(document_service: DocumentService, mock_sql_rep
 
 
 def test_read_document_wrong_course(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
-    """Should raise 404 if document exists but belongs to a different course."""
-    mock_sql_repo.read_document.return_value = {"id": "doc-1", "course_id": "wrong-course"}
+    """Should raise 404 if document doesn't belong to this course (filtered in SQL)."""
+    mock_sql_repo.read_document.return_value = None
 
     with pytest.raises(HTTPException) as exc_info:
         document_service.read_document("expected-course", "doc-1")
 
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
     assert "not found" in exc_info.value.detail.lower()
+    mock_sql_repo.read_document.assert_called_once_with("expected-course", "doc-1")
+
 
 
 def test_read_all_documents(document_service: DocumentService, mock_sql_repo: ISQLRepository) -> None:
@@ -112,7 +114,7 @@ def test_delete_document(document_service: DocumentService, mock_sql_repo: ISQLR
     response = document_service.delete_document("course-1", "doc-1")
     mock_rag_service.delete_index.return_value = None
 
-    mock_sql_repo.delete_document.assert_called_once_with("doc-1")
+    mock_sql_repo.delete_document.assert_called_once_with("course-1", "doc-1")
     mock_rag_service.delete_index.assert_called_once_with("course-1", "doc-1")
     assert response == {"status": "deleted", "course_id": "course-1", "doc_id": "doc-1"}
 
@@ -122,6 +124,6 @@ def test_delete_document_idempotent(document_service: DocumentService, mock_sql_
     response = document_service.delete_document("course-1", "nonexistent-id")
     mock_rag_service.delete_index.return_value = None
 
-    mock_sql_repo.delete_document.assert_called_once_with("nonexistent-id")
+    mock_sql_repo.delete_document.assert_called_once_with("course-1", "nonexistent-id")
     mock_rag_service.delete_index.assert_called_once_with("course-1", "nonexistent-id")
     assert response == {"status": "deleted", "course_id": "course-1", "doc_id": "nonexistent-id"}

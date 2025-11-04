@@ -21,11 +21,11 @@ class ISQLRepository(Protocol):
         """Save a single uploaded file (binary) in SQL DB and return its document ID."""
         ...
 
-    def read_document(self, doc_id: str) -> Optional[dict]:
+    def read_document(self, course_id: str, doc_id: str) -> Optional[dict]:
         """Retrieve a file record by document ID."""
         ...
 
-    def delete_document(self, doc_id: str) -> None:
+    def delete_document(self, course_id: str, doc_id: str) -> None:
         """Delete a file record by its ID."""
         ...
 
@@ -59,11 +59,15 @@ class ISQLRepository(Protocol):
     def delete_course(self, course_id: str) -> None:
         """Delete a course record by ID."""
         ...
+    
+    def get_course_by_name(self, course_name: str) -> Optional[dict]:
+        """Get a CourseId by Name"""
+        ...
 
     # ======================================================
     # INSTRUCTORS
     # ======================================================
-    def create_instructor(self, name: str, title: str, university: str, email: str) -> str:
+    def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
         """Add a new instructor."""
         ...
 
@@ -76,19 +80,58 @@ class ISQLRepository(Protocol):
         ...
 
     def read_all_instructors(
-        self, 
-        name: Optional[str] = None, 
-        title: Optional[str] = None, 
+        self,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
         university: Optional[str] = None,
         email: Optional[str] = None,
+        role: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
     ) -> List[dict]:
-        """Retrieve all instructors."""
+        """Retrieve all instructors, with optional filters and ordering."""
         ...
-
     def delete_instructor(self, instructor_id: str) -> Optional[dict]:
         """Delete an instructor by ID."""
         ...
+
+    # ======================================================
+    # STUDENTS
+    # ======================================================
+    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+        """Create a new student and link them to a course."""
+        ...
+
+    def read_student(self, student_id: str) -> Optional[dict]:
+        """Fetch a student by their ID."""
+        ...
+
+    def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
+        """Fetch all students, optionally filtering by course ID."""
+        ...
+
+    def delete_student(self, student_id: str) -> None:
+        """Delete a student and remove their course associations."""
+        ...
+
+    def read_courses_by_discord(self, discord_id: str) -> List[dict]:
+        """Get all courses a student is registered in by Discord ID."""
+        ...
+
+    # ======================================================
+    # Queries
+    # ======================================================
+    def create_query_log(
+        self,
+        student_id: str,
+        course_id: str,
+        query_text: str,
+        response_text: str
+    ) -> str:
+        """Log a student's question and the corresponding response, returning the new query ID."""
+        ...
+
+    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
+        """Fetch all queries (and responses) made by a given student in a given course."""

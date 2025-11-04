@@ -22,10 +22,11 @@ def add_instructor(
     title: str = Query(..., description="Job title of the instructor.", example="Associate Professor of Computer Science"),
     university: str = Query(..., description="University where the instructor works.", example="Tech University"),
     email: str = Query(..., description="Instructor's email address.", example="sarah.johnson@techuni.edu"),
+    password: str = Query(..., description="Instructor's password.", example="cold-palmer"),
     service: InstructorService = Depends(get_instructor_service)
 ):
     """Creates a new instructor record."""
-    return service.create_instructor(name=name, title=title, university=university, email=email)
+    return service.create_instructor(name=name, title=title, university=university, email=email, password=password)
 
 
 # ------------------------------------------------------

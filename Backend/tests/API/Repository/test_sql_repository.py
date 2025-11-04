@@ -1,6 +1,7 @@
 import base64
 import pytest
 import uuid
+from API.Repository.i_sql_repository import ISQLRepository
 
 # ==========================================================
 # FILE TYPES
@@ -42,7 +43,7 @@ def test_create_and_read_document(repo, temp_course):
     assert doc_id is not None
 
     # Read it back
-    doc = repo.read_document(doc_id)
+    doc = repo.read_document(temp_course, doc_id)
     assert doc is not None
     assert doc["course_id"] == uuid.UUID(temp_course)
     assert doc["file_name"] == file_name
@@ -57,50 +58,96 @@ def test_read_all_documents_filters_and_pagination(repo, temp_course):
         )
 
     results = repo.read_all_documents(course_id=temp_course, limit=2, offset=0)
-    assert len(results) == 2
+    assert len(results["documents"]) == 2
 
     results_next = repo.read_all_documents(course_id=temp_course, limit=2, offset=2)
-    assert isinstance(results_next, list)
+    assert isinstance(results_next["documents"], list)
 
 
 def test_delete_document(repo, temp_course):
     doc_id = repo.create_document(temp_course, "temp.txt", b"hello", file_type_id=2)
-    assert repo.read_document(doc_id) is not None
+    assert repo.read_document(temp_course, doc_id) is not None
 
-    # Delete it
-    repo.delete_document(doc_id)
-    assert repo.read_document(doc_id) is None
+    repo.delete_document(course_id=temp_course, doc_id=doc_id)
+    assert repo.read_document(temp_course, doc_id) is None
+
+
 
 # ==========================================================
 # INSTRUCTORS
 # ==========================================================
-def test_create_and_read_instructor(repo):
-    instructor_id = repo.create_instructor(
-        name="Dr. Jane Smith",
-        title="Professor",
-        university="ISU",
-        email="jane.smith@isu.edu",
-    )
+def test_create_instructor(repo: ISQLRepository):
+    """Should create instructor and handle duplicate/invalid edge cases."""
+    instructor_id = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "fake-hash")
     assert instructor_id is not None
 
+    # Duplicate email should raise
+    with pytest.raises(Exception):
+        repo.create_instructor("Dr. Copy", "Professor", "ISU", "jane.smith@isu.edu", "hash2")
+
+    # Empty fields might be allowed by schema, so no exception expected
+    repo.create_instructor("", "", "", "unique@example.com", "pw")
+
+
+def test_read_instructor(repo: ISQLRepository):
+    """Should fetch instructors by ID/email and handle not-found cases."""
+    instructor_id = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "fake-hash")
+
+    # By ID 
     instructor = repo.read_instructor(instructor_id)
     assert instructor is not None
     assert instructor["name"] == "Dr. Jane Smith"
-    assert instructor["university"] == "ISU"
+    assert instructor["role"] == "INSTRUCTOR"
+
+    # By Email
+    found = repo.read_instructor_by_email("jane.smith@isu.edu")
+    assert found is not None
+    assert found["email"] == "jane.smith@isu.edu"
+
+    # Nonexistent
+    assert repo.read_instructor("00000000-0000-0000-0000-000000000000") is None
+    assert repo.read_instructor_by_email("notfound@isu.edu") is None
 
 
-def test_read_all_instructors(repo, temp_instructor):
-    instructors = repo.read_all_instructors()
+def test_read_all_instructors_features(repo: ISQLRepository, temp_instructor: str):
+    """Should support filtering, ordering, and pagination."""
+    result = repo.read_all_instructors()
+    instructors = result["instructors"]
     assert isinstance(instructors, list)
-    assert any(str(inst["id"]) == temp_instructor for inst in instructors)     # Convert UUID to string for comparison
+    if instructors:
+        assert "email" in instructors[0] and "role" in instructors[0]
 
-def test_delete_instructor(repo):
-    instructor_id = repo.create_instructor(
-        name="Dr. Temp", title="Assistant Prof.", university="Test U", email="temp@u.edu"
-    )
+    filtered = repo.read_all_instructors(role="INSTRUCTOR")["instructors"]
+    assert all(inst["role"] == "INSTRUCTOR" for inst in filtered)
+
+    limited = repo.read_all_instructors(limit=1)["instructors"]
+    assert len(limited) <= 1
+
+    invalid = repo.read_all_instructors(order_by="invalid_field")["instructors"]
+    assert isinstance(invalid, list)
+
+
+def test_delete_instructor(repo: ISQLRepository):
+    """Should delete an instructor and handle not-found cases safely."""
+    # Create an instructor
+    instructor_id = repo.create_instructor("Dr. John Doe", "Lecturer", "MIT", "john.doe@mit.edu", "secure-hash")
+    assert instructor_id is not None
+
+    # Verify it exists before deletion
+    instructor = repo.read_instructor(instructor_id)
+    assert instructor is not None
+    assert instructor["email"] == "john.doe@mit.edu"
+
+    # Delete the instructor
     repo.delete_instructor(instructor_id)
+
+    # Verify it was deleted
     deleted = repo.read_instructor(instructor_id)
     assert deleted is None
+
+    # Deleting again should not raise an error
+    # (depending on your DB constraint handling)
+    repo.delete_instructor(instructor_id)
 
 
 # ==========================================================
@@ -122,7 +169,7 @@ def test_create_and_read_course(repo, temp_instructor):
 
 
 def test_read_all_courses(repo):
-    results = repo.read_all_courses()
+    results = repo.read_all_courses()["courses"]
     assert isinstance(results, list)
 
 

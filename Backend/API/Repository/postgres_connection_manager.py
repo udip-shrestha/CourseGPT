@@ -8,7 +8,7 @@ import logging
 
 class PostgresConnectionManager:
     """
-    Singleton PostgreSQL connection pool manager.
+    PostgreSQL connection pool manager.
     Provides safe, typed query helpers with rollback on error.
 
     ---------------------------------------------------------------------------
@@ -29,17 +29,6 @@ class PostgresConnectionManager:
 
     • close_all()               → Gracefully close all pooled connections.
     """
-
-    _instance = None
-    _lock = threading.Lock()
-
-    def __new__(cls, db_url: str = None):
-        """Ensure only one instance of the connection pool exists."""
-        if cls._instance is None:
-            with cls._lock:
-                if cls._instance is None:
-                    cls._instance = super().__new__(cls)
-        return cls._instance
 
     def __init__(self, db_url: str) -> None:
         self.db_url: str = db_url
