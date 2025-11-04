@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <!-- Solid mortarboard icon (uses currentColor so it adapts to your site's text color) -->
+  <g fill="currentColor">
+    <!-- Cap top -->
+    <path d="M2 8l10-5 10 5-10 5L2 8z"/>
+    <!-- Cap base (band) -->
+    <path d="M6 11.2v2.5c0 2.5 2.9 4.3 6 4.3s6-1.8 6-4.3v-2.5l-6 3-6-3z"/>
+    <!-- Tassel -->
+    <path d="M22 8v6.2a1.8 1.8 0 1 1-2.4 1.7V9.1l2.4-1.1z"/>
+  </g>
+</svg>

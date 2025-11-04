@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 // Import Dialog components
@@ -14,7 +13,7 @@ import {
 import { Info, X } from 'lucide-react'; // Kept Info, X
 
 export function HomePage() {
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
     const [showInstructions, setShowInstructions] = useState(true);
     // State for the second help dialog
     const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
@@ -34,7 +33,7 @@ export function HomePage() {
 
     return (
         // Make the main container relative to position elements inside it
-        <div className="relative min-h-[calc(100vh-theme(spacing.40))] w-full"> {/* Adjust min-height based on header/footer */}
+        <div className="relative w-full flex flex-col items-center justify-center py-16 sm:py-24 space-y-4 text-center">
 
             {/* Main Content (Centered) */}
             <div className="flex flex-col items-center justify-center pt-16 sm:pt-24 space-y-4 text-center">
@@ -49,24 +48,6 @@ export function HomePage() {
                 <p className="max-w-xl text-lg text-muted-foreground">
                     Your AI assistant for managing course materials and generating insights.
                 </p>
-
-                {/* --- Test Buttons --- */}
-                <div className="flex gap-4 pt-4">
-                    <Button
-                        variant="secondary" // Use a secondary style
-                        onClick={() => navigate('/instructors/1/profile')} // Use a specific ID or placeholder
-                    >
-                        Go to Test Instructor Profile
-                    </Button>
-                    <Button
-                        variant="outline" // Example for courses
-                        onClick={() => navigate('/instructors/1/courses')} // Use a specific ID or placeholder
-                    >
-                        Go to Test Instructor Courses
-                    </Button>
-                </div>
-                {/* --- END --- */}
-
             </div>
 
             {/* Instruction Pop-up (Bottom Left) */}
