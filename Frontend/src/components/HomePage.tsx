@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 // Import Dialog components
@@ -14,7 +13,7 @@ import {
 import { Info, X } from 'lucide-react'; // Kept Info, X
 
 export function HomePage() {
-    const navigate = useNavigate();
+    // const navigate = useNavigate();
     const [showInstructions, setShowInstructions] = useState(true);
     // State for the second help dialog
     const [isHelpDialogOpen, setIsHelpDialogOpen] = useState(false);
@@ -49,24 +48,6 @@ export function HomePage() {
                 <p className="max-w-xl text-lg text-muted-foreground">
                     Your AI assistant for managing course materials and generating insights.
                 </p>
-
-                {/* --- Test Buttons --- */}
-                <div className="flex gap-4 pt-4">
-                    <Button
-                        variant="secondary" // Use a secondary style
-                        onClick={() => navigate('/instructors/1/profile')} // Use a specific ID or placeholder
-                    >
-                        Go to Test Instructor Profile
-                    </Button>
-                    <Button
-                        variant="outline" // Example for courses
-                        onClick={() => navigate('/instructors/1/courses')} // Use a specific ID or placeholder
-                    >
-                        Go to Test Instructor Courses
-                    </Button>
-                </div>
-                {/* --- END --- */}
-
             </div>
 
             {/* Instruction Pop-up (Bottom Left) */}
