@@ -51,7 +51,7 @@ export function HomePage() {
                 </p>
 
                 {/* --- Test Buttons --- */}
-                <div className="flex gap-4 pt-4">
+                {/* <div className="flex gap-4 pt-4">
                     <Button
                         variant="secondary" // Use a secondary style
                         onClick={() => navigate('/instructors/1/profile')} // Use a specific ID or placeholder
@@ -64,7 +64,7 @@ export function HomePage() {
                     >
                         Go to Test Instructor Courses
                     </Button>
-                </div>
+                </div> */}
                 {/* --- END --- */}
 
             </div>
