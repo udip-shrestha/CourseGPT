@@ -86,3 +86,22 @@ def test_delete_course_not_found(course_service: CourseService, mock_sql_repo: I
         course_service.delete_course("fake")
 
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+
+def test_get_course_id_by_name_success(course_service: CourseService, mock_sql_repo: ISQLRepository):
+    """Should return course_id if course exists."""
+    mock_sql_repo.get_course_by_name.return_value = {"id": "course-123"}
+
+    result = course_service.get_course_id_by_name("CS101")
+
+    mock_sql_repo.get_course_by_name.assert_called_once_with("CS101")
+    assert result == {"course_id": "course-123"}
+
+
+def test_get_course_id_by_name_not_found(course_service: CourseService, mock_sql_repo: ISQLRepository):
+    """Should raise 404 if course name not found."""
+    mock_sql_repo.get_course_by_name.return_value = None
+
+    with pytest.raises(HTTPException) as exc_info:
+        course_service.get_course_id_by_name("UnknownCourse")
+
+    assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
