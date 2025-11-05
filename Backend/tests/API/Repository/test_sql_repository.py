@@ -179,3 +179,90 @@ def test_delete_course(repo, temp_instructor):
     )
     repo.delete_course(course_id)
     assert repo.read_course(course_id) is None
+
+def test_get_course_by_name(repo, temp_instructor):
+    name = "UniqueCourse"
+    institution = "ISU"
+    year = 2025
+    semester_id = 1
+
+    course_id = repo.create_course(
+        instructor_id=temp_instructor,
+        name=name,
+        institution=institution,
+        semester_id=semester_id,
+        year=year
+    )
+
+    course = repo.get_course_by_name(name)
+    assert course is not None
+    assert course["name"] == name
+    assert course["institution"] == institution
+
+# ==========================================================
+# STUDENTS
+# ==========================================================
+def test_create_and_read_student(repo, temp_course):
+    student_name = "Alice"
+    discord_id = "alice123"
+    student_id = repo.create_student(student_name, discord_id, temp_course)
+    assert student_id is not None
+
+    student = repo.read_student(student_id)
+    assert student is not None
+    assert student["name"] == student_name
+    assert student["course_id"] == uuid.UUID(temp_course)
+
+def test_create_student_existing_discord(repo, temp_course):
+    discord_id = "repeat123"
+    student1 = repo.create_student("Student1", discord_id, temp_course)
+    student2 = repo.create_student("Student1", discord_id, temp_course)
+    assert student1 == student2  # Should reuse same student_id
+
+def test_read_all_students(repo, temp_course):
+    repo.create_student("Bob", "bob123", temp_course)
+    all_students = repo.read_all_students()
+    assert isinstance(all_students, list)
+    course_students = repo.read_all_students(temp_course)
+    assert isinstance(course_students, list)
+
+def test_read_student_by_discord(repo, temp_course):
+    discord_id = "disc999"
+    repo.create_student("Cathy", discord_id, temp_course)
+    student = repo.read_student_by_discord(discord_id)
+    assert student is not None
+    assert student["discord_id"] == discord_id
+
+def test_read_courses_by_discord(repo, temp_course):
+    discord_id = "linked123"
+    repo.create_student("David", discord_id, temp_course)
+    courses = repo.read_courses_by_discord(discord_id)
+    assert isinstance(courses, list)
+    assert any("course_name" in c for c in courses)
+
+def remove_student_from_course(self, student_id, course_id) -> bool:
+    with self.connection.cursor() as cursor:
+        cursor.execute(
+            "DELETE FROM course_student WHERE student_id = %s AND course_id = %s",
+            (student_id, course_id),
+        )
+        self.connection.commit()
+        # Return True if any rows were deleted, False otherwise
+        return cursor.rowcount > 0
+
+# ==========================================================
+# QUERIES (Student Questions)
+# ==========================================================
+def test_create_and_read_query_log(repo, temp_course):
+    # Create student first
+    student_id = repo.create_student("Frank", "frank123", temp_course)
+
+    query_text = "What is polymorphism?"
+    response_text = "Polymorphism allows objects to take many forms."
+
+    qid = repo.create_query_log(student_id, temp_course, query_text, response_text)
+    assert qid is not None
+
+    queries = repo.read_queries_by_student(student_id, temp_course)
+    assert isinstance(queries, list)
+    assert any(q["query_text"] == query_text for q in queries)

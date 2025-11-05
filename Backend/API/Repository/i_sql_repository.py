@@ -120,6 +120,10 @@ class ISQLRepository(Protocol):
         """Get all courses a student is registered in by Discord ID."""
         ...
 
+    def read_student_by_discord(self, discord_id: str) -> Optional[dict]:
+        """Retrieve a student by their Discord ID."""
+        ...
+
     # ======================================================
     # Queries
     # ======================================================
