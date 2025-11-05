@@ -4,9 +4,6 @@ from API.Service.students_service import StudentService
 from API.Repository.i_sql_repository import ISQLRepository
 from API.Repository.i_vector_repository import IVectorRepository
 
-# -------------------------------
-# Example: create student test
-# -------------------------------
 def test_create_student_success(student_service: StudentService, mock_sql_repo: ISQLRepository):
     """Should create a student if not exists."""
     # Mock SQL repo to simulate new student creation
