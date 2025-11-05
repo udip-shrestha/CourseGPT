@@ -6,6 +6,7 @@ from API.Service.rag_service import RAGService
 from API.Service.courses_service import CourseService
 from API.Service.auth_service import AuthService
 from API.Service.instructors_service import InstructorService
+from API.Service.students_service import StudentService
 from API.Repository.i_vector_repository import IVectorRepository
 from unittest.mock import MagicMock
 from API.Util.loaders import Loader
@@ -95,3 +96,8 @@ def auth_service(mock_sql_repo: ISQLRepository) -> AuthService:
 def instructor_service(mock_sql_repo: ISQLRepository) -> InstructorService:
     """Provides an InstructorService wired with a mock SQL repository."""
     return InstructorService(sql_repo=mock_sql_repo)
+
+@pytest.fixture
+def student_service(mock_sql_repo: ISQLRepository) -> StudentService:
+    """Provides a StudentService wired with a mock SQL repository."""
+    return StudentService(sql_repo=mock_sql_repo)
