@@ -9,7 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "tailwind:init": "node ./node_modules/tailwindcss/lib/cli.js init -p",
-    "cy:open": "cypress open"
+    "cy:open": "cypressTests open"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "^1.2.12",
