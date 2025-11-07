@@ -14,4 +14,10 @@
 // ***********************************************************
 
 // Import commands.js using ES2015 syntax:
-import './commands'
+module.exports = {
+    e2e: {
+        supportFile: './support/e2e/supportFile.js',
+        baseUrl: null,
+        experimentalRunAllSpecs: false,
+    },
+};
