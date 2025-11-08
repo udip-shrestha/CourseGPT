@@ -120,6 +120,14 @@ class ISQLRepository(Protocol):
         """Get all courses a student is registered in by Discord ID."""
         ...
 
+    def read_student_by_discord(self, discord_id: str) -> Optional[dict]:
+        """Retrieve a student by their Discord ID."""
+        ...
+    
+    def remove_student_from_course(self, student_id: str, course_id: str) -> bool:
+        """Deletes a record linking a student to a course in the junction table."""
+        ...
+    
     # ======================================================
     # Queries
     # ======================================================
