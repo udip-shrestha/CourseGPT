@@ -76,6 +76,6 @@
   "description": "Cypress end-2-end testing",
   "main": "eslint.config.js",
   "keywords": [],
-  "author": "",
+  "author": "Adomale Kiobel",
   "license": "ISC"
 }
