@@ -17,7 +17,7 @@
 module.exports = {
     e2e: {
         supportFile: './support/e2e/supportFile.js',
-        baseUrl: null,
+        baseUrl: 'http://sdmay26-37.ece.iastate.edu/',
         experimentalRunAllSpecs: false,
     },
 };
