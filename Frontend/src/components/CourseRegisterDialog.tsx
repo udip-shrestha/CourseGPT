@@ -109,7 +109,7 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
 
 
     return (
-        // Use DialogContent component provided by ui/dialog
+        // The JSX (visuals) remains exactly the same
         <DialogContent className="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Register New Course</DialogTitle>
@@ -144,13 +144,11 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
                 {/* Semester */}
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="semester-dialog" className="text-right">Semester</Label>
-                    {/* Use Select component for dropdown */}
                     <Select value={semesterName} onValueChange={setSemesterName} required>
                         <SelectTrigger id="semester-dialog" className="col-span-3">
                             <SelectValue placeholder="Select semester" />
                         </SelectTrigger>
                         <SelectContent>
-                            {/* Map over semester names for options */}
                             {semesterOptions.map((sem) => (
                                 <SelectItem key={sem} value={sem}>{sem}</SelectItem>
                             ))}
@@ -162,12 +160,12 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
                     <Label htmlFor="year-dialog" className="text-right">Year</Label>
                     <Input
                         id="year-dialog"
-                        type="number" // Use number input type
+                        type="number"
                         value={year}
                         onChange={(e) => setYear(e.target.value)}
                         className="col-span-3"
                         placeholder="e.g., 2025"
-                        min="2000" // Example validation
+                        min="2000"
                         required
                     />
                 </div>
@@ -177,11 +175,9 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
 
                 {/* Use DialogFooter for buttons */}
                 <DialogFooter>
-                    {/* DialogClose wraps the Cancel button */}
                     <DialogClose asChild>
                         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
                     </DialogClose>
-                    {/* Submit button */}
                     <Button type="submit" disabled={isLoading}>
                         {isLoading ? "Registering..." : "Register Course"}
                     </Button>
@@ -190,4 +186,3 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
         </DialogContent>
     );
 }
-
