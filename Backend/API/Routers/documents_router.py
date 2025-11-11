@@ -4,7 +4,9 @@ from langchain_core.documents import Document
 from API.Service.document_service import DocumentService
 from API.dependencies import authorize_course, get_document_service
 
+
 router = APIRouter(tags=["Documents"])
+
 
 @router.post(
     "/courses/{course_id}/documents",
@@ -19,21 +21,22 @@ router = APIRouter(tags=["Documents"])
 async def upload_document(
     course_id: str = Path(
         ...,
-        description="UUID of the course (e.g., the 'Data Structures' course)."
+        description="UUID of the course (e.g., the 'Data Structures' course).",
     ),
     file: UploadFile = File(
         ...,
-        description="Select a file to upload, e.g., `Backend_Knowledge.pdf` (application/pdf)."
+        description="Select a file to upload, e.g., `Backend_Knowledge.pdf` (application/pdf).",
     ),
     _auth: dict = Depends(authorize_course),
-    service: DocumentService = Depends(get_document_service)
+    service: DocumentService = Depends(get_document_service),
 ):
+    """Uploads a new document for a specific course."""
     content = await file.read()
     return service.create_document(
         course_id=course_id,
         file_name=file.filename,
         file_bytes=content,
-        mime_type=file.content_type
+        mime_type=file.content_type,
     )
 
 
@@ -48,12 +51,14 @@ async def upload_document(
 )
 def get_document(
     course_id: str = Path(
-        ..., 
-        description="UUID of the course that owns the document."
+        ...,
+        description="UUID of the course that owns the document.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
     doc_id: str = Path(
         ...,
         description="UUID of the document, e.g., the uploaded 'Backend_Knowledge.pdf'.",
+        examples={"example": "3f9aab52-ef01-4a11-9a3d-1115a6ecf83b"},
     ),
     _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
@@ -76,34 +81,35 @@ def get_all_documents(
     course_id: str = Path(
         ...,
         description="UUID of the course.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
     file_type: Optional[str] = Query(
         None,
         description="Optional MIME type to filter by (e.g., `application/pdf`, `text/plain`).",
-        example="application/pdf",
+        examples={"example": "application/pdf"},
     ),
     limit: int = Query(
         10,
         ge=1,
         description="Maximum number of results to return per page (must be ≥ 1).",
-        example=10,
+        examples={"example": 10},
     ),
     offset: int = Query(
         0,
         ge=0,
         description="Starting index for pagination (must be ≥ 0).",
-        example=0,
+        examples={"example": 0},
     ),
     order_by: str = Query(
         "uploaded_at",
         description="Field name to sort results by (e.g., `uploaded_at`, `file_name`).",
-        example="uploaded_at",
+        examples={"example": "uploaded_at"},
     ),
     order_dir: str = Query(
         "desc",
         description="Sorting direction for results. Must be either `'asc'` or `'desc'`.",
-        example="desc",
-        regex="^(asc|desc)$",  # only allow these two values
+        examples={"example": "desc"},
+        pattern="^(asc|desc)$",
     ),
     _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
@@ -133,14 +139,15 @@ def delete_document(
     course_id: str = Path(
         ...,
         description="UUID of the course that owns the document.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
     doc_id: str = Path(
         ...,
         description="UUID of the document to delete.",
+        examples={"example": "3f9aab52-ef01-4a11-9a3d-1115a6ecf83b"},
     ),
     _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
 ):
     """Deletes a document from the system."""
     return service.delete_document(course_id, doc_id)
-
