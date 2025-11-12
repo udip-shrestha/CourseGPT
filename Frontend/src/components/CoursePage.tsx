@@ -5,6 +5,7 @@ import { useApiClient } from "../ApiClientContext.tsx";
 import { CourseDocPage } from "./CourseDocPage";
 import { NotFoundPage } from "./NotFoundPage";
 import { CourseIntegrationsPage } from "./CourseIntegrationsPage.tsx";
+import { CourseChatPage } from "./CourseChatPage.tsx";
 
 export function CoursePage() {
   const { courseId } = useParams();
@@ -81,7 +82,7 @@ export function CoursePage() {
       {/* Nested Routes */}
       <Routes>
         <Route index element={<CourseDocPage course={course} />} />
-        <Route path="chat" element={<NotFoundPage />} />
+        <Route path="chat" element={<CourseChatPage course={course} />} />
         <Route
           path="integrations"
           element={<CourseIntegrationsPage course={course} />}

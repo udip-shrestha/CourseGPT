@@ -89,7 +89,9 @@
     /* Structural */
     --border: oklch(0.269 0 0);
     --input: oklch(0.269 0 0);
-    --input-background: oklch(0.22 0 0); /* darker input background for dark mode */
+    --input-background: oklch(
+      0.22 0 0
+    ); /* darker input background for dark mode */
     --switch-background: oklch(0.269 0 0);
     --ring: oklch(0.439 0 0);
 
@@ -141,16 +143,43 @@
 ========================================================== */
 @layer base {
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
-    h1, h2, h3, h4, p, label, button, input {
+    h1,
+    h2,
+    h3,
+    h4,
+    p,
+    label,
+    button,
+    input {
       line-height: 1.5;
     }
 
-    h1 { font-size: var(--text-2xl); font-weight: var(--font-weight-medium); }
-    h2 { font-size: var(--text-xl); font-weight: var(--font-weight-medium); }
-    h3 { font-size: var(--text-lg); font-weight: var(--font-weight-medium); }
-    h4 { font-size: var(--text-base); font-weight: var(--font-weight-medium); }
-    p, input { font-size: var(--text-base); font-weight: var(--font-weight-normal); }
-    label, button { font-size: var(--text-base); font-weight: var(--font-weight-medium); }
+    h1 {
+      font-size: var(--text-2xl);
+      font-weight: var(--font-weight-medium);
+    }
+    h2 {
+      font-size: var(--text-xl);
+      font-weight: var(--font-weight-medium);
+    }
+    h3 {
+      font-size: var(--text-lg);
+      font-weight: var(--font-weight-medium);
+    }
+    h4 {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+    }
+    p,
+    input {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-normal);
+    }
+    label,
+    button {
+      font-size: var(--text-base);
+      font-weight: var(--font-weight-medium);
+    }
   }
 }
 
@@ -181,4 +210,120 @@
     @apply ring-2 ring-ring;
   }
 }
+/* ==========================================================
+   💬 CHAT & STREAMING ANIMATIONS
+   ----------------------------------------------------------
+   Smooth animations for message appearance and streaming effect.
+==========================================================
+  */
+@layer components {
+  /* Message fade-in animation */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out forwards;
+  }
+
+  /* Streaming cursor blink animation */
+  @keyframes streamingCursor {
+    0%,
+    49% {
+      opacity: 1;
+    }
+    50%,
+    100% {
+      opacity: 0;
+    }
+  }
+
+  .animate-streamingCursor {
+    animation: streamingCursor 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  /* Message container base styles */
+  .chat-message {
+    @apply rounded-lg px-4 py-2 max-w-xs sm:max-w-md lg:max-w-lg;
+  }
+
+  /* User message styles - light & dark mode */
+  .chat-message-user {
+    @apply bg-blue-600 text-white rounded-br-none;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .chat-message-user {
+      @apply bg-blue-700 text-blue-50;
+    }
+  }
+
+  /* Assistant message styles - light & dark mode */
+  .chat-message-assistant {
+    @apply bg-muted text-muted-foreground rounded-bl-none border border-border;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    .chat-message-assistant {
+      @apply bg-slate-800 text-slate-100 border-slate-700;
+    }
+  }
+
+  /* Chat content text styles */
+  .chat-content {
+    @apply text-sm leading-relaxed break-words whitespace-pre-wrap;
+  }
+
+  /* Chat timestamp styles */
+  .chat-timestamp {
+    @apply text-xs mt-1 opacity-70;
+  }
+
+  /* Loading indicator animation */
+  @keyframes bounce {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(-4px);
+    }
+  }
+
+  .animate-chatBounce {
+    animation: bounce 1.4s ease-in-out infinite;
+  }
+}
+/* ==========================================================
+   📱 CHAT LAYOUT RESPONSIVE TWEAKS
+   ----------------------------------------------------------
+   Ensure chat interface looks good across all screen sizes.
+========================================================== */
+@layer components {
+  .chat-container {
+    @apply flex flex-col h-[calc(100vh-200px)] rounded-lg border border-border bg-card;
+  }
+
+  .chat-header {
+    @apply border-b border-border px-4 py-3 sm:px-6;
+  }
+
+  .chat-messages {
+    @apply flex-1 overflow-y-auto px-4 py-4 sm:px-6 space-y-4;
+  }
+
+  .chat-input-area {
+    @apply border-t border-border px-4 py-3 sm:px-6 bg-card;
+  }
+
+  .chat-empty-state {
+    @apply flex flex-col items-center justify-center h-full text-center;
+  }
+}

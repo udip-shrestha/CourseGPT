@@ -9,6 +9,8 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
   const DISCORD_SERVER_GUIDE_URL =
     "https://support.discord.com/hc/en-us/articles/204849977-How-do-I-create-a-server";
 
+  const DISCORD_SERVER_TEMPLATE_URL = "https://discord.new/aVBUfJZsZH9G";
+
   return (
     <div className="space-y-3">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-6">
@@ -64,6 +66,15 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
                     className="text-blue-600 hover:underline inline-flex items-center gap-1"
                   >
                     this guide <ExternalLink className="h-3 w-3" />
+                  </a>
+                  . Additionally, you may use this Discord{" "}
+                  <a
+                    href={DISCORD_SERVER_TEMPLATE_URL}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:underline inline-flex items-center gap-1"
+                  >
+                    server template <ExternalLink className="h-3 w-3" />
                   </a>
                   .
                 </p>
