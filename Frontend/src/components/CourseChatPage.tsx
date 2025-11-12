@@ -166,8 +166,7 @@ export function CourseChatPage({ course }: { course: any }) {
             </div>
           ))
         )}
-
-        <div ref={messagesEndRef} />
+        {messages.length === 0 ? null : <div ref={messagesEndRef} />}
       </div>
 
       {/* Input Area */}
