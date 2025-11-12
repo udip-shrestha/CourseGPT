@@ -267,7 +267,7 @@
 
   /* Assistant message styles - light & dark mode */
   .chat-message-assistant {
-    @apply bg-muted text-muted-foreground rounded-bl-none border border-border;
+    @apply bg-slate-300 text-black rounded-bl-none border border-border;
   }
 
   @media (prefers-color-scheme: dark) {
