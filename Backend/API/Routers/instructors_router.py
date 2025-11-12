@@ -128,3 +128,57 @@ def delete_instructor(
 ):
     """Deletes an instructor from the system."""
     return service.delete_instructor(instructor_id)
+
+
+@router.put(
+    "/instructors/{instructor_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Update an instructor",
+    description=(
+        "**Action:** Updates an instructor's information in the system.\n\n"
+        "**Returns:** JSON containing the updated instructor details."
+    ),
+)
+def update_instructor(
+    instructor_id: str = Path(
+        ...,
+        description="UUID of the instructor to update.",
+        examples={"example": "5f3c1b56-8a2e-4f81-9f43-3a6a5dfb5b1b"},
+    ),
+    name: Optional[str] = Query(
+        None,
+        description="Updated full name of the instructor.",
+        examples={"example": "Dr. Sarah Johnson"},
+    ),
+    title: Optional[str] = Query(
+        None,
+        description="Updated job title of the instructor.",
+        examples={"example": "Associate Professor of Computer Science"},
+    ),
+    university: Optional[str] = Query(
+        None,
+        description="Updated university where the instructor works.",
+        examples={"example": "Tech University"},
+    ),
+    email: Optional[str] = Query(
+        None,
+        description="Updated instructor email address.",
+        examples={"example": "sarah.johnson@techuni.edu"},
+    ),
+    password: Optional[str] = Query(
+        None,
+        description="Updated password of the instructor.",
+        examples={"example": "new-password123"},
+    ),
+    service: InstructorService = Depends(get_instructor_service),
+):
+    """Updates an instructor's details."""
+    return service.update_instructor(
+        instructor_id=instructor_id,
+        name=name,
+        title=title,
+        university=university,
+        email=email,
+        password=password,
+    )
+

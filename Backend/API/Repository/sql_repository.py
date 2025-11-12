@@ -250,6 +250,39 @@ class SQLRepository(ISQLRepository):
         """
         self.cm.execute(sql, (instructor_id,))
 
+    def update_instructor(self, instructor_id: str, updates: dict) -> dict:
+        """
+        Update instructor fields dynamically based on provided key-value pairs.
+        Returns the updated instructor record.
+        """
+
+        if not updates:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid fields provided for update."
+            )
+
+        # Build dynamic SET clause
+        set_clause = ", ".join([f"{key} = %s" for key in updates.keys()])
+        values = list(updates.values()) + [instructor_id]
+
+        sql = f"""
+            UPDATE instructors
+            SET {set_clause}, updated_at = NOW()
+            WHERE id = %s
+            RETURNING id, name, title, university, email, 
+                        (SELECT role_name FROM instructor_roles WHERE id = role_id) AS role,
+                        created_at, updated_at;
+        """
+
+        updated = self.cm.select_one(sql, tuple(values))
+        if not updated:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Instructor with id={instructor_id} not found."
+            )
+
+        return updated
 
     # ======================================================
     # COURSES

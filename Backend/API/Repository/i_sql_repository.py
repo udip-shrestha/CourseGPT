@@ -97,6 +97,10 @@ class ISQLRepository(Protocol):
         """Delete an instructor by ID."""
         ...
 
+    def update_instructor(self, instructor_id: str, updates: dict) -> dict:
+        """Update instructor information."""
+        ...
+    
     # ======================================================
     # STUDENTS
     # ======================================================
