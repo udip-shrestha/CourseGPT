@@ -64,6 +64,11 @@ class ISQLRepository(Protocol):
         """Get a CourseId by Name"""
         ...
 
+    
+    def update_course(self, course_id: str, updates: dict) -> dict:
+        """Update course information."""
+        ...
+        
     # ======================================================
     # INSTRUCTORS
     # ======================================================
