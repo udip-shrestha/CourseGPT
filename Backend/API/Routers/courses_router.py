@@ -3,7 +3,9 @@ from API.Service.courses_service import CourseService
 from API.dependencies import get_course_service
 from typing import Optional
 
+
 router = APIRouter(tags=["Courses"])
+
 
 @router.post(
     "/instructors/{instructor_id}/courses",
@@ -11,36 +13,36 @@ router = APIRouter(tags=["Courses"])
     summary="Add a new course",
     description=(
         "**Action:** Adds a new course to the system. "
-        "The uploaded course details is read into memory and persisted in the database.\n\n"
+        "The uploaded course details are read into memory and persisted in the database.\n\n"
         "**Returns:** JSON containing the created course's ID."
     ),
 )
 async def add_course(
     instructor_id: str = Path(
         ...,
-        description="UUID of the instructor who owns this course (e.g., the professor’s ID)."
+        description="UUID of the instructor who owns this course (e.g., the professor’s ID).",
     ),
     name: str = Query(
         ...,
         description="Name of the course (e.g., 'Data Structures').",
-        example="Data Structures"
+        examples={"example": "Data Structures"},
     ),
     institution: str = Query(
         ...,
         description="Name of the institution offering the course.",
-        example="Iowa State University"
+        examples={"example": "Iowa State University"},
     ),
     semester_id: int = Query(
         ...,
         description="Numeric ID of the semester (e.g., 3 = Fall).",
-        example=3
+        examples={"example": 3},
     ),
     year: int = Query(
         ...,
         description="Academic year when the course is offered.",
-        example=2025
+        examples={"example": 2025},
     ),
-    service: CourseService = Depends(get_course_service)
+    service: CourseService = Depends(get_course_service),
 ):
     """Creates a new course record associated with a specific instructor."""
     return service.create_course(
@@ -65,37 +67,37 @@ def get_all_courses(
     instructor_id: str = Path(
         ...,
         description="UUID of the instructor.",
-        example="69898770-08e8-4491-a0b1-640f23168397"
+        examples={"example": "69898770-08e8-4491-a0b1-640f23168397"},
     ),
     institution: Optional[str] = Query(
         None,
         description="Optional filter by institution name.",
-        example="Iowa State University"
+        examples={"example": "Iowa State University"},
     ),
     limit: int = Query(
         10,
         ge=1,
         description="Maximum number of results to return per page (must be ≥ 1).",
-        example=10
+        examples={"example": 10},
     ),
     offset: int = Query(
         0,
         ge=0,
         description="Starting index for pagination (must be ≥ 0).",
-        example=0
+        examples={"example": 0},
     ),
     order_by: str = Query(
         "created_at",
         description="Field name to sort results by (e.g., `year`, `created_at`).",
-        example="created_at"
+        examples={"example": "created_at"},
     ),
     order_dir: str = Query(
         "desc",
         description="Sorting direction for results (`asc` or `desc`).",
-        example="desc",
-        regex="^(asc|desc)$"
+        examples={"example": "desc"},
+        pattern="^(asc|desc)$",
     ),
-    service: CourseService = Depends(get_course_service)
+    service: CourseService = Depends(get_course_service),
 ):
     """Retrieve all courses with optional filtering and pagination."""
     return service.read_all_courses(
@@ -104,7 +106,7 @@ def get_all_courses(
         limit=limit,
         offset=offset,
         order_by=order_by,
-        order_dir=order_dir
+        order_dir=order_dir,
     )
 
 
@@ -123,7 +125,7 @@ def get_course_by_id(
     course_id: str = Path(
         ...,
         description="UUID of the course to retrieve.",
-        example="a4e7b4a9-8423-4d34-b8b2-4a07f4448dc9"
+        examples={"example": "a4e7b4a9-8423-4d34-b8b2-4a07f4448dc9"},
     ),
     service: CourseService = Depends(get_course_service),
 ):
@@ -143,7 +145,7 @@ def get_course_by_id(
 def delete_course(
     course_id: str = Path(
         ...,
-        description="UUID of the course to delete."
+        description="UUID of the course to delete.",
     ),
     service: CourseService = Depends(get_course_service),
 ):
@@ -163,7 +165,7 @@ def get_course_id_by_name(
     course_name: str = Query(
         ...,
         description="Exact name of the course to look up (e.g., 'Data Structures').",
-        example="Data Structures"
+        examples={"example": "Data Structures"},
     ),
     service: CourseService = Depends(get_course_service),
 ):

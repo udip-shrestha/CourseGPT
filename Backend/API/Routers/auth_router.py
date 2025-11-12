@@ -1,13 +1,14 @@
 from fastapi import APIRouter, Depends, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
-from typing import Annotated
-
 from API.Service.auth_service import AuthService
 from API.dependencies import get_auth_service
 
 router = APIRouter(tags=["Auth"])
 
 
+# ---------------------------------------------------------------------
+# Login (OAuth2 Password Grant)
+# ---------------------------------------------------------------------
 @router.post(
     "/auth/login",
     status_code=status.HTTP_200_OK,
@@ -23,14 +24,18 @@ router = APIRouter(tags=["Auth"])
 )
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
-    service: AuthService = Depends(get_auth_service)
+    service: AuthService = Depends(get_auth_service),
 ):
     """OAuth2-compliant login endpoint for instructors."""
     return service.login(
         instructor_email=form_data.username,
-        instructor_password=form_data.password
+        instructor_password=form_data.password,
     )
 
+
+# ---------------------------------------------------------------------
+# Register Instructor
+# ---------------------------------------------------------------------
 @router.post(
     "/auth/register",
     status_code=status.HTTP_201_CREATED,
@@ -41,11 +46,31 @@ def login(
     ),
 )
 def register(
-    name: str = Form("Dr. Jane Doe", description="Full name of the instructor"),
-    title: str = Form("Assistant Professor of Computer Science", description="Instructor's title"),
-    university: str = Form("Iowa State University", description="Instructor's university"),
-    email: str = Form("jane.doe@iastate.edu", description="Instructor's email address"),
-    password: str = Form("mysecurepassword", description="Instructor's password"),
+    name: str = Form(
+        ...,
+        examples=["Dr. Jane Doe"],
+        description="Full name of the instructor",
+    ),
+    title: str = Form(
+        ...,
+        examples=["Assistant Professor of Computer Science"],
+        description="Instructor's title",
+    ),
+    university: str = Form(
+        ...,
+        examples=["Iowa State University"],
+        description="Instructor's university",
+    ),
+    email: str = Form(
+        ...,
+        examples=["jane.doe@iastate.edu"],
+        description="Instructor's email address",
+    ),
+    password: str = Form(
+        ...,
+        examples=["mysecurepassword"],
+        description="Instructor's password",
+    ),
     auth_service: AuthService = Depends(get_auth_service),
 ):
     """Public registration endpoint that returns access token."""
