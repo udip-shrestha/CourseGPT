@@ -132,6 +132,37 @@ def get_course_by_id(
     """Retrieve one course by its unique ID."""
     return service.read_course(course_id)
 
+@router.put(
+    "/courses/{course_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Update an existing course",
+    description=(
+        "**Action:** Updates course fields (name, institution, semester, or year). "
+        "Only provided fields will be updated.\n\n"
+        "**Returns:** JSON of the updated course record."
+    ),
+)
+def update_course(
+    course_id: str = Path(
+        ...,
+        description="UUID of the course to update.",
+        examples={"example": "a4e7b4a9-8423-4d34-b8b2-4a07f4448dc9"},
+    ),
+    name: Optional[str] = Query(None, description="Updated course name."),
+    institution: Optional[str] = Query(None, description="Updated institution name."),
+    semester_id: Optional[int] = Query(None, description="Updated semester ID."),
+    year: Optional[int] = Query(None, description="Updated academic year."),
+    service: CourseService = Depends(get_course_service),
+):
+    """Updates one or more fields of a course."""
+    updates = {k: v for k, v in {
+        "name": name,
+        "institution": institution,
+        "semester_id": semester_id,
+        "year": year
+    }.items() if v is not None}
+
+    return service.update_course(course_id, updates)
 
 @router.delete(
     "/courses/{course_id}",
