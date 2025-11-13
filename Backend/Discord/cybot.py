@@ -83,7 +83,7 @@ async def ask(interaction: discord.Interaction, question: str):
             response += f"• {value}\n"
 
     # Send response in chunks if it exceeds Discord's 2000 character limit 
-    message_chunks = split_message(response)
+    message_chunks = await split_message(response)
     
     for i, chunk in enumerate(message_chunks):
         if chunk.strip():  # Only send non-empty chunks
@@ -170,6 +170,42 @@ async def courses(interaction: discord.Interaction):
 
     await interaction.followup.send(message, ephemeral=True)
 
+# Unregister from the course        
+@bot.tree.command(name="unregister", description="Unregister from the course")
+async def unregister(interaction: discord.Interaction):
+    await interaction.response.defer(thinking=True, ephemeral=True)
+    # Get course_id from guild name using API
+    guild_name = interaction.guild.name if interaction.guild else ""
+    course_id = await get_course_id(guild_name)
+    
+    if not course_id:
+        await interaction.followup.send(
+            "🚫 Course not found. Please ask an instructor to create the course first."
+        )
+        return
+    
+    # Check if student is already unregistered
+    registered, _ = await is_registered(str(interaction.user.id), course_id)
+    if not registered:
+        await interaction.followup.send(
+            "🚫 You are currently not registered for this course."
+        )
+        return
+    
+    # Unregister student using API
+    success, message = await unregister_student(
+        str(interaction.user.id),
+        course_id
+    )
+
+    # Send response based on registration result
+    if success:
+        emoji = "✅"  
+        disclaimer = "⚠️ Ensure to leave the Discord server to avoid being registered automatically." 
+    else:
+        emoji = "🚫"
+        disclaimer = ""
+    await interaction.followup.send(f"{emoji} {message}\n\n{disclaimer}")
 
 
 # Help command
