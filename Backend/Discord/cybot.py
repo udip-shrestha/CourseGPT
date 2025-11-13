@@ -77,11 +77,17 @@ async def ask(interaction: discord.Interaction, question: str):
     # Format response with sources if available
     response = answer
     if sources:
+        values = sources.split("; ") 
         response += "\n\n📚 **Sources:**\n"
-        for source in sources:
-            response += f"• {source}\n"
+        for value in values:
+            response += f"• {value}\n"
 
-    await interaction.followup.send(response)
+    # Send response in chunks if it exceeds Discord's 2000 character limit 
+    message_chunks = split_message(response)
+    
+    for i, chunk in enumerate(message_chunks):
+        if chunk.strip():  # Only send non-empty chunks
+            await interaction.followup.send(chunk)
 
 # Register to the course        
 @bot.tree.command(name="register", description="Register for the course")
@@ -98,7 +104,7 @@ async def register(interaction: discord.Interaction):
         return
     
     # Check if student is already registered
-    registered = await is_registered(str(interaction.user.id), course_id)
+    registered, _ = await is_registered(str(interaction.user.id), course_id)
     if registered:
         await interaction.followup.send(
             "🚫 You are already registered for this course."
@@ -163,6 +169,8 @@ async def courses(interaction: discord.Interaction):
         message += f"- **{course_name}** ({institution}, {year})\n"
 
     await interaction.followup.send(message, ephemeral=True)
+
+
 
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")

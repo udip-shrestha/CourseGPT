@@ -126,5 +126,7 @@ def unregister_student(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Student not found or not enrolled in this course",
         )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to unregister student: {e}")
