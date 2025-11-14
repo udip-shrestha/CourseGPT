@@ -44,6 +44,7 @@ async def on_guild_join(guild):
 
 # Ask command
 @bot.tree.command(name="ask", description="Ask a question to the bot")
+@app_commands.describe(question="Your question about the course material of this course")
 async def ask(interaction: discord.Interaction, question: str):
     # Get course_id from guild name using API
     guild_name = interaction.guild.name if interaction.guild else ""
@@ -170,17 +171,16 @@ async def courses(interaction: discord.Interaction):
 
     await interaction.followup.send(message, ephemeral=True)
 
-# Unregister from the course        
-@bot.tree.command(name="unregister", description="Unregister from the course")
-async def unregister(interaction: discord.Interaction):
+# Unregister from a course        
+@bot.tree.command(name="unregister", description="Unregister from a course given the course name")
+@app_commands.describe(course_name="Name of the course to unregister from. Note: This is the Discord server name of that course.")
+async def unregister(interaction: discord.Interaction, course_name: str):
     await interaction.response.defer(thinking=True, ephemeral=True)
-    # Get course_id from guild name using API
-    guild_name = interaction.guild.name if interaction.guild else ""
-    course_id = await get_course_id(guild_name)
+    course_id = await get_course_id(course_name)
     
     if not course_id:
         await interaction.followup.send(
-            "🚫 Course not found. Please ask an instructor to create the course first."
+            "🚫 Course not found. Try a different course name or checking the spelling in /courses"
         )
         return
     
@@ -201,7 +201,7 @@ async def unregister(interaction: discord.Interaction):
     # Send response based on registration result
     if success:
         emoji = "✅"  
-        disclaimer = "⚠️ Ensure to leave the Discord server to avoid being registered automatically." 
+        disclaimer = "⚠️ Ensure to leave the course's Discord server to avoid being registered automatically." 
     else:
         emoji = "🚫"
         disclaimer = ""
