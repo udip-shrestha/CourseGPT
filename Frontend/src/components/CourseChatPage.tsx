@@ -94,9 +94,10 @@ export function CourseChatPage({ course }: { course: any }) {
       }
 
       const answer = data?.answer || "No response received";
-
-      // Start streaming animation
-      await streamMessage(answer, assistantMessageId, 20);
+      const sources = data?.sources || "No sources retrieved";
+      const sourcesContent = "\n📚 Sources:\n" + sources;
+      // Start streaming animation for message
+      await streamMessage(answer + sourcesContent, assistantMessageId, 20);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to get response";
