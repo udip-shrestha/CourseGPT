@@ -24,6 +24,48 @@ export function CourseChatPage({ course }: { course: any }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const formatSources = (raw: unknown): string => {
+    // normalize to array of trimmed tokens split on semicolon
+    const tokens: string[] = Array.isArray(raw)
+      ? (raw as any[]).flatMap((x) =>
+          typeof x === "string" ? x.split(/\s*;\s*/).map((s) => s.trim()) : []
+        )
+      : typeof raw === "string"
+      ? raw.split(/\s*;\s*/).map((s) => s.trim())
+      : [];
+
+    const map = new Map<string, Set<string>>();
+
+    for (const t of tokens) {
+      if (!t) continue;
+      const parenIdx = t.indexOf("(");
+      let filename = parenIdx !== -1 ? t.slice(0, parenIdx).trim() : t;
+      let pagePart = parenIdx !== -1 ? t.slice(parenIdx).trim() : "";
+
+      // normalize page text e.g. "(page 14)" -> "(page 14)"
+      if (pagePart) pagePart = pagePart.replace(/\s+/g, " ");
+
+      if (!map.has(filename)) map.set(filename, new Set());
+      if (pagePart) map.get(filename)!.add(pagePart);
+    }
+
+    // build lines with numeric sort for pages
+    const lines: string[] = [];
+    for (const [filename, pagesSet] of map) {
+      const pagesArr = Array.from(pagesSet);
+      pagesArr.sort((a, b) => {
+        const na = a.match(/\d+/);
+        const nb = b.match(/\d+/);
+        const ia = na ? parseInt(na[0], 10) : 0;
+        const ib = nb ? parseInt(nb[0], 10) : 0;
+        return ia - ib;
+      });
+      lines.push(filename + (pagesArr.length ? " " + pagesArr.join(" ") : ""));
+    }
+
+    return lines.join("\n");
+  };
+
   const streamMessage = async (
     fullContent: string,
     messageId: string,
@@ -95,7 +137,7 @@ export function CourseChatPage({ course }: { course: any }) {
 
       const answer = data?.answer || "No response received";
       const sources = data?.sources || "No sources retrieved";
-      const sourcesContent = "\n📚 Sources:\n" + sources;
+      const sourcesContent = "\n📚 Sources:\n" + formatSources(sources ?? []);
       // Start streaming animation for message
       await streamMessage(answer + sourcesContent, assistantMessageId, 20);
     } catch (err) {
