@@ -64,6 +64,11 @@ class ISQLRepository(Protocol):
         """Get a CourseId by Name"""
         ...
 
+    
+    def update_course(self, course_id: str, updates: dict) -> dict:
+        """Update course information."""
+        ...
+        
     # ======================================================
     # INSTRUCTORS
     # ======================================================
@@ -97,6 +102,10 @@ class ISQLRepository(Protocol):
         """Delete an instructor by ID."""
         ...
 
+    def update_instructor(self, instructor_id: str, updates: dict) -> dict:
+        """Update instructor information."""
+        ...
+    
     # ======================================================
     # STUDENTS
     # ======================================================

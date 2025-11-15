@@ -80,3 +80,54 @@ class InstructorService:
 
         self.sql_repo.delete_instructor(instructor_id)
         return {"status": "deleted", "instructor_id": instructor_id}
+    
+    # ------------------------------------------------------
+    # Update Instructor
+    # ------------------------------------------------------
+    @clean_service
+    def update_instructor(
+        self,
+        instructor_id: str,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
+        university: Optional[str] = None,
+        email: Optional[str] = None,
+        password: Optional[str] = None,
+    ) -> dict:
+        """Update an existing instructor's information."""
+
+        instructor = self.sql_repo.read_instructor(instructor_id)
+        if not instructor:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Instructor with id={instructor_id} not found."
+            )
+
+        # Prepare updates
+        updates = {}
+        if name:
+            updates["name"] = name
+        if title:
+            updates["title"] = title
+        if university:
+            updates["university"] = university
+        if email:
+            # Make sure email is unique
+            existing = self.sql_repo.read_instructor_by_email(email)
+            if existing and existing["id"] != instructor_id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Instructor with email={email} already exists."
+                )
+            updates["email"] = email
+        if password:
+            updates["password"] = encrypt_password(password)
+
+        if not updates:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No valid fields provided for update."
+            )
+
+        updated_instructor = self.sql_repo.update_instructor(instructor_id, updates)
+        return updated_instructor
