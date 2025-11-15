@@ -5,9 +5,6 @@ from fastapi import HTTPException, status
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------
-# Decorator Definition
-# ---------------------------------------------------------------------
 def clean_service(func):
     """
     Decorator for service-layer methods.

@@ -139,3 +139,22 @@ class CourseService:
             )
 
         return {"course_id": course["id"]}
+
+    # ------------------------------------------------------
+    # Update Course
+    # ------------------------------------------------------
+    @clean_service
+    def update_course(self, course_id: str, updates: dict) -> dict:
+        """
+        Update course details such as name, institution, semester_id, or year.
+        Returns the updated course record.
+        """
+        existing_course = self.sql_repo.read_course(course_id)
+        if not existing_course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Course with id={course_id} not found."
+            )
+
+        updated_course = self.sql_repo.update_course(course_id, updates)
+        return updated_course

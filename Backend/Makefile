@@ -126,31 +126,15 @@ $(ACTIVATE_PATH):
 	fi
 endif
 
-# -------------------------------------------
-# Run API Tests with Coverage
-# -------------------------------------------
-ifeq ($(OS),Windows_NT)
-api-coverage: $(ACTIVATE_PATH)
-	@echo "Running API tests with coverage..."
-	@cmd /C "( \
-		set PYTHONPATH=. && \
-		call $(VENV_DIR)\Scripts\activate && \
-		pytest --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests\\API -v \
-	)"
-else
-api-coverage: $(ACTIVATE_PATH)
-	@echo "Running API tests with coverage..."
-	@bash -c "export PYTHONPATH=. && \
-		source $(VENV_DIR)/bin/activate && \
-		pytest --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests/API -v"
-endif
+
+
 
 
 # ===========================================
 # API Make Commands
 # ===========================================
 
-.PHONY: api-run api-test
+.PHONY: api-run api-test api-coverage
 
 # -------------------------------------------
 # Run FastAPI backend
@@ -178,16 +162,34 @@ api-test: $(ACTIVATE_PATH)
 	@cmd /C "( \
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
-		pytest tests\\API -v \
+		pytest tests\\API -v --override-ini="addopts=" \
 	)"
 else
 api-test: $(ACTIVATE_PATH)
 	@echo "Running API tests..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
-		pytest tests/API -v"
+		pytest tests/API -v --override-ini="addopts=" 
 endif
 
+# -------------------------------------------
+# Run API Tests with Coverage
+# -------------------------------------------
+ifeq ($(OS),Windows_NT)
+api-coverage: $(ACTIVATE_PATH)
+	@echo "Running API tests with coverage..."
+	@cmd /C "( \
+		set PYTHONPATH=. && \
+		call $(VENV_DIR)\Scripts\activate && \
+		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests\\API -v \
+	)"
+else
+api-coverage: $(ACTIVATE_PATH)
+	@echo "Running API tests with coverage..."
+	@bash -c "export PYTHONPATH=. && \
+		source $(VENV_DIR)/bin/activate && \
+		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests/API -v"
+endif
 
 
 
