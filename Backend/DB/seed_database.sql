@@ -47,3 +47,25 @@ admin_cte AS (
 )
 
 SELECT instructor_id, admin_id FROM instructor_cte, admin_cte;
+
+
+-- ===========================================
+-- Step 2. Set default RAG strategy for courses to 'SIMPLE'
+-- ===========================================
+DO $$
+DECLARE
+    simple_id int;
+BEGIN
+    SELECT id INTO simple_id
+    FROM rag_strategies
+    WHERE type_name = 'SIMPLE';
+
+    IF simple_id IS NULL THEN
+        RAISE EXCEPTION 'SIMPLE rag_strategy row not found';
+    END IF;
+
+    EXECUTE format(
+        'ALTER TABLE courses ALTER COLUMN rag_strategy_id SET DEFAULT %s',
+        simple_id
+    );
+END$$;

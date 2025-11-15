@@ -1,5 +1,5 @@
 from typing import Protocol, List, Dict, Type, Optional
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 

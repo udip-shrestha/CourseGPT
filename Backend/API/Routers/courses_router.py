@@ -42,6 +42,11 @@ async def add_course(
         description="Academic year when the course is offered.",
         examples={"example": 2025},
     ),
+    rag_strategy: Optional[str] = Query(
+        None,
+        description="Optional RAG strategy name (e.g., 'SIMPLE' or 'AGENTIC').",
+        examples={"example": "AGENTIC"},
+    ),
     service: CourseService = Depends(get_course_service),
 ):
     """Creates a new course record associated with a specific instructor."""
@@ -50,7 +55,8 @@ async def add_course(
         name=name,
         institution=institution,
         semester_id=semester_id,
-        year=year
+        year=year,
+        rag_strategy=rag_strategy
     )
 
 @router.get(

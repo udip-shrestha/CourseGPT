@@ -7,11 +7,12 @@ from API.Service.courses_service import CourseService
 from API.Service.auth_service import AuthService
 from API.Service.instructors_service import InstructorService
 from API.Service.students_service import StudentService
+from API.Service.queries_service import QueryService
 from API.Repository.i_vector_repository import IVectorRepository
 from unittest.mock import MagicMock
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
-from API.Util.prompt_builders import PromptBuilder
+from API.Util.rag_strategy import RAGStrategyFactory
 from langchain_core.language_models import BaseLanguageModel
 
 
@@ -40,9 +41,9 @@ def mock_splitter() -> Splitter:
 
 
 @pytest.fixture
-def mock_prompt_builder() -> PromptBuilder:
-    """Provides an empty mocked PromptBuilder instance."""
-    return MagicMock(spec=PromptBuilder)
+def mock_rag_strategy_factory() -> RAGStrategyFactory:
+    """Provides a plain mocked RAG strategy instance."""
+    return MagicMock(spec=RAGStrategyFactory)
 
 
 @pytest.fixture
@@ -50,26 +51,28 @@ def mock_llm() -> BaseLanguageModel:
     """Provides an empty mocked LLM instance."""
     return MagicMock(spec=BaseLanguageModel)
 
-
 @pytest.fixture
 def mock_rag_service() -> RAGService:
     """Provides a plain mocked RAGService instance."""
     return MagicMock(spec=RAGService)
 
+
 @pytest.fixture
 def rag_service(
-    mock_loader: MagicMock,
-    mock_splitter: MagicMock,
+    mock_loader: Loader,
+    mock_splitter: Splitter,
+    mock_rag_strategy_factory: RAGStrategyFactory,
     mock_vector_repo: IVectorRepository,
-    mock_prompt_builder: MagicMock,
-    mock_llm: MagicMock,
+    mock_sql_repo: ISQLRepository,
+    mock_llm: BaseLanguageModel,
 ) -> RAGService:
     """Provides a RAGService wired with plain mock dependencies."""
     return RAGService(
         loader=mock_loader,
         splitter=mock_splitter,
         vector_repo=mock_vector_repo,
-        prompt_builder=mock_prompt_builder,
+        sql_repo=mock_sql_repo,
+        rag_strategy_factory=mock_rag_strategy_factory,
         llm=mock_llm,
     )
 
@@ -97,7 +100,14 @@ def instructor_service(mock_sql_repo: ISQLRepository) -> InstructorService:
     """Provides an InstructorService wired with a mock SQL repository."""
     return InstructorService(sql_repo=mock_sql_repo)
 
+
 @pytest.fixture
 def student_service(mock_sql_repo: ISQLRepository) -> StudentService:
     """Provides a StudentService wired with a mock SQL repository."""
     return StudentService(sql_repo=mock_sql_repo)
+
+
+@pytest.fixture
+def query_service(mock_sql_repo, mock_rag_service):
+    """Provides a plain mocked QueryService instance."""
+    return QueryService(sql_repo=mock_sql_repo, rag_service=mock_rag_service)
