@@ -523,27 +523,32 @@ class SQLRepository(ISQLRepository):
     def remove_student_from_course(self, student_id: str, course_id: str) -> bool:
         """
         Deletes a record linking a student to a course in the junction table.
+        Returns True if a row was deleted, False if no link existed.
         """
-        query = """
+        check_sql = """
+            SELECT 1 FROM student_courses 
+            WHERE student_id = %s AND course_id = %s LIMIT 1;
+        """
+        try:
+            exists = self.cm.select_one(check_sql, (student_id, course_id))
+        except Exception as e:
+            print("[DEBUG] remove_student_from_course check error:", e)
+            raise
+
+        if not exists:
+            # No link existed
+            return False
+    
+        delete_query = """
             DELETE FROM student_courses
             WHERE student_id = %s AND course_id = %s;
         """
         try:
-            affected_rows = self.cm.execute(query, (student_id, course_id))
-            print("[DEBUG] Affected rows:", affected_rows)
-            return affected_rows > 0
+            self.cm.execute(delete_query, (student_id, course_id))
+            return True
         except Exception as e:
             print("[DEBUG] remove_student_from_course error:", e)
             raise
-
-
-        
-        
-
-    
-
-
-
 
 
     # ======================================================
