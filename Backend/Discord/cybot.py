@@ -78,9 +78,8 @@ async def ask(interaction: discord.Interaction, question: str):
     # Format response with sources if available
     response = answer
     if sources:
-        values = sources.split("; ") 
         response += "\n\n📚 **Sources:**\n"
-        for value in values:
+        for value in sources:
             response += f"• {value}\n"
 
     # Send response in chunks if it exceeds Discord's 2000 character limit 

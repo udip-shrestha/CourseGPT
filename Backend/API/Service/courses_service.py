@@ -30,7 +30,8 @@ class CourseService:
         name: str,
         institution: str,
         semester_id: int,
-        year: int
+        year: int,
+        rag_strategy: Optional[str] = None,
     ) -> dict:
         """
         1️⃣ Validate that instructor exists.
@@ -44,12 +45,20 @@ class CourseService:
                 detail=f"Instructor with id={instructor_id} not found."
             )
 
+        rag_strategy_id: Optional[int] = None
+        if rag_strategy is not None:
+            strategy_row = self.sql_repo.read_rag_strategy_by_type(rag_strategy)
+            if not strategy_row:
+                raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Invalid rag_strategy '{rag_strategy}'.")
+            rag_strategy_id = strategy_row["id"]
+
         course_id = self.sql_repo.create_course(
             instructor_id=instructor_id,
             name=name,
             institution=institution,
             semester_id=semester_id,
-            year=year
+            year=year,
+            rag_strategy_id=rag_strategy_id
         )
 
         # Step 3: create Chroma/Vector collection

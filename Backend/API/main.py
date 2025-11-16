@@ -1,8 +1,16 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router, auth_router
 from API.dependencies import get_connection_manager
+
+
+logging.basicConfig(
+    level=logging.INFO,     # Enables INFO logs (fixes your issue)
+    format="[%(levelname)s] %(message)s",
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -15,7 +23,9 @@ async def lifespan(app: FastAPI):
     # ---- SHUTDOWN ----
     connection_manager.close_all()
 
+
 app = FastAPI(lifespan=lifespan)
+
 
 # --- THIS MIDDLEWARE CONFIGURATION ---
 # Define the origins allowed to make requests (frontend URL)

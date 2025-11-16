@@ -138,17 +138,25 @@ class ISQLRepository(Protocol):
         ...
     
     # ======================================================
-    # Queries
+    # QUERIES
     # ======================================================
-    def create_query_log(
-        self,
-        student_id: str,
-        course_id: str,
-        query_text: str,
-        response_text: str
-    ) -> str:
-        """Log a student's question and the corresponding response, returning the new query ID."""
+    def create_query(self,student_id: Optional[str], course_id: str, query_text: str, response_text: Optional[str], summary: Optional[str]) -> str:
+        """Insert a new query + response + summary record."""
         ...
 
-    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
-        """Fetch all queries (and responses) made by a given student in a given course."""
+    def read_query(self, query_id: str) -> Optional[dict]:
+        """Fetch a single query by ID."""
+        ...
+
+    def read_queries_for_student_course(self, student_id: str, course_id: str, limit: int = 5) -> List[dict]:
+        """Fetch recent queries for a student in a specific course."""
+        ...
+
+    def read_all_queries_for_course(self, course_id: str, limit: int = 5) -> List[dict]:
+        """Fetch recent queries for a course (all students)."""
+        ...
+
+    def delete_query(self, query_id: str) -> None:
+        """Delete a query by its ID."""
+        ...
+    

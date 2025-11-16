@@ -1,13 +1,13 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from fastapi import HTTPException, status
 from langchain_core.documents import Document
-from langchain_core.language_models import BaseLanguageModel
+from langchain_core.language_models import BaseLLM
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
-from API.Util.prompt_builders import PromptBuilder
+from API.Util.rag_strategy import RAGStrategyFactory
 from API.Repository.i_vector_repository import IVectorRepository
+from API.Repository.i_sql_repository import ISQLRepository
 from API.Util.decorators import clean_service
-from API.Util.formatters import clean_and_format_response
 
 
 class RAGService:
@@ -17,7 +17,7 @@ class RAGService:
     Methods:
       • create_index() → Loads, splits, and stores document chunks in the vector store.
       • delete_index() → Removes all vectors linked to a specific document or course.
-      • query()        → Retrieves relevant chunks, builds a prompt, and generates a response.
+      • query()        → RAG.
     """
 
     def __init__(
@@ -25,13 +25,15 @@ class RAGService:
         loader: Loader,
         splitter: Splitter,
         vector_repo: IVectorRepository,
-        prompt_builder: PromptBuilder,
-        llm: BaseLanguageModel
+        sql_repo: ISQLRepository,
+        rag_strategy_factory: RAGStrategyFactory,
+        llm: BaseLLM
     ):
         self.loader = loader
         self.splitter = splitter
         self.vector_repo = vector_repo
-        self.prompt_builder = prompt_builder
+        self.sql_repo = sql_repo
+        self.rag_strategy_factory = rag_strategy_factory
         self.llm = llm
 
     # ======================================================
@@ -72,33 +74,16 @@ class RAGService:
         self.vector_repo.delete_index(course_id, doc_id)
 
     # ======================================================
-    # RETRIEVAL (Retriever → Prompt → LLM)
+    # RETRIEVAL
     # ======================================================
     @clean_service
-    def query(self, course_id: str, question: str) -> Dict[str, str]:
-        """
-        1️⃣ Retrieve relevant text chunks from vector DB.
-        2️⃣ Construct a context-aware prompt using retrieved chunks.
-        3️⃣ Generate an answer via the LLM.
-        """
-        # --- Step 1: Retrieve relevant chunks ---
-        retrieved = self.vector_repo.query(course_id, question)
-        # 🔍 DEBUG LOGGING: Check retrieval
-        print(f"[RAG DEBUG] Retrieved {len(retrieved)} chunks for course {course_id}")
-        for i, (doc, score) in enumerate(retrieved):
-            print(f"[RAG DEBUG] #{i+1} Source: {getattr(doc.metadata, 'get', lambda k, d=None: doc.metadata[k] if k in doc.metadata else d)('source', 'unknown')}")
-            print(f"[RAG DEBUG] Similarity Score: {score}")
-            print(f"[RAG DEBUG] Preview: {doc.page_content[:200]}...\n")
+    def query(self, course_id: str, course: dict, student_id: Optional[int], question: str) -> Dict[str, str]:
+        rag_strategy_id = course["rag_strategy_id"]
 
-        if not retrieved:
+        rag_strategy = self.rag_strategy_factory.get(str(rag_strategy_id))
+        result = rag_strategy.run(self.vector_repo, self.sql_repo, self.llm, course_id, course, student_id, question)
+
+        if not result:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No relevant information found for this course.")
 
-        # --- Step 2: Build context from retrieved chunks ---
-        context = "\n\n".join([doc.page_content for doc, _ in retrieved])
-        message = self.prompt_builder.build("DefaultLangChainRAGPrompt", context, question)
-
-        # --- Step 3: Generate response from LLM ---
-        result = self.llm.invoke(message)
-        answer, sources = clean_and_format_response(result, [doc for doc, _ in retrieved])
-
-        return {"answer": answer, "sources": sources}
+        return result
