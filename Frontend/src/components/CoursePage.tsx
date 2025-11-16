@@ -13,9 +13,7 @@ import { CourseChatPage } from "./CourseChatPage.tsx";
 export function CoursePage() {
     const { courseId } = useParams();
     const apiClient = useApiClient();
-    // --- 2. INITIALIZE useNavigate ---
     const navigate = useNavigate();
-    // --- END ---
 
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -68,14 +66,11 @@ export function CoursePage() {
     }
 
     return (
-        // Note: This outer component uses a Fragment <>,
-        // but your old one used <div className="space-y-6">.
-        // I will add that div back for consistent spacing.
         <div className="space-y-6">
             {/* Header Section */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <div className="text-center sm:text-left">
-                    {/* --- 3. ADDED THE BACK BUTTON --- */}
+
                     <Button
                         variant="ghost"
                         onClick={() =>
@@ -87,7 +82,6 @@ export function CoursePage() {
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Back to Courses
                     </Button>
-                    {/* --- END BACK BUTTON --- */}
 
                     <h1 className="text-2xl sm:text-3xl font-bold break-words">
                         {course.name}
