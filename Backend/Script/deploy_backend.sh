@@ -55,7 +55,10 @@ DISCORD_TOKEN=${DISCORD_TOKEN:-}
 # ===========================================
 # LLM Configuration
 # ===========================================
-HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
+LLM_PROVIDER=${LLM_PROVIDER:-}
+LLM_BASE_URL=${LLM_BASE_URL:-}
+LLM_MODEL=${LLM_MODEL:-}
+HUGGINGFACEHUB_API_TOKEN=${HUGGINGFACEHUB_API_TOKEN:-}
 EOF
 
 chmod 600 "$DISCORD_ENV"
