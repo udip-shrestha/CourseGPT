@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
-import { useParams, Routes, Route, Navigate } from "react-router-dom";
+
+import { useParams, Routes, Route, Navigate, useNavigate } from "react-router-dom";
+import { ChevronLeft } from "lucide-react";
+
 import { useApiClient } from "../ApiClientContext.tsx";
 import { CourseDocPage } from "./CourseDocPage";
 import { NotFoundPage } from "./NotFoundPage";
@@ -8,88 +11,108 @@ import { CourseIntegrationsPage } from "./CourseIntegrationsPage.tsx";
 import { CourseChatPage } from "./CourseChatPage.tsx";
 
 export function CoursePage() {
-  const { courseId } = useParams();
-  const apiClient = useApiClient();
+    const { courseId } = useParams();
+    const apiClient = useApiClient();
+    // --- 2. INITIALIZE useNavigate ---
+    const navigate = useNavigate();
+    // --- END ---
 
-  const [course, setCourse] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+    const [course, setCourse] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
 
-  const fetchCourse = useCallback(async () => {
-    if (!courseId) return;
+    const fetchCourse = useCallback(async () => {
+        if (!courseId) return;
 
-    setLoading(true);
-    setError(null);
+        setLoading(true);
+        setError(null);
 
-    const { data, errorMessage } = await apiClient.getCourse(courseId);
+        const { data, errorMessage } = await apiClient.getCourse(courseId);
 
-    if (errorMessage) {
-      setError("Failed to load course: " + errorMessage);
-      setCourse(null);
-    } else if (data) {
-      setCourse(data);
+        if (errorMessage) {
+            setError("Failed to load course: " + errorMessage);
+            setCourse(null);
+        } else if (data) {
+            setCourse(data);
+        }
+
+        setLoading(false);
+    }, [courseId, apiClient]); // Added apiClient
+
+    useEffect(() => {
+        fetchCourse();
+    }, [fetchCourse]);
+
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-[70vh] text-muted-foreground">
+                Loading course details...
+            </div>
+        );
     }
 
-    setLoading(false);
-  }, [courseId]);
+    if (error || !course) {
+        return (
+            <div className="flex flex-col items-center justify-center h-[70vh] text-center">
+                <p className="text-red-600 font-semibold mb-2">
+                    Course not found or failed to load.
+                </p>
+                {error && (
+                    <p className="text-sm text-muted-foreground mb-4 max-w-sm">{error}</p>
+                )}
+                <Button variant="outline" onClick={fetchCourse}>
+                    Retry
+                </Button>
+            </div>
+        );
+    }
 
-  useEffect(() => {
-    fetchCourse();
-  }, [fetchCourse]);
-
-  if (loading) {
     return (
-      <div className="flex items-center justify-center h-[70vh] text-muted-foreground">
-        Loading course details...
-      </div>
-    );
-  }
+        // Note: This outer component uses a Fragment <>,
+        // but your old one used <div className="space-y-6">.
+        // I will add that div back for consistent spacing.
+        <div className="space-y-6">
+            {/* Header Section */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="text-center sm:text-left">
+                    {/* --- 3. ADDED THE BACK BUTTON --- */}
+                    <Button
+                        variant="ghost"
+                        onClick={() =>
+                            // This uses the instructor_id from the fetched course data
+                            navigate(`/instructors/${course.instructor_id}/courses`)
+                        }
+                        className="mb-2 -ml-4" // Use negative margin to align
+                    >
+                        <ChevronLeft className="h-4 w-4 mr-1" />
+                        Back to Courses
+                    </Button>
+                    {/* --- END BACK BUTTON --- */}
 
-  if (error || !course) {
-    return (
-      <div className="flex flex-col items-center justify-center h-[70vh] text-center">
-        <p className="text-red-600 font-semibold mb-2">
-          Course not found or failed to load.
-        </p>
-        {error && (
-          <p className="text-sm text-muted-foreground mb-4 max-w-sm">{error}</p>
-        )}
-        <Button variant="outline" onClick={fetchCourse}>
-          Retry
-        </Button>
-      </div>
-    );
-  }
+                    <h1 className="text-2xl sm:text-3xl font-bold break-words">
+                        {course.name}
+                    </h1>
+                    <p className="text-muted-foreground text-sm sm:text-base">
+                        {course.institution} • {course.semester_name || "Unknown"}{" "}
+                        {course.year}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Instructor: {course.instructor_name} ({course.instructor_email})
+                    </p>
+                </div>
+            </div>
 
-  return (
-    <>
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-        <div className="text-center sm:text-left">
-          <h1 className="text-2xl sm:text-3xl font-bold break-words">
-            {course.name}
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            {course.institution} • {course.semester_name || "Unknown"}{" "}
-            {course.year}
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Instructor: {course.instructor_name} ({course.instructor_email})
-          </p>
+            {/* Nested Routes */}
+            <Routes>
+                <Route index element={<CourseDocPage course={course} />} />
+                <Route path="chat" element={<CourseChatPage course={course} />} />
+                <Route
+                    path="integrations"
+                    element={<CourseIntegrationsPage course={course} />}
+                />
+                <Route path="settings" element={<NotFoundPage />} />
+                <Route path="*" element={<Navigate to="." replace />} />
+            </Routes>
         </div>
-      </div>
-
-      {/* Nested Routes */}
-      <Routes>
-        <Route index element={<CourseDocPage course={course} />} />
-        <Route path="chat" element={<CourseChatPage course={course} />} />
-        <Route
-          path="integrations"
-          element={<CourseIntegrationsPage course={course} />}
-        />
-        <Route path="settings" element={<NotFoundPage />} />
-        <Route path="*" element={<Navigate to="." replace />} />
-      </Routes>
-    </>
-  );
+    );
 }
