@@ -41,6 +41,9 @@ DB_USER=${DB_USER:-}
 DB_PASSWORD=${DB_PASSWORD:-}
 SCHEMA_FILE=${SCHEMA_FILE:-}
 SEED_FILE=${SEED_FILE:-}
+EXPORT_OLD_DATA_SCRIPT=${EXPORT_OLD_DATA_SCRIPT:-}
+LOAD_OLD_DATA_SCRIPT=${LOAD_OLD_DATA_SCRIPT:-}
+IMPORT_OLD_DATA_SCRIPT=${IMPORT_OLD_DATA_SCRIPT:-}
 
 # ===========================================
 # Chroma Vector Database Configuration
@@ -55,7 +58,10 @@ DISCORD_TOKEN=${DISCORD_TOKEN:-}
 # ===========================================
 # LLM Configuration
 # ===========================================
-HUGGINGFACE_TOKEN=${HUGGINGFACE_TOKEN:-}
+LLM_PROVIDER=${LLM_PROVIDER:-}
+LLM_BASE_URL=${LLM_BASE_URL:-}
+LLM_MODEL=${LLM_MODEL:-}
+HUGGINGFACEHUB_API_TOKEN=${HUGGINGFACEHUB_API_TOKEN:-}
 EOF
 
 chmod 600 "$DISCORD_ENV"

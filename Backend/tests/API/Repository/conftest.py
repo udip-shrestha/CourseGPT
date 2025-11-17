@@ -31,6 +31,34 @@ def connection_manager(postgres_instance):
     cm.close_all()
 
 
+def apply_seed(connection_manager):
+    """
+    Apply seed data to the ephemeral test database.
+    This assumes schema_database.sql has already been executed.
+    """
+    # Get SIMPLE strategy ID
+    row = connection_manager.select_one("""
+        SELECT id FROM rag_strategies WHERE type_name = 'SIMPLE'
+    """)
+    simple_id = row["id"] if row else None
+
+    # Ensure existing course rows use SIMPLE
+    connection_manager.execute("""
+        UPDATE courses
+        SET rag_strategy_id = %s
+        WHERE rag_strategy_id IS NULL
+    """, (simple_id,))
+
+    # Assign DEFAULT for future rows (literal integer)
+    connection_manager.execute(f"""
+        ALTER TABLE courses
+        ALTER COLUMN rag_strategy_id
+        SET DEFAULT {simple_id};
+    """)
+
+    # Add ANY other seed logic here in future…
+
+
 @pytest.fixture(scope="session", autouse=True)
 def setup_test_schema(connection_manager):
     """Run real schema initialization SQL once per session."""
@@ -38,6 +66,7 @@ def setup_test_schema(connection_manager):
     with open(schema_path, "r") as f:
         schema_sql = f.read()
     connection_manager.execute(schema_sql)
+    apply_seed(connection_manager)
     yield
     connection_manager.execute("DROP SCHEMA public CASCADE; CREATE SCHEMA public;")
 
