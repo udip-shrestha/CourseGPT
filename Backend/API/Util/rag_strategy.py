@@ -272,7 +272,16 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         logger.info("[AgenticRAG] Agent call complete")
 
         messages = [msg for ev in events for key in ("model", "tools") if key in ev for msg in ev[key]["messages"]]
-        clean_reasoning = [{"type": msg.type, "content": msg.content} for msg in messages]
+
+        clean_reasoning = [
+            {
+                **({"type": msg.type} if hasattr(msg, "type") and msg.type else {}),
+                **({"content": msg.content} if hasattr(msg, "content") and msg.content else {}),
+                **({"tool_name": msg.name} if hasattr(msg, "name") and msg.name else {}),
+                **({"tool_call": msg.tool_calls} if hasattr(msg, "tool_calls") and msg.tool_calls else {})
+            }
+            for msg in messages
+        ]
 
         ai_messages = [m for m in messages if isinstance(m, AIMessage)]
         answer = ai_messages[-1].content if ai_messages else ""
