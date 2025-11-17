@@ -151,3 +151,12 @@ WHERE
     AND course_id IN (SELECT id FROM courses)
     AND trim(query_text) <> ''
 ON CONFLICT (id) DO NOTHING;
+
+-------------------------------------------------------
+-- 10. Set migrated courses to SIMPLE rag strategy
+-------------------------------------------------------
+UPDATE courses
+SET rag_strategy_id = (
+    SELECT id FROM rag_strategies WHERE type_name = 'SIMPLE'
+)
+WHERE rag_strategy_id IS NULL;

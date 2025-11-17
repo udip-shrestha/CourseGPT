@@ -310,6 +310,7 @@ db-migrate:
 	@echo "=============================================="
 	$(MAKE) db-dump-old
 	$(MAKE) db-init
+	$(MAKE) db-seed
 	$(MAKE) db-load-old
 	$(MAKE) db-move-old
 	@echo "=============================================="

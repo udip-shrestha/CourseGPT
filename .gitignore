@@ -40,4 +40,4 @@
 /bin/
 
 # Ignore dump database files
-DB/old_data_dump.sql
+Backend/DB/old_data_dump.sql
