@@ -11,7 +11,7 @@ import {
     DialogFooter,
     DialogClose
 } from "./ui/dialog";
-// --- 1. IMPORT THE API CLIENT HOOK ---
+
 import { useApiClient } from "../ApiClientContext";
 
 // Define props for the dialog
@@ -22,28 +22,31 @@ interface CourseRegisterDialogProps {
 }
 
 
-// Based on Swagger, Fall=4, but usually Spring=1, Summer=2, Fall=3. Double-check your DB/backend logic.
+// --- 2. UPDATED SEMESTER MAPPING ---
+// Added "Winter". (Assuming Winter = 3, adjust if your DB uses a different ID)
 const semesterMap: { [key: string]: number } = {
-    "Spring": 1, // Placeholder
-    "Summer": 2, // Placeholder
-    "Fall": 4    // Based on POST /courses
+    "Spring": 1,
+    "Summer": 2,
+    "Winter": 3, //
 };
-const semesterOptions = ["Spring", "Summer", "Fall"]; // Options for the dropdown
+// Added "Winter" to the dropdown options
+const semesterOptions = ["Spring", "Summer", "Winter"];
+// --- END OF UPDATE ---
 
 
 export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }: CourseRegisterDialogProps) {
-    // --- 2. INITIALIZE THE API CLIENT ---
+    // --- 3. INITIALIZE THE API CLIENT ---
     const apiClient = useApiClient();
 
     const [name, setName] = useState("");
     const [institution, setInstitution] = useState("");
-    const [semesterName, setSemesterName] = useState(""); // Store the selected name (e.g., "Fall")
+    const [semesterName, setSemesterName] = useState("");
     const [year, setYear] = useState<number | string>("");
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // --- 3. REPLACED 'handleSubmit' TO USE 'apiClient' ---
+    // --- 4. REPLACED 'handleSubmit' TO USE 'apiClient' ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -109,7 +112,7 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
 
 
     return (
-        // The JSX (visuals) remains exactly the same
+        // Use DialogContent component provided by ui/dialog
         <DialogContent className="max-w-lg">
             <DialogHeader>
                 <DialogTitle>Register New Course</DialogTitle>
@@ -148,11 +151,13 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
                         <SelectTrigger id="semester-dialog" className="col-span-3">
                             <SelectValue placeholder="Select semester" />
                         </SelectTrigger>
+                        {/* --- 5. UPDATED DROPDOWN OPTIONS --- */}
                         <SelectContent>
                             {semesterOptions.map((sem) => (
                                 <SelectItem key={sem} value={sem}>{sem}</SelectItem>
                             ))}
                         </SelectContent>
+                        {/* --- END OF UPDATE --- */}
                     </Select>
                 </div>
                 {/* Year */}
