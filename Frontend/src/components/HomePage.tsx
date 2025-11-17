@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 // Import Dialog components
@@ -11,6 +11,7 @@ import {
   DialogClose, // Added DialogClose for convenience
 } from "./ui/dialog";
 import { Info, X } from "lucide-react"; // Kept Info, X
+import { useApiClient } from "../ApiClientContext.tsx";
 
 export function HomePage() {
   // const navigate = useNavigate();
@@ -33,28 +34,59 @@ export function HomePage() {
       excerpt:
         "Detailed steps on integrating and using the CourseGPT bot within Discord channels...",
       content:
-        "1) Invite the bot to your server.\n2) Ensure your server name matches the course name.\n3) Students can ask the bot using /ask and instructors can use /ask for course-specific queries.\n\nPermissions: Bot needs Send Messages and Read Message History.",
+        "1) Invite the bot to your server.\n\n2) Ensure your server name matches the course name.\n\n3) Students can ask the bot using /ask and instructors can use /ask for course-specific queries.",
     },
     {
       id: "discord-register",
-      title: "How students register for Discord",
+      title: "How students are registered on Discord",
       excerpt:
         "Instructions for students on joining the Discord server and verifying their accounts...",
       content:
-        "Students must join the server, then run /register in a designated channel or use the web registration flow. The bot links the Discord ID to the student record in the course.",
+        "Students must simply join the server. Our Discord bot automatically registers them! However, they can verify their registration status by using the /status bot command\n\nIf unregistered, they will receive a prompt to manually register using the /register command.",
     },
     {
       id: "upload-materials",
       title: "Uploading Course Materials",
       excerpt:
-        "Go to the 'Courses' section, select your course, and use the 'Add Document' button...",
+        "Detailed instructions on how to upload course documents for your courses...",
       content:
-        "Open your course page, click Add Document, select file(s), choose document type, then confirm. After upload the RAG indexing runs and documents become searchable by the assistant.",
+        "1) Go to the Dashboard\n\n2) Navigate to the Courses menu.\n\n3) Under 'My Courses', click on your preferred course.\n\n4) To add a new course material, click 'Add Document', select the file(s) then confirm.\n\nOnce your course materials are uploaded, our AI model is ready to answer questions related to those materials!",
     },
   ];
 
   // Example user data - replace with actual auth context later
-  const user = { name: "Instructor" }; // Placeholder
+  const apiClient = useApiClient();
+  const [user, setUser] = useState<{ name?: string } | null>(null);
+  const [loadingUser, setLoadingUser] = useState<boolean>(false);
+
+  useEffect(() => {
+    const loadInstructor = async () => {
+      if (!apiClient?.isAuthenticated()) {
+        setUser({ name: "to" });
+        return;
+      }
+      const instructorId = apiClient.getInstructorId?.();
+      if (!instructorId) {
+        setUser(null);
+        return;
+      }
+      setLoadingUser(true);
+      try {
+        const { data } = await apiClient.request(
+          "GET",
+          `/instructors/${instructorId}`,
+          { operationId: "get-instructor" }
+        );
+        const name = data?.name || "";
+        setUser({ name });
+      } catch {
+        setUser(null);
+      } finally {
+        setLoadingUser(false);
+      }
+    };
+    loadInstructor();
+  }, [apiClient]);
 
   const handleYesClick = () => {
     setShowInstructions(false); // Close the first pop-up
@@ -72,7 +104,7 @@ export function HomePage() {
       <div className="flex flex-col items-center justify-center pt-16 sm:pt-24 space-y-4 text-center">
         {/* Welcome Message (Top Middle) */}
         <h2 className="text-3xl font-semibold tracking-tight">
-          Welcome Back{user ? `, ${user.name}` : ""}!
+          Welcome {loadingUser ? "" : user?.name ?? ""}
         </h2>
 
         <h1 className="text-4xl font-bold md:text-5xl lg:text-6xl text-primary">
