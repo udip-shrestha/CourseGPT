@@ -7,8 +7,8 @@ from dotenv import load_dotenv
 from chromadb import Client, PersistentClient
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
-from langchain_core.language_models import BaseLLM
-from langchain_community.llms import Ollama
+from langchain_core.language_models import BaseChatModel
+from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
 
 from API.Repository.sql_repository import SQLRepository
@@ -190,11 +190,11 @@ def get_rag_strategy_factory(
 
 
 @lru_cache()
-def get_llm() -> BaseLLM:
+def get_llm() -> BaseChatModel:
     llm_provider = os.environ["LLM_PROVIDER"].lower()
     logger.info(f"[LLM] LLM_PROVIDER detected as {llm_provider}.")
 
-    if llm_provider == "chathuggingface":
+    if llm_provider == "huggingface":
         model_id, token = os.environ["LLM_MODEL"], os.environ["HUGGINGFACEHUB_API_TOKEN"]
         logger.info(f"[LLM INIT] Initializing HuggingFace Chat Model ID: {model_id}")
         
@@ -204,6 +204,7 @@ def get_llm() -> BaseLLM:
             max_new_tokens=512,
             do_sample=False,
             repetition_penalty=1.03,
+            temperature=0.0,
             provider="auto"
         )
 
@@ -212,7 +213,7 @@ def get_llm() -> BaseLLM:
     if llm_provider == "ollama":
         model_name, base_url = os.environ["LLM_MODEL"], os.environ["LLM_BASE_URL"]
         logger.info(f"[LLM INIT] Initializing Ollama model '{model_name}' at {base_url}")
-        return Ollama(model=model_name, base_url=base_url)
+        return ChatOllama(model=model_name, base_url=base_url, temperature=0)
 
     raise ValueError(f"Unknown LLM_PROVIDER: {llm_provider}")
 
@@ -254,7 +255,7 @@ def get_rag_service(
     vector_repo: IVectorRepository = Depends(get_vector_repository),
     sql_repo: IVectorRepository = Depends(get_sql_repository),
     rag_strategy_factory: RAGStrategyFactory = Depends(get_rag_strategy_factory),
-    llm: BaseLLM = Depends(get_llm),
+    llm: BaseChatModel = Depends(get_llm),
 ) -> RAGService:
     """Provide a fully configured RAGService instance."""
     return RAGService(loader, splitter, vector_repo, sql_repo, rag_strategy_factory, llm)

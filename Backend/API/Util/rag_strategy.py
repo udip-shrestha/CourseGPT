@@ -5,7 +5,7 @@ from typing import Any, List, Dict, Optional, Protocol, Tuple
 
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
-from langchain_core.language_models import BaseLLM
+from langchain_core.language_models import BaseChatModel
 from langchain_core.tools import tool
 
 from API.Repository.i_vector_repository import IVectorRepository
@@ -22,7 +22,7 @@ class IRAGStrategy(Protocol):
         self,
         vector_repo: IVectorRepository,
         sql_repo: ISQLRepository,
-        llm: BaseLLM,
+        llm: BaseChatModel,
         course_id: str,
         course: dict,
         student_id: Optional[str],
@@ -33,7 +33,7 @@ class IRAGStrategy(Protocol):
 
 class BaseRAGStrategy(ABC, IRAGStrategy):
 
-    def load_past_messages(self, llm: BaseLLM, sql_repo: ISQLRepository, course_id: str) -> Tuple[str, List[HumanMessage | AIMessage]]:
+    def load_past_messages(self, llm: BaseChatModel, sql_repo: ISQLRepository, course_id: str) -> Tuple[str, List[HumanMessage | AIMessage]]:
         """
         Return a 3–4 sentence summary of past course messages and the raw messages.
         """
@@ -184,7 +184,7 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         self,
         vector_repo: IVectorRepository,
         sql_repo: ISQLRepository,
-        llm: BaseLLM,
+        llm: BaseChatModel,
         course_id: str,
         course: dict,
         student_id: Optional[str],
@@ -272,7 +272,7 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         logger.info("[AgenticRAG] Agent call complete")
 
         messages = [msg for ev in events for key in ("model", "tools") if key in ev for msg in ev[key]["messages"]]
-        clean_reasoning = [{"type": msg.type, "content": self.clean_llm_output(msg.content)} for msg in messages]
+        clean_reasoning = [{"type": msg.type, "content": msg.content} for msg in messages]
 
         ai_messages = [m for m in messages if isinstance(m, AIMessage)]
         answer = ai_messages[-1].content if ai_messages else ""

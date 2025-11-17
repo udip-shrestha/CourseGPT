@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 from fastapi import HTTPException, status
 from langchain_core.documents import Document
-from langchain_core.language_models import BaseLLM
+from langchain_core.language_models import BaseChatModel
 from API.Util.loaders import Loader
 from API.Util.splitters import Splitter
 from API.Util.rag_strategy import RAGStrategyFactory
@@ -27,7 +27,7 @@ class RAGService:
         vector_repo: IVectorRepository,
         sql_repo: ISQLRepository,
         rag_strategy_factory: RAGStrategyFactory,
-        llm: BaseLLM
+        llm: BaseChatModel
     ):
         self.loader = loader
         self.splitter = splitter
