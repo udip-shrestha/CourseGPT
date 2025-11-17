@@ -50,6 +50,9 @@ export class APIClient {
     // cancel any in-flight requests
     for (const c of this.controllers.values()) c.abort();
     this.controllers.clear();
+
+    // Redirect to home page
+    window.location.href = "/login";
   }
 
   // ===== INTERNAL: CONTROLLER MANAGEMENT =====
@@ -127,6 +130,11 @@ export class APIClient {
 
       // --- Handle errors gracefully (no throw) ---
       if (!response.ok) {
+        // ===== AUTO-LOGOUT ON 401 IF USER WAS AUTHENTICATED =====
+        if (response.status === 401 && this.isAuthenticated()) {
+          this.logout();
+        }
+
         const contentType = response.headers.get("content-type");
         let errorMessage = response.statusText;
 

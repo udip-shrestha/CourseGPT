@@ -281,7 +281,7 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         retrieved_sources = sorted({src for msg in messages if isinstance(msg, ToolMessage) and msg.name == "tool_retrieve_chunks" for src in (msg.artifact or [])})
 
         sql_repo.create_query(student_id, course_id, query_text=question, response_text=clean_answer)
-        logger.info(f"[SimpleRAG] Stored query in DB for student_id={student_id}")
+        logger.info(f"[AgenticRAG] Stored query in DB for student_id={student_id}")
 
         logger.info(f"[AgenticRAG] ---- END question ----")
         return {

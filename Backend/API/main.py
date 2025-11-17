@@ -27,6 +27,14 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 
+app.include_router(queries_router.router)
+app.include_router(documents_router.router)
+app.include_router(instructors_router.router)
+app.include_router(courses_router.router)
+app.include_router(students_router.router)
+app.include_router(auth_router.router)
+
+
 # --- THIS MIDDLEWARE CONFIGURATION ---
 # Define the origins allowed to make requests (frontend URL)
 origins = [
@@ -36,22 +44,14 @@ origins = [
     "https://sdmay26-37.ece.iastate.edu",         # deployed frontend (HTTPS - for later)
 ]
 
-app.add_middleware(
-    CORSMiddleware,
+app = CORSMiddleware(
+    app=app,
     allow_origins=origins, # List of allowed origins
     allow_credentials=True, # Allow cookies if needed for auth later
     allow_methods=["*"], # Allow all standard methods (GET, POST, PUT, DELETE, OPTIONS,etc.)
     allow_headers=["*"], # Allow all headers
 )
 # --------------------------------------
-
-
-app.include_router(queries_router.router)
-app.include_router(documents_router.router)
-app.include_router(instructors_router.router)
-app.include_router(courses_router.router)
-app.include_router(students_router.router)
-app.include_router(auth_router.router)
 
 
 # cd Backend -> make db-init, uvicorn API.main:app --reload
