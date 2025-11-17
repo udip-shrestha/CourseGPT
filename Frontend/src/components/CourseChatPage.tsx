@@ -25,7 +25,7 @@ export function CourseChatPage({ course }: { course: any }) {
   }, [messages]);
 
   const formatSources = (raw: unknown): string => {
-    // normalize to array of trimmed tokens split on semicolon
+    // Normalize input into tokens
     const tokens: string[] = Array.isArray(raw)
       ? (raw as any[]).flatMap((x) =>
           typeof x === "string" ? x.split(/\s*;\s*/).map((s) => s.trim()) : []
@@ -34,33 +34,34 @@ export function CourseChatPage({ course }: { course: any }) {
       ? raw.split(/\s*;\s*/).map((s) => s.trim())
       : [];
 
-    const map = new Map<string, Set<string>>();
+    const map = new Map<string, Set<number>>();
 
     for (const t of tokens) {
       if (!t) continue;
-      const parenIdx = t.indexOf("(");
-      let filename = parenIdx !== -1 ? t.slice(0, parenIdx).trim() : t;
-      let pagePart = parenIdx !== -1 ? t.slice(parenIdx).trim() : "";
 
-      // normalize page text e.g. "(page 14)" -> "(page 14)"
-      if (pagePart) pagePart = pagePart.replace(/\s+/g, " ");
+      // Extract page number if present, and filename without the parentheses part
+      const pageMatch = t.match(/\(.*?(\d+).*?\)/);
+      const pageNum = pageMatch ? parseInt(pageMatch[1], 10) : NaN;
 
-      if (!map.has(filename)) map.set(filename, new Set());
-      if (pagePart) map.get(filename)!.add(pagePart);
+      // Remove any parenthetical content to get filename, then trim
+      const filename = t.replace(/\(.*\)/g, "").trim();
+
+      if (!filename) continue;
+      if (!map.has(filename)) map.set(filename, new Set<number>());
+      if (!Number.isNaN(pageNum)) {
+        map.get(filename)!.add(pageNum);
+      }
     }
 
-    // build lines with numeric sort for pages
+    // Build formatted lines with pages sorted numerically
     const lines: string[] = [];
     for (const [filename, pagesSet] of map) {
       const pagesArr = Array.from(pagesSet);
-      pagesArr.sort((a, b) => {
-        const na = a.match(/\d+/);
-        const nb = b.match(/\d+/);
-        const ia = na ? parseInt(na[0], 10) : 0;
-        const ib = nb ? parseInt(nb[0], 10) : 0;
-        return ia - ib;
-      });
-      lines.push(filename + (pagesArr.length ? " " + pagesArr.join(" ") : ""));
+      pagesArr.sort((a, b) => a - b);
+      const pagesStr = pagesArr.length
+        ? " " + pagesArr.map((n) => `(page ${n})`).join(" ")
+        : "";
+      lines.push(filename + pagesStr);
     }
 
     return lines.join("\n");

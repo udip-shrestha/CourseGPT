@@ -166,7 +166,7 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         ]
 
         result = llm.invoke(messages)
-        answer = self.clean_llm_output(result.content)
+        answer = self.clean_llm_output(result if isinstance(result, str) else result.content)
         logger.info("[SimpleRAG] LLM call complete")
 
         sql_repo.create_query(student_id, course_id, query_text=question, response_text=answer)
