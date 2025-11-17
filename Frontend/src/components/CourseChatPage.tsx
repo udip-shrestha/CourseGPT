@@ -24,6 +24,49 @@ export function CourseChatPage({ course }: { course: any }) {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  const formatSources = (raw: unknown): string => {
+    // Normalize input into tokens
+    const tokens: string[] = Array.isArray(raw)
+      ? (raw as any[]).flatMap((x) =>
+          typeof x === "string" ? x.split(/\s*;\s*/).map((s) => s.trim()) : []
+        )
+      : typeof raw === "string"
+      ? raw.split(/\s*;\s*/).map((s) => s.trim())
+      : [];
+
+    const map = new Map<string, Set<number>>();
+
+    for (const t of tokens) {
+      if (!t) continue;
+
+      // Extract page number if present, and filename without the parentheses part
+      const pageMatch = t.match(/\(.*?(\d+).*?\)/);
+      const pageNum = pageMatch ? parseInt(pageMatch[1], 10) : NaN;
+
+      // Remove any parenthetical content to get filename, then trim
+      const filename = t.replace(/\(.*\)/g, "").trim();
+
+      if (!filename) continue;
+      if (!map.has(filename)) map.set(filename, new Set<number>());
+      if (!Number.isNaN(pageNum)) {
+        map.get(filename)!.add(pageNum);
+      }
+    }
+
+    // Build formatted lines with pages sorted numerically
+    const lines: string[] = [];
+    for (const [filename, pagesSet] of map) {
+      const pagesArr = Array.from(pagesSet);
+      pagesArr.sort((a, b) => a - b);
+      const pagesStr = pagesArr.length
+        ? " " + pagesArr.map((n) => `(page ${n})`).join(" ")
+        : "";
+      lines.push(filename + pagesStr);
+    }
+
+    return lines.join("\n");
+  };
+
   const streamMessage = async (
     fullContent: string,
     messageId: string,
@@ -94,9 +137,10 @@ export function CourseChatPage({ course }: { course: any }) {
       }
 
       const answer = data?.answer || "No response received";
-
-      // Start streaming animation
-      await streamMessage(answer, assistantMessageId, 20);
+      const sources = data?.sources || "No sources retrieved";
+      const sourcesContent = "\n📚 Sources:\n" + formatSources(sources ?? []);
+      // Start streaming animation for message
+      await streamMessage(answer + sourcesContent, assistantMessageId, 20);
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to get response";

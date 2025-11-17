@@ -117,6 +117,8 @@ async def register_student(discord_id: str, name: str, course_id: str) -> Tuple[
                 return False, resp.text, None
     except httpx.HTTPError as e:
         return False, f"Registration error: {e}", None
+    
+
 
 
 async def is_registered(discord_id: str, course_id: str) -> Tuple[bool, Optional[str]]:
@@ -132,23 +134,6 @@ async def is_registered(discord_id: str, course_id: str) -> Tuple[bool, Optional
     except httpx.HTTPError:
         pass
     return False, None
-
-
-async def log_query(student_id: str, course_id: str, query_text: str, response_text: str) -> bool:
-    """Log a query to the database via API."""
-    url = f"{API_BASE_URL.rstrip('/')}/students/log_query"
-    params = {
-        "student_id": student_id,
-        "course_id": course_id,
-        "query_text": query_text,
-        "response_text": response_text,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
-            resp = await client.post(url, params=params)
-            return resp.status_code in (200, 201)
-    except httpx.HTTPError:
-        return False
 
 
 async def ask_AI_model(question: str, course_id: str) -> Tuple[str, List[str]]:
@@ -170,3 +155,51 @@ async def ask_AI_model(question: str, course_id: str) -> Tuple[str, List[str]]:
         return "⚠️ Request timed out.", []
     except httpx.HTTPError as e:
         return f"Error connecting to backend: {e}", []
+
+async def formatSources(raw: Optional[List[str]]) -> str:
+    """
+    Normalize backend 'sources' into grouped lines:
+      Filename (page X) (page Y)
+    Accepts list of strings or a single semicolon-separated string entries.
+    """
+    if not raw:
+        return ""
+
+    # Normalize into tokens (split on semicolon if any token contains multiple entries)
+    tokens: List[str] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, str):
+                continue
+            tokens.extend([t.strip() for t in re.split(r"\s*;\s*", item) if t.strip()])
+    elif isinstance(raw, str):
+        tokens = [t.strip() for t in re.split(r"\s*;\s*", raw) if t.strip()]
+    else:
+        return ""
+
+    groups: dict[str, set[int]] = {}
+    for t in tokens:
+        if not t:
+            continue
+        # extract page number if present
+        m = re.search(r"\((?:page\s*)?(\d+)\)", t, flags=re.IGNORECASE)
+        page_num = int(m.group(1)) if m else None
+        # remove parenthetical parts to get filename
+        filename = re.sub(r"\(.*?\)", "", t).strip()
+        if not filename:
+            continue
+        if filename not in groups:
+            groups[filename] = set()
+        if page_num is not None:
+            groups[filename].add(page_num)
+
+    lines: List[str] = []
+    for filename, pages in groups.items():
+        if pages:
+            sorted_pages = sorted(pages)
+            pages_str = " " + " ".join(f"(page {p})" for p in sorted_pages)
+        else:
+            pages_str = ""
+        lines.append(f"{filename}{pages_str}")
+
+    return "\n".join(lines)

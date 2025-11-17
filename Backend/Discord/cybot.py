@@ -72,15 +72,11 @@ async def ask(interaction: discord.Interaction, question: str):
     # Get answer from AI model
     answer, sources = await ask_AI_model(question, course_id)
     
-    # Log the query
-    await log_query(student_id, course_id, question, answer)
-    
     # Format response with sources if available
     response = answer
     if sources:
-        response += "\n\n📚 **Sources:**\n"
-        for value in sources:
-            response += f"• {value}\n"
+        formattedSources = await formatSources(sources)
+        response += "\n\n📚 Sources:\n" + formattedSources
 
     # Send response in chunks if it exceeds Discord's 2000 character limit 
     message_chunks = await split_message(response)
