@@ -93,12 +93,13 @@ def authorize(
 ) -> dict:
     """Decode JWT (fake JSON token) and return instructor record from DB."""
     if not token or token.strip() == "":
-        raise HTTPException(status_code=401, detail="Missing authorization token", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authorization token", headers={"WWW-Authenticate": "Bearer"})
 
-    payload = decrypt_access_token(token)
-    token_instructor_id = payload.get("id")
-    if not token_instructor_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload", headers={"WWW-Authenticate": "Bearer"})
+    try:
+        payload = decrypt_access_token(token)
+        token_instructor_id = payload["id"]
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {str(e)}", headers={"WWW-Authenticate": "Bearer"})
 
     instructor = sql_repo.read_instructor(token_instructor_id)
     if not instructor:
