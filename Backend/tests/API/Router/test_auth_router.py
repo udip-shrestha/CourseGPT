@@ -71,7 +71,7 @@ def test_login_invalid_credentials(client: TestClient, mock_auth_service: AuthSe
 def test_login_missing_fields(client: TestClient):
     """Should fail validation when username/password missing."""
     response = client.post("/auth/login", data={})
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 def test_register_success(client: TestClient, mock_auth_service: AuthService):
@@ -137,5 +137,5 @@ def test_register_duplicate_email(client: TestClient, mock_auth_service: AuthSer
 def test_register_missing_fields(client: TestClient):
     """Should fail validation when required fields missing."""
     response = client.post("/auth/register", data={})
-    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
 

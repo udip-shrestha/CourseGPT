@@ -2,6 +2,7 @@ import logging
 from functools import wraps
 from fastapi import HTTPException, status
 
+
 logger = logging.getLogger(__name__)
 
 
