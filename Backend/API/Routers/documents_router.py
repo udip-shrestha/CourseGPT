@@ -4,6 +4,31 @@ from langchain_core.documents import Document
 from API.Service.document_service import DocumentService
 from API.dependencies import authorize_course, get_document_service
 
+from fastapi.responses import StreamingResponse
+from fastapi import HTTPException
+from io import BytesIO
+import mimetypes
+
+
+import base64
+# import memoryview
+
+def decode_file_data(encoded):
+    if isinstance(encoded, (bytes, bytearray)):
+        return bytes(encoded)
+
+    if isinstance(encoded, memoryview):
+        return encoded.tobytes()
+
+    if isinstance(encoded, str):
+        return base64.b64decode(encoded)
+
+    raise TypeError(f"Unsupported file_data type: {type(encoded)}")
+
+
+
+
+
 
 router = APIRouter(tags=["Documents"])
 
@@ -151,3 +176,59 @@ def delete_document(
 ):
     """Deletes a document from the system."""
     return service.delete_document(course_id, doc_id)
+
+
+
+@router.get(
+    "/courses/{course_id}/documents/{doc_id}/download",
+    summary="Download a document as a file attachment",
+)
+def download_document(
+    course_id: str,
+    doc_id: str,
+    service: DocumentService = Depends(get_document_service),
+    _auth: dict = Depends(authorize_course),
+):
+    doc = service.read_document(course_id, doc_id)
+
+    file_bytes = decode_file_data(doc["file_data"])
+    filename = doc["file_name"]
+
+    return StreamingResponse(
+        BytesIO(file_bytes),
+        media_type=doc.get("mime_type") or "application/octet-stream",
+        headers={
+            # MUST include both for Chrome/Firefox/Safari compatibility
+            "Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{filename}',
+        },
+    )
+
+
+
+@router.get(
+    "/courses/{course_id}/documents/{doc_id}/preview",
+    summary="Preview a document inline in the browser",
+)
+def preview_document(
+    course_id: str,
+    doc_id: str,
+    service: DocumentService = Depends(get_document_service),
+    _auth: dict = Depends(authorize_course),
+):
+    doc = service.read_document(course_id, doc_id)
+
+    file_bytes = decode_file_data(doc["file_data"])
+
+    extension = doc.get("extension") or ""
+    base_name = doc.get("file_name") or "file"
+    filename = f"{base_name}.{extension}" if extension else base_name
+
+    mime_type = doc.get("mime_type") or "application/octet-stream"
+
+    return StreamingResponse(
+        BytesIO(file_bytes),
+        media_type=doc.get("mime_type") or "application/pdf",
+        headers={
+        "Content-Disposition": f'inline; filename="{doc["file_name"]}"'
+    },
+    )

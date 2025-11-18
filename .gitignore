@@ -41,3 +41,6 @@
 
 # Ignore dump database files
 Backend/DB/old_data_dump.sql
+
+Backend/db-backup.sql
+
