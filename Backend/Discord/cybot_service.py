@@ -158,36 +158,38 @@ async def ask_AI_model(question: str, course_id: str) -> Tuple[str, List[str]]:
 
 async def formatSources(raw: Optional[List[str]]) -> str:
     """
-    Normalize backend 'sources' into grouped lines:
-      Filename (page X) (page Y)
-    Accepts list of strings or a single semicolon-separated string entries.
+    Group sources like 'File.pdf (page N)' into:
+      File.pdf (page 1) (page 2) (page 6) ...
+    Deduplicates and sorts page numbers numerically.
     """
     if not raw:
         return ""
 
-    # Normalize into tokens (split on semicolon if any token contains multiple entries)
+    # Normalize to a flat list of strings
     tokens: List[str] = []
     if isinstance(raw, list):
         for item in raw:
-            if not isinstance(item, str):
-                continue
-            tokens.extend([t.strip() for t in re.split(r"\s*;\s*", item) if t.strip()])
+            if isinstance(item, str):
+                tokens.append(item.strip())
     elif isinstance(raw, str):
-        tokens = [t.strip() for t in re.split(r"\s*;\s*", raw) if t.strip()]
+        tokens = [raw.strip()]
     else:
         return ""
 
     groups: dict[str, set[int]] = {}
+
     for t in tokens:
         if not t:
             continue
-        # extract page number if present
-        m = re.search(r"\((?:page\s*)?(\d+)\)", t, flags=re.IGNORECASE)
-        page_num = int(m.group(1)) if m else None
-        # remove parenthetical parts to get filename
+        # Extract page number
+        page_match = re.search(r"\(.*?(\d+).*?\)", t)
+        page_num = int(page_match.group(1)) if page_match else None
+
+        # Extract filename (remove all parentheses groups)
         filename = re.sub(r"\(.*?\)", "", t).strip()
         if not filename:
             continue
+
         if filename not in groups:
             groups[filename] = set()
         if page_num is not None:
@@ -195,11 +197,8 @@ async def formatSources(raw: Optional[List[str]]) -> str:
 
     lines: List[str] = []
     for filename, pages in groups.items():
-        if pages:
-            sorted_pages = sorted(pages)
-            pages_str = " " + " ".join(f"(page {p})" for p in sorted_pages)
-        else:
-            pages_str = ""
+        sorted_pages = sorted(pages)
+        pages_str = " " + " ".join(f"(page {p})" for p in sorted_pages) if sorted_pages else ""
         lines.append(f"{filename}{pages_str}")
 
     return "\n".join(lines)
