@@ -339,6 +339,31 @@ export class APIClient {
     });
   }
 
+  async updateCourse(
+    courseId: string,
+    params: {
+      name?: string;
+      institution?: string;
+      semester_id?: number;
+      year?: number;
+    }
+  ) {
+    if (!courseId) {
+      return { errorMessage: "Course ID is required." };
+    }
+
+    // Filter out undefined values
+    const query = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined)
+    );
+
+    return this.request("PUT", `/courses/${courseId}`, {
+      query,
+      isJson: false,
+      operationId: `course-update-${courseId}`,
+    });
+  }
+
   async createCourse(
     instructorId: string,
     params: {

@@ -7,7 +7,6 @@ import { InstructorProfile } from "./components/InstructorProfile";
 import { InstructorCourses } from "./components/InstructorCourses";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { CoursePage } from "./components/CoursePage";
-import { SettingsPage } from "./components/SettingsPage";
 
 /**
  * The main Layout component.
@@ -52,9 +51,6 @@ export default function App() {
                     path="/instructors/:instructorId/courses"
                     element={<InstructorCourses />}
                 />
-
-                {/* Settings Route */}
-                <Route path="/settings" element={<SettingsPage />} />
 
                 {/* Course Route with Nested Routing */}
                 {/* The "/*" at the end is critical for nested routes like /chat, /settings */}
