@@ -49,6 +49,7 @@ export class APIClient {
         localStorage.removeItem(this.instructorKey);
         for (const c of this.controllers.values()) c.abort();
         this.controllers.clear();
+        window.location.href = "/login"; // main branch improvement
     }
 
     // ===== INTERNAL CONTROLLER MANAGEMENT =====
@@ -97,19 +98,13 @@ export class APIClient {
 
             const finalHeaders = new Headers(headers || {});
             if (this.token) finalHeaders.set("Authorization", `Bearer ${this.token}`);
-            if (isJson && !(body instanceof FormData)) {
-                finalHeaders.set("Content-Type", "application/json");
-            }
+            if (isJson && !(body instanceof FormData)) finalHeaders.set("Content-Type", "application/json");
 
             let requestBody: BodyInit | undefined;
             if (body !== undefined) {
-                if (body instanceof FormData || body instanceof URLSearchParams) {
-                    requestBody = body;
-                } else if (typeof body === "string") {
-                    requestBody = body;
-                } else {
-                    requestBody = JSON.stringify(body);
-                }
+                if (body instanceof FormData || body instanceof URLSearchParams) requestBody = body;
+                else if (typeof body === "string") requestBody = body;
+                else requestBody = JSON.stringify(body);
             }
 
             const response = await fetch(url, {
@@ -119,7 +114,10 @@ export class APIClient {
                 signal: controller?.signal,
             });
 
+            // ===== HANDLE ERRORS =====
             if (!response.ok) {
+                if (response.status === 401 && this.isAuthenticated()) this.logout(); // auto-logout on 401
+
                 const contentType = response.headers.get("content-type");
                 let errorMessage = response.statusText;
                 if (contentType?.includes("application/json")) {
@@ -136,7 +134,7 @@ export class APIClient {
 
             const contentType = response.headers.get("content-type");
             if (contentType?.includes("application/json")) {
-                const data = (await response.text().then((t) => (t ? JSON.parse(t) : {}))) as T;
+                const data = (await response.text().then(t => (t ? JSON.parse(t) : {}))) as T;
                 return { data };
             }
             if (contentType?.startsWith("text/")) {
@@ -161,11 +159,11 @@ export class APIClient {
         form.append("client_id", "string");
         form.append("client_secret", "string");
 
-        const { data, errorStatus, errorMessage } = await this.request(
-            "POST",
-            "/auth/login",
-            { body: form, isJson: false, operationId: "auth-login" }
-        );
+        const { data, errorStatus, errorMessage } = await this.request("POST", "/auth/login", {
+            body: form,
+            isJson: false,
+            operationId: "auth-login",
+        });
 
         if (data?.access_token && data?.instructor_id) {
             this.setToken(data.access_token);
@@ -184,11 +182,12 @@ export class APIClient {
         form.append("email", email);
         form.append("password", password);
 
-        const { data, errorStatus, errorMessage } = await this.request(
-            "POST",
-            "/auth/register",
-            { body: form, isJson: false, headers: { "Content-Type": "application/x-www-form-urlencoded" }, operationId: "auth-register" }
-        );
+        const { data, errorStatus, errorMessage } = await this.request("POST", "/auth/register", {
+            body: form,
+            isJson: false,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            operationId: "auth-register",
+        });
 
         if (data?.access_token && data?.instructor_id) {
             this.setToken(data.access_token);
@@ -204,7 +203,11 @@ export class APIClient {
         if (!courseId || !file) return { errorMessage: "Course ID and file are required." };
         const formData = new FormData();
         formData.append("file", file);
-        return this.request("POST", `/courses/${courseId}/documents`, { body: formData, isJson: false, operationId: `documents-upload-${courseId}` });
+        return this.request("POST", `/courses/${courseId}/documents`, {
+            body: formData,
+            isJson: false,
+            operationId: `documents-upload-${courseId}`,
+        });
     }
 
     async listDocuments(courseId: string, filters?: { file_type?: string; limit?: number; offset?: number; order_by?: "uploaded_at" | "file_name"; order_dir?: "asc" | "desc" }) {
@@ -240,7 +243,11 @@ export class APIClient {
 
     async createCourse(instructorId: string, params: { name: string; institution: string; semester_id: number; year: number }) {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
-        return this.request("POST", `/instructors/${instructorId}/courses`, { query: params, isJson: false, operationId: `course-create-${instructorId}` });
+        return this.request("POST", `/instructors/${instructorId}/courses`, {
+            query: params,
+            isJson: false,
+            operationId: `course-create-${instructorId}`,
+        });
     }
 
     async updateCourse(courseId: string, params: { name?: string; institution?: string; semester_id?: number; year?: number }) {
@@ -249,7 +256,7 @@ export class APIClient {
         return this.request("PUT", `/courses/${courseId}`, { query, isJson: false, operationId: `course-update-${courseId}` });
     }
 
-    // ===== COURSE QUERY (OLD) =====
+    // ===== COURSE QUERY =====
     async queryCourse(courseId: string, question: string) {
         if (!courseId || !question) return { errorMessage: "Course ID and question are required." };
         const params = { course_id: courseId, question };
