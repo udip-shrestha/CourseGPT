@@ -202,7 +202,7 @@ export function SettingsPage() {
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="space-y-2">
+                    {/* <div className="space-y-2">
                         <Label htmlFor="course-id">Course ID</Label>
                         <Input
                             id="course-id"
@@ -210,7 +210,7 @@ export function SettingsPage() {
                             readOnly
                             className="bg-muted"
                         />
-                    </div>
+                    </div> */}
 
                     <div className="space-y-2">
                         <Label htmlFor="name">Course Name</Label>
