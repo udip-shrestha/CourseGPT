@@ -374,6 +374,54 @@ export class APIClient {
       operationId: `course-query-${courseId}`,
     });
   }
+
+  // ===== INSTRUCTOR ENDPOINTS =====
+
+  async getInstructor(instructorId: string) {
+    if (!instructorId) {
+      return { errorMessage: "Instructor ID is required." };
+    }
+
+    return this.request("GET", `/instructors/${instructorId}`, {
+      operationId: `instructor-get-${instructorId}`,
+    });
+  }
+
+  async updateInstructor(
+    instructorId: string,
+    params: {
+      name?: string;
+      title?: string;
+      university?: string;
+      email?: string;
+      password?: string;
+    }
+  ) {
+    if (!instructorId) {
+      return { errorMessage: "Instructor ID is required." };
+    }
+
+    // Filter out undefined values
+    const query = Object.fromEntries(
+      Object.entries(params).filter(([_, v]) => v !== undefined)
+    );
+
+    return this.request("PUT", `/instructors/${instructorId}`, {
+      query,
+      isJson: false,
+      operationId: `instructor-update-${instructorId}`,
+    });
+  }
+
+  async deleteInstructor(instructorId: string) {
+    if (!instructorId) {
+      return { errorMessage: "Instructor ID is required." };
+    }
+
+    return this.request("DELETE", `/instructors/${instructorId}`, {
+      operationId: `instructor-delete-${instructorId}`,
+    });
+  }
 }
 
 /**

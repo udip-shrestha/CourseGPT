@@ -40,6 +40,7 @@ export function Header() {
     const onCourseRoute = path.startsWith("/courses/");
     const onLoginPage = path === "/login";
     const onRegisterPage = path === "/register";
+    const onSettingsPage = path === "/settings";
     // Check for root path (which can be "/" or "")
     const onHomePage = path === "" || path === "/";
     // --- End of logic from 'main' ---
@@ -83,6 +84,14 @@ export function Header() {
                                 >
                                     <Upload className="h-4 w-4" />
                                     Courses
+                                </Button>
+                                <Button
+                                    variant={onSettingsPage ? "default" : "ghost"}
+                                    className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                                    onClick={() => navigate("/settings")}
+                                >
+                                    <Settings className="h-4 w-4" />
+                                    Settings
                                 </Button>
                             </>
                         )}
@@ -128,19 +137,6 @@ export function Header() {
                                 >
                                     <Plug className="h-4 w-4" />
                                     Integrations
-                                </Button>
-
-                                <Button
-                                    variant={
-                                        path.includes(`/courses/${courseId}/settings`)
-                                            ? "default"
-                                            : "ghost"
-                                    }
-                                    className="flex items-center gap-2 w-full sm:w-auto justify-center"
-                                    onClick={() => navigate(`/courses/${courseId}/settings`)}
-                                >
-                                    <Settings className="h-4 w-4" />
-                                    Settings
                                 </Button>
                             </>
                         )}
@@ -202,6 +198,14 @@ export function Header() {
                                         >
                                             <LayoutDashboard className="h-4 w-4" />
                                             Dashboard
+                                        </Button>
+                                        <Button
+                                            variant={onSettingsPage ? "default" : "ghost"}
+                                            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                                            onClick={() => navigate("/settings")}
+                                        >
+                                            <Settings className="h-4 w-4" />
+                                            Settings
                                         </Button>
                                         <Button
                                             variant="outline"

@@ -5,7 +5,6 @@ import { useApiClient } from "../ApiClientContext.tsx";
 import { CourseDocPage } from "./CourseDocPage";
 import { CourseIntegrationsPage } from "./CourseIntegrationsPage.tsx";
 import { CourseChatPage } from "./CourseChatPage.tsx";
-import { SettingsPage } from "./SettingsPage";
 
 export function CoursePage() {
   const { courseId } = useParams();
@@ -87,7 +86,6 @@ export function CoursePage() {
           path="integrations"
           element={<CourseIntegrationsPage course={course} />}
         />
-        <Route path="settings" element={<SettingsPage />} />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
     </>
