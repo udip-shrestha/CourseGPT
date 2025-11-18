@@ -7,7 +7,7 @@ import { CourseCard } from "./CourseCard";
 import { CourseRegisterDialog } from "./CourseRegisterDialog";
 import { Dialog, DialogTrigger } from "./ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-// --- 1. IMPORT the apiClient hook ---
+
 import { useApiClient } from "../ApiClientContext";
 
 export interface CourseSummary {
@@ -20,11 +20,7 @@ export interface CourseSummary {
     created_at: string;
 }
 
-// --- THIS INTERFACE WAS REMOVED (No longer used) ---
-// interface CourseApiResponse {
-//     total: number;
-//     courses: CourseSummary[];
-// }
+
 
 function semesterIdToString(id: number | undefined): string {
     if (id === undefined) return "N/A";
@@ -52,7 +48,7 @@ export function InstructorCourses() {
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
 
-    // --- 3. UPDATED fetchCourses to use apiClient ---
+
     const fetchCourses = useCallback(async () => {
         setDeleteError(null);
 
@@ -67,7 +63,7 @@ export function InstructorCourses() {
         setIsLoading(true);
         setError(null);
 
-        // Use the apiClient to make the request
+
         const { data, errorMessage } = await apiClient.listInstructorCourses(instructorId, {
             order_by: "created_at",
             order_dir: "desc"
@@ -96,9 +92,9 @@ export function InstructorCourses() {
     useEffect(() => {
         fetchCourses();
     }, [fetchCourses]);
-    // --- End Fetch Courses ---
 
-    // --- 4. UPDATED handleDeleteCourse to use apiClient ---
+
+
     const handleDeleteCourse = async (courseId: string) => {
         console.log(`Attempting to delete course ${courseId}`);
         setDeleteError(null);
@@ -124,7 +120,7 @@ export function InstructorCourses() {
             throw err;
         }
     };
-    // --- End Delete Course Handler ---
+
 
     const handleViewCourse = (course: CourseSummary) => {
         console.log("Navigating to view course:", course.name);
@@ -144,7 +140,7 @@ export function InstructorCourses() {
         fetchCourses(); // Re-fetch the course list
     };
 
-    // --- Renamed 'fetchCourses' to 'handleCourseUpdated' for clarity ---
+
     const handleCourseUpdated = () => {
         fetchCourses(); // Re-fetch the course list
     }
