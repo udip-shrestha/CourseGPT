@@ -1,10 +1,15 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { Plus, Download, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, Download, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { FileUpload } from "./FileUpload";
 import { useApiClient } from "../ApiClientContext.tsx";
+import { API_BASE_URL } from "../ApiClient.ts";
+
+
+
+
 
 export function CourseDocPage({ course }: { course: any }) {
     const apiClient = useApiClient();
@@ -103,27 +108,80 @@ export function CourseDocPage({ course }: { course: any }) {
         setIsDeleteDialogOpen(true);
     }
 
+    // async function handleDownload(docId: string, fileName: string) {
+    //     const { data, errorMessage } = await apiClient.getDocument(course.id, docId);
+    //     if (errorMessage || !data?.file_data) {
+    //         setError("Failed to download document.");
+    //         return;
+    //     }
+
+    //     const blob = b64toBlob(data.file_data, "application/pdf");
+    //     const url = URL.createObjectURL(blob);
+    //     const a = document.createElement("a");
+    //     a.href = url;
+    //     a.download = fileName;
+    //     a.click();
+    //     URL.revokeObjectURL(url);
+    // }
+
+    // function b64toBlob(base64: string, type = "application/pdf") {
+    //     const binary = atob(base64);
+    //     const array = Uint8Array.from(binary, (char) => char.charCodeAt(0));
+    //     return new Blob([array], { type });
+    // }
+
     async function handleDownload(docId: string, fileName: string) {
-        const { data, errorMessage } = await apiClient.getDocument(course.id, docId);
-        if (errorMessage || !data?.file_data) {
-            setError("Failed to download document.");
+        const url = `${apiClient["baseUrl"]}/courses/${course.id}/documents/${docId}/download`;
+
+        const response = await fetch(url, {
+            headers: {
+                Authorization: `Bearer ${apiClient.getToken()}`,
+            },
+        });
+
+        if (!response.ok) {
+            console.error("Download failed");
             return;
         }
 
-        const blob = b64toBlob(data.file_data, "application/pdf");
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = fileName;
-        a.click();
-        URL.revokeObjectURL(url);
+        const blob = await response.blob();
+
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+
+        // Use the REAL filename from DB
+        link.download = fileName;
+
+        link.click();
+
+        URL.revokeObjectURL(link.href);
     }
 
-    function b64toBlob(base64: string, type = "application/pdf") {
-        const binary = atob(base64);
-        const array = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-        return new Blob([array], { type });
-    }
+
+    async function handlePreview(docId: string) {
+            const url = `${apiClient["baseUrl"]}/courses/${course.id}/documents/${docId}/preview`;
+
+            const response = await fetch(url, {
+                headers: {
+                    Authorization: `Bearer ${apiClient.getToken()}`,
+                },
+            });
+
+            if (!response.ok) {
+                console.error("Preview failed");
+                return;
+            }
+
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl, "_blank");
+        }
+
+
+
+
+
+
 
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const canPrev = page > 1;
@@ -193,6 +251,16 @@ export function CourseDocPage({ course }: { course: any }) {
                                             </div>
                                         </div>
                                         <div className="flex gap-2">
+                                            {/* Preview Button */}
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() => handlePreview(doc.id)}
+                                            >
+                                                <Eye className="h-4 w-4" />
+                                            </Button>
+
+                                            {/* Download Button */}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -200,6 +268,8 @@ export function CourseDocPage({ course }: { course: any }) {
                                             >
                                                 <Download className="h-4 w-4" />
                                             </Button>
+
+                                            {/* Delete Button */}
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
@@ -208,6 +278,7 @@ export function CourseDocPage({ course }: { course: any }) {
                                                 <Trash2 className="h-4 w-4 text-destructive" />
                                             </Button>
                                         </div>
+
                                     </div>
                                 ))}
                             </div>
