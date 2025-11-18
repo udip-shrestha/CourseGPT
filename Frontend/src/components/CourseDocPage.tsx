@@ -5,7 +5,7 @@ import { Plus, Download, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-r
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { FileUpload } from "./FileUpload";
 import { useApiClient } from "../ApiClientContext.tsx";
-import { API_BASE_URL } from "../ApiClient.ts";
+
 
 
 
