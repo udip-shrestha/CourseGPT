@@ -117,6 +117,23 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
+                                    {/* Update Course */}
+                            <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full justify-start text-sm h-8"
+                                    >
+                                        <Pencil className="mr-2 h-4 w-4" /> Edit Course
+                                    </Button>
+                                </DialogTrigger>
+
+                                <CourseUpdateDialog 
+                                    course={course}
+                                    onCourseUpdated={handleUpdated}
+                                    onClose={() => setIsUpdateDialogOpen(false)}
+                                />
+                            </Dialog>
                         </div>
                     </PopoverContent>
                 </Popover>
@@ -133,19 +150,6 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                     </div>
                 </div>
             </CardHeader>
-
-            <CardContent className="pt-2">
-                <div className="pt-4 mt-4 border-t">
-                    <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" className="w-full" onClick={handleButtonClick}>
-                                <Pencil className="mr-2 h-4 w-4" /> Update Course
-                            </Button>
-                        </DialogTrigger>
-                        <CourseUpdateDialog course={course} onCourseUpdated={handleUpdated} onClose={() => setIsUpdateDialogOpen(false)} />
-                    </Dialog>
-                </div>
-            </CardContent>
-        </Card>
+        </Card> 
     );
 }
