@@ -15,6 +15,7 @@ class SQLRepository(ISQLRepository):
     def __init__(self, cm: PostgresConnectionManager):
         self.cm = cm
 
+
     # ======================================================
     # FILE TYPES
     # ======================================================
@@ -26,20 +27,33 @@ class SQLRepository(ISQLRepository):
         """
         return self.cm.select_one(sql, (mime_type,))
 
-    def read_file_type_by_extension(self, extension: str) -> Optional[Dict[str, Any]]:
-        sql = """
-            SELECT *
-            FROM file_types
-            WHERE extension = %s;
-        """
-        return self.cm.select_one(sql, (extension,))
-
     def read_all_file_types(self) -> List[Dict[str, Any]]:
         sql = """
             SELECT * 
             FROM file_types;
         """
         return self.cm.select_all(sql)
+
+
+    # ======================================================
+    # RAG STRATEGIES
+    # ======================================================
+    def read_rag_strategy_by_type(self, type_name: str) -> Optional[Dict[str, Any]]:
+        sql = """
+            SELECT *
+            FROM rag_strategies
+            WHERE LOWER(type_name) = LOWER(%s);
+        """
+        return self.cm.select_one(sql, (type_name,))
+
+    def read_all_rag_strategies(self) -> List[Dict[str, Any]]:
+        sql = """
+            SELECT *
+            FROM rag_strategies
+            ORDER BY id;
+        """
+        return self.cm.select_all(sql)
+
 
     # ======================================================
     # DOCUMENTS
@@ -131,7 +145,7 @@ class SQLRepository(ISQLRepository):
 
         return {
             "total": total_count,
-            "documents": results or []
+            "documents": results
         }
 
 
@@ -240,7 +254,7 @@ class SQLRepository(ISQLRepository):
         data_params = tuple(params + [limit, offset])
         results = self.cm.select_all(data_sql, data_params)
 
-        return {"total": total_count, "instructors": results or []}
+        return {"total": total_count, "instructors": results}
 
     def delete_instructor(self, instructor_id: str) -> None:
         """Delete an instructor by their UUID."""
@@ -287,7 +301,7 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     # COURSES
     # ======================================================
-    def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int) -> str:
+    def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int, rag_strategy_id: Optional[int] = None) -> str:
         existing_sql = """
             SELECT id FROM courses
             WHERE name = %s AND institution = %s AND year = %s AND semester_id = %s;
@@ -299,22 +313,33 @@ class SQLRepository(ISQLRepository):
                 detail=f"Course '{name}' at '{institution}' for {year} semester {semester_id} already exists."
             )
 
-        sql = """
-            INSERT INTO courses (instructor_id, name, institution, semester_id, year)
-            VALUES (%s, %s, %s, %s, %s)
+        columns = ["instructor_id", "name", "institution", "semester_id", "year"]
+        values = [instructor_id, name, institution, semester_id, year]
+
+        if rag_strategy_id is not None:
+            columns.append("rag_strategy_id")
+            values.append(rag_strategy_id)
+
+        col_str = ", ".join(columns)
+        placeholder_str = ", ".join(["%s"] * len(values))
+        sql = f"""
+            INSERT INTO courses ({col_str})
+            VALUES ({placeholder_str})
             RETURNING id;
         """
-        return self.cm.insert_one(sql, (instructor_id, name, institution, semester_id, year))
+        return self.cm.insert_one(sql, tuple(values))
 
     def read_course(self, course_id: str) -> Optional[dict]:
         sql = """
             SELECT 
                 c.id, c.name, c.institution, c.semester_id, c.year, c.created_at,
                 i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email,
+                rs.id AS rag_strategy_id, rs.type_name AS rag_strategy_name,
                 s.name AS semester_name
             FROM courses c
             LEFT JOIN instructors i ON c.instructor_id = i.id
             LEFT JOIN semesters s ON c.semester_id = s.id
+            LEFT JOIN rag_strategies rs ON c.rag_strategy_id = rs.id
             WHERE c.id = %s;
         """
         return self.cm.select_one(sql, (course_id,))
@@ -359,9 +384,11 @@ class SQLRepository(ISQLRepository):
         data_sql = f"""
             SELECT 
                 c.id, c.instructor_id, c.name, c.institution, 
-                c.semester_id, c.year, c.created_at, i.name AS instructor_name
+                c.semester_id, c.year, c.created_at, i.name AS instructor_name,
+                rs.id AS rag_strategy_id, rs.type_name AS rag_strategy_name
             FROM courses c
             LEFT JOIN instructors i ON c.instructor_id = i.id
+            LEFT JOIN rag_strategies rs ON c.rag_strategy_id = rs.id
             {where_clause}
             ORDER BY c.{order_by} {order_dir}
             LIMIT %s OFFSET %s;
@@ -371,7 +398,7 @@ class SQLRepository(ISQLRepository):
 
         return {
             "total": total_count,
-            "courses": results or []
+            "courses": results
         }
 
     def delete_course(self, course_id: str) -> None:
@@ -554,17 +581,7 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     # QUERIES (Student Questions)
     # ======================================================
-    def create_query_log(
-        self,
-        student_id: str,
-        course_id: str,
-        query_text: str,
-        response_text: str
-    ) -> str:
-        """
-        Logs a student's query and the generated system response.
-        Returns the new query record ID.
-        """
+    def create_query(self, student_id: Optional[str], course_id: str, query_text: str, response_text: Optional[str]) -> str:
         sql = """
             INSERT INTO queries (student_id, course_id, query_text, response_text)
             VALUES (%s, %s, %s, %s)
@@ -572,31 +589,122 @@ class SQLRepository(ISQLRepository):
         """
         return self.cm.insert_one(sql, (student_id, course_id, query_text, response_text))
 
-    def read_queries_by_student(self, student_id: str, course_id: str) -> List[Dict[str, str]]:
-        """
-        Retrieves all queries made by a specific student for a specific course.
-        Includes course name and timestamp.
-        """
+    def read_query(self, course_id: str, query_id: str) -> Optional[dict]:
         sql = """
             SELECT 
-                q.id AS query_id,
-                q.query_text,
-                q.response_text,
-                q.asked_at,
-                c.id AS course_id,
-                c.name AS course_name
-            FROM queries q
-            LEFT JOIN courses c ON q.course_id = c.id
-            WHERE q.student_id = %s AND q.course_id = %s
-            ORDER BY q.asked_at DESC;
+                id, student_id, course_id, query_text, 
+                response_text, asked_at
+            FROM queries
+            WHERE id = %s AND course_id = %s;
         """
-        rows = self.cm.select_all(sql, (student_id, course_id))
+        return self.cm.select_one(sql, (query_id, course_id))
 
-        for r in rows:
-            r["query_id"] = str(r["query_id"])
-            if r.get("course_id"):
-                r["course_id"] = str(r["course_id"])
-            if "asked_at" in r and r["asked_at"]:
-                r["asked_at"] = str(r["asked_at"])
+    def read_queries_for_student_course(
+        self,
+        student_id: str,
+        course_id: str,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "asked_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        # --- Allowed sorting fields ---
+        allowed_order_by = {"asked_at", "id", "query_text", "response_text"}
+        allowed_order_dir = {"asc", "desc"}
 
-        return rows
+        # Validate sorting inputs
+        if order_by not in allowed_order_by:
+            order_by = "asked_at"
+        if order_dir.lower() not in allowed_order_dir:
+            order_dir = "desc"
+
+        # --- WHERE clause and base params ---
+        filters = ["student_id = %s", "course_id = %s"]
+        params = [student_id, course_id]
+
+        where_clause = f"WHERE {' AND '.join(filters)}"
+
+        # --- 1. Count total rows (before pagination) ---
+        count_sql = f"""
+            SELECT COUNT(*) AS total
+            FROM queries
+            {where_clause};
+        """
+        total_row = self.cm.select_one(count_sql, tuple(params))
+        total_count = total_row["total"] if total_row else 0
+
+        # --- 2. Fetch paginated results ---
+        data_sql = f"""
+            SELECT
+                id,
+                query_text,
+                response_text,
+                asked_at
+            FROM queries
+            {where_clause}
+            ORDER BY {order_by} {order_dir}
+            LIMIT %s OFFSET %s;
+        """
+
+        data_params = params + [limit, offset]
+        results = self.cm.select_all(data_sql, tuple(data_params))
+
+        return {
+            "total": total_count,
+            "queries": results
+        }
+
+    def read_all_queries_for_course(
+        self,
+        course_id: str,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "asked_at",
+        order_dir: str = "desc",
+    ) -> dict:
+        allowed_order_by = {"asked_at", "id", "student_id", "query_text", "response_text"}
+        allowed_order_dir = {"asc", "desc"}
+
+        if order_by not in allowed_order_by:
+            order_by = "asked_at"
+
+        if order_dir.lower() not in allowed_order_dir:
+            order_dir = "desc"
+
+        filters = ["course_id = %s"]
+        params = [course_id]
+
+        where_clause = f"WHERE {' AND '.join(filters)}"
+
+        count_sql = f"""
+            SELECT COUNT(*) AS total
+            FROM queries
+            {where_clause};
+        """
+        total_row = self.cm.select_one(count_sql, tuple(params))
+        total_count = total_row["total"] if total_row else 0
+
+        data_sql = f"""
+            SELECT
+                id,
+                student_id,
+                query_text,
+                response_text,
+                asked_at
+            FROM queries
+            {where_clause}
+            ORDER BY {order_by} {order_dir}
+            LIMIT %s OFFSET %s;
+        """
+
+        data_params = params + [limit, offset]
+        results = self.cm.select_all(data_sql, tuple(data_params))
+
+        return {
+            "total": total_count,
+            "queries": results
+        }
+
+    def delete_query(self, course_id: str, query_id: str) -> None:
+        sql = "DELETE FROM queries WHERE id = %s AND course_id = %s;"
+        self.cm.execute(sql, (query_id, course_id))

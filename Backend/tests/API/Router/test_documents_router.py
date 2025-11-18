@@ -55,7 +55,7 @@ def test_upload_document_invalid_file(client: TestClient, mock_document_service:
         files={"file": ("", BytesIO(), "application/octet-stream")}
     )
     # Since the file field is required, FastAPI itself should handle this
-    assert response.status_code in (status.HTTP_422_UNPROCESSABLE_ENTITY, status.HTTP_400_BAD_REQUEST)
+    assert response.status_code in (status.HTTP_422_UNPROCESSABLE_CONTENT, status.HTTP_400_BAD_REQUEST)
     mock_document_service.create_document.assert_not_called()
 
 
