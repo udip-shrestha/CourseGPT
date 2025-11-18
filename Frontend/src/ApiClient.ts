@@ -240,40 +240,6 @@ export class APIClient {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.request("DELETE", `/courses/${courseId}`, { operationId: `course-delete-${courseId}` });
     }
-  async deleteCourse(courseId: string) {
-    if (!courseId) {
-      return { errorMessage: "Course ID is required." };
-    }
-
-    return this.request("DELETE", `/courses/${courseId}`, {
-      operationId: `course-delete-${courseId}`,
-    });
-  }
-
-  async updateCourse(
-    courseId: string,
-    params: {
-      name?: string;
-      institution?: string;
-      semester_id?: number;
-      year?: number;
-    }
-  ) {
-    if (!courseId) {
-      return { errorMessage: "Course ID is required." };
-    }
-
-    // Filter out undefined values
-    const query = Object.fromEntries(
-      Object.entries(params).filter(([_, v]) => v !== undefined)
-    );
-
-    return this.request("PUT", `/courses/${courseId}`, {
-      query,
-      isJson: false,
-      operationId: `course-update-${courseId}`,
-    });
-  }
 
     async createCourse(instructorId: string, params: { name: string; institution: string; semester_id: number; year: number }) {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
