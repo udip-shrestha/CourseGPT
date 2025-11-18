@@ -1,5 +1,5 @@
-import { useState } from 'react'; // Import useState
-import { Calendar, Building, Settings, Trash2, AlertTriangle, Eye } from 'lucide-react'; // Import new icons
+import { useState } from 'react';
+import { Calendar, Building, Settings, Trash2, AlertTriangle, Pencil } from 'lucide-react';
 import { Card, CardContent, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import type { CourseSummary } from './InstructorCourses';
@@ -7,7 +7,7 @@ import {
     Popover,
     PopoverContent,
     PopoverTrigger,
-} from "./ui/popover"; // Import Popover
+} from "./ui/popover";
 import {
     Dialog,
     DialogClose,
@@ -17,44 +17,46 @@ import {
     DialogHeader,
     DialogTitle,
     DialogTrigger,
-} from "./ui/dialog"; // Import Dialog
+} from "./ui/dialog";
+// Import the new Update Dialog
+import { CourseUpdateDialog } from './CourseUpdateDialog';
 
 // Interface for props using the API data structure
 interface CourseCardProps {
     course: CourseSummary;
-    // --- 1. FIX: Updated prop to match InstructorCourses ---
     onViewCourse: () => void;
     onDelete: () => Promise<void>;
+    onCourseUpdated: () => void; // Added onCourseUpdated prop
 }
 
-// Helper to convert semester ID to string (Adjust mapping if needed based on your backend)
+// Helper to convert semester ID to string
 function semesterIdToString(id: number): string {
     switch (id) {
         case 1: return "Spring";
         case 2: return "Summer";
         case 3: return "Fall";
-        case 4: return "Fall"; // Handling the '4' seen in Swagger example
         default: return "Unknown";
     }
 }
 
-export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) {
+export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: CourseCardProps) {
     const semesterString = semesterIdToString(course.semester_id);
 
-    // --- State for Delete Flow ---
+    // State for flows
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
     const [isFinalDeleteDialogOpen, setIsFinalDeleteDialogOpen] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [deleteError, setDeleteError] = useState<string | null>(null);
-    // --- End State ---
+    const [isUpdateDialogOpen, setIsUpdateDialogOpen] = useState(false);
 
-    // --- Delete Handler ---
+    // Delete Handler
     const handleDelete = async () => {
         setIsDeleting(true);
         setDeleteError(null);
         try {
             await onDelete();
+            // Close all dialogs on success
             setIsFinalDeleteDialogOpen(false);
             setIsDeleteDialogOpen(false);
             setIsSettingsOpen(false);
@@ -65,12 +67,32 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
             setIsDeleting(false);
         }
     };
-    // --- End Delete Handler ---
+
+    // Update Handler
+    const handleUpdated = () => {
+        setIsUpdateDialogOpen(false); // Close the update dialog
+        setIsSettingsOpen(false); // Close the popover
+        onCourseUpdated(); // Call the parent's refresh function
+    };
+
+    // Click handler for the whole card
+    const handleCardClick = () => {
+        onViewCourse();
+    };
+
+    // Click handler for buttons (stops card click)
+    const handleButtonClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    };
 
     return (
-        <Card className="hover:shadow-md transition-shadow relative">
-            {/* --- Settings Popover --- */}
-            <div className="absolute top-2 right-2 z-10">
+        // Card is now clickable
+        <Card
+            className="hover:shadow-md transition-shadow relative cursor-pointer"
+            onClick={handleCardClick}
+        >
+            {/* Settings Popover */}
+            <div className="absolute top-2 right-2 z-10" onClick={handleButtonClick}>
                 <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" aria-label="Course Settings">
@@ -79,21 +101,7 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                     </PopoverTrigger>
                     <PopoverContent className="w-48 p-2">
                         <div className="grid gap-1">
-                            {/* View Course Button (in popover) */}
-                            <Button
-                                variant="ghost"
-                                className="w-full justify-start text-sm h-8"
-                                // --- 2. FIX: Updated onClick ---
-                                onClick={() => {
-                                    onViewCourse(); // Call the prop directly
-                                    setIsSettingsOpen(false);
-                                }}
-                            >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Course
-                            </Button>
-
-                            {/* --- Delete Option (Triggers First Dialog) --- */}
+                            {/* Delete Option (Triggers First Dialog) */}
                             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button
@@ -104,7 +112,7 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                                         Delete Course
                                     </Button>
                                 </DialogTrigger>
-                                {/* --- First Confirmation Dialog --- */}
+                                {/* Delete Dialogs */}
                                 <DialogContent>
                                     <DialogHeader>
                                         <DialogTitle>Delete "{course.name}"?</DialogTitle>
@@ -116,7 +124,6 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                                         <DialogClose asChild>
                                             <Button variant="outline">Cancel</Button>
                                         </DialogClose>
-                                        {/* --- Second Confirmation Dialog (Nested Trigger) --- */}
                                         <Dialog open={isFinalDeleteDialogOpen} onOpenChange={setIsFinalDeleteDialogOpen}>
                                             <DialogTrigger asChild>
                                                 <Button variant="destructive">Confirm Delete</Button>
@@ -153,7 +160,6 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
-                            {/* --- End Delete Option --- */}
                         </div>
                     </PopoverContent>
                 </Popover>
@@ -176,12 +182,27 @@ export function CourseCard({ course, onViewCourse, onDelete }: CourseCardProps) 
 
             <CardContent className="pt-2">
                 <div className="pt-4 mt-4 border-t">
-                    <p className="text-xs text-muted-foreground">
-                        Created: {new Date(course.created_at).toLocaleDateString()}
-                    </p>
+                    {/* "Update Course" button */}
+                    <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button
+                                variant="outline"
+                                className="w-full"
+                                onClick={handleButtonClick} // Stop propagation
+                            >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Update Course
+                            </Button>
+                        </DialogTrigger>
+                        {/* This renders the new update form */}
+                        <CourseUpdateDialog
+                            course={course}
+                            onCourseUpdated={handleUpdated}
+                            onClose={() => setIsUpdateDialogOpen(false)}
+                        />
+                    </Dialog>
                 </div>
             </CardContent>
         </Card>
     );
 }
-
