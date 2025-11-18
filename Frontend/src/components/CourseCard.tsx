@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Calendar, Building, Settings, Trash2, AlertTriangle, Pencil } from 'lucide-react';
-import { Card, CardContent, CardHeader } from './ui/card';
+import { Card, CardHeader } from './ui/card';
 import { Button } from './ui/button';
 import type { CourseSummary } from './InstructorCourses';
 import {
