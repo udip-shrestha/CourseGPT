@@ -11,7 +11,7 @@ import {
     DialogFooter,
     DialogClose
 } from "./ui/dialog";
-// --- 1. IMPORT THE API CLIENT HOOK ---
+
 import { useApiClient } from "../ApiClientContext";
 
 // Define props for the dialog
@@ -22,28 +22,31 @@ interface CourseRegisterDialogProps {
 }
 
 
-// Based on Swagger, Fall=4, but usually Spring=1, Summer=2, Fall=3. Double-check your DB/backend logic.
+// --- 2. UPDATED SEMESTER MAPPING ---
+// Added "Winter". (Assuming Winter = 3, adjust if your DB uses a different ID)
 const semesterMap: { [key: string]: number } = {
-    "Spring": 1, // Placeholder
-    "Summer": 2, // Placeholder
-    "Fall": 4    // Based on POST /courses
+    "Spring": 1,
+    "Summer": 2,
+    "Fall": 3,
 };
-const semesterOptions = ["Spring", "Summer", "Fall"]; // Options for the dropdown
+// Added "Winter" to the dropdown options
+const semesterOptions = ["Spring", "Summer", "Fall"];
+// --- END OF UPDATE ---
 
 
 export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }: CourseRegisterDialogProps) {
-    // --- 2. INITIALIZE THE API CLIENT ---
+    // --- 3. INITIALIZE THE API CLIENT ---
     const apiClient = useApiClient();
 
     const [name, setName] = useState("");
     const [institution, setInstitution] = useState("");
-    const [semesterName, setSemesterName] = useState(""); // Store the selected name (e.g., "Fall")
+    const [semesterName, setSemesterName] = useState("");
     const [year, setYear] = useState<number | string>("");
 
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // --- 3. REPLACED 'handleSubmit' TO USE 'apiClient' ---
+    // --- 4. REPLACED 'handleSubmit' TO USE 'apiClient' ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -144,17 +147,17 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
                 {/* Semester */}
                 <div className="grid grid-cols-4 items-center gap-4">
                     <Label htmlFor="semester-dialog" className="text-right">Semester</Label>
-                    {/* Use Select component for dropdown */}
                     <Select value={semesterName} onValueChange={setSemesterName} required>
                         <SelectTrigger id="semester-dialog" className="col-span-3">
                             <SelectValue placeholder="Select semester" />
                         </SelectTrigger>
+                        {/* --- 5. UPDATED DROPDOWN OPTIONS --- */}
                         <SelectContent>
-                            {/* Map over semester names for options */}
                             {semesterOptions.map((sem) => (
                                 <SelectItem key={sem} value={sem}>{sem}</SelectItem>
                             ))}
                         </SelectContent>
+                        {/* --- END OF UPDATE --- */}
                     </Select>
                 </div>
                 {/* Year */}
@@ -162,12 +165,12 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
                     <Label htmlFor="year-dialog" className="text-right">Year</Label>
                     <Input
                         id="year-dialog"
-                        type="number" // Use number input type
+                        type="number"
                         value={year}
                         onChange={(e) => setYear(e.target.value)}
                         className="col-span-3"
                         placeholder="e.g., 2025"
-                        min="2000" // Example validation
+                        min="2000"
                         required
                     />
                 </div>
@@ -177,11 +180,9 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
 
                 {/* Use DialogFooter for buttons */}
                 <DialogFooter>
-                    {/* DialogClose wraps the Cancel button */}
                     <DialogClose asChild>
                         <Button type="button" variant="outline" onClick={onClose} disabled={isLoading}>Cancel</Button>
                     </DialogClose>
-                    {/* Submit button */}
                     <Button type="submit" disabled={isLoading}>
                         {isLoading ? "Registering..." : "Register Course"}
                     </Button>
@@ -190,4 +191,3 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
         </DialogContent>
     );
 }
-
