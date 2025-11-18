@@ -74,9 +74,14 @@ async def ask(interaction: discord.Interaction, question: str):
     
     # Format response with sources if available
     response = answer
-    if sources:
-        formattedSources = await formatSources(sources)
-        response += "\n\n📚 Sources:\n" + formattedSources
+
+    # Safely verify sources is a non-empty list of strings
+    if isinstance(sources, list):
+        clean_sources = [s for s in sources if isinstance(s, str) and s.strip()]
+        if clean_sources:
+            formattedSources = await formatSources(clean_sources)
+            if formattedSources:
+                response += "\n\n📚 **Sources:**\n" + formattedSources
 
     # Send response in chunks if it exceeds Discord's 2000 character limit 
     message_chunks = await split_message(response)
