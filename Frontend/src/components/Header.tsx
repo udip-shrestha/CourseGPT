@@ -32,7 +32,6 @@ export function Header() {
     const currentInstructorId = apiClient.getInstructorId?.();
     const handleLogout = () => {
         apiClient.logout?.();
-        navigate("/login", { replace: true });
     };
 
     // --- Logic from 'main' branch ---

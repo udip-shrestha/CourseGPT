@@ -13,13 +13,6 @@ def test_read_file_type_by_mime(repo):
     assert result["extension"] == "pdf"
 
 
-def test_read_file_type_by_extension(repo):
-    result = repo.read_file_type_by_extension("txt")
-    assert result is not None
-    assert result["extension"] == "txt"
-    assert result["mime_type"] == "text/plain"
-
-
 def test_read_all_file_types(repo):
     result = repo.read_all_file_types()
     assert isinstance(result, list)
@@ -85,8 +78,9 @@ def test_create_instructor(repo: ISQLRepository):
     with pytest.raises(Exception):
         repo.create_instructor("Dr. Copy", "Professor", "ISU", "jane.smith@isu.edu", "hash2")
 
-    # Empty fields might be allowed by schema, so no exception expected
-    repo.create_instructor("", "", "", "unique@example.com", "pw")
+    # Empty fields are NOT allowed by schema → expect failure
+    with pytest.raises(Exception):
+        repo.create_instructor("", "", "", "unique@example.com", "pw")
 
 
 def test_read_instructor(repo: ISQLRepository):
@@ -249,20 +243,3 @@ def remove_student_from_course(self, student_id, course_id) -> bool:
         self.connection.commit()
         # Return True if any rows were deleted, False otherwise
         return cursor.rowcount > 0
-
-# ==========================================================
-# QUERIES (Student Questions)
-# ==========================================================
-def test_create_and_read_query_log(repo, temp_course):
-    # Create student first
-    student_id = repo.create_student("Frank", "frank123", temp_course)
-
-    query_text = "What is polymorphism?"
-    response_text = "Polymorphism allows objects to take many forms."
-
-    qid = repo.create_query_log(student_id, temp_course, query_text, response_text)
-    assert qid is not None
-
-    queries = repo.read_queries_by_student(student_id, temp_course)
-    assert isinstance(queries, list)
-    assert any(q["query_text"] == query_text for q in queries)

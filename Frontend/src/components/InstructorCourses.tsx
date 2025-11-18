@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react"; // 1. IMPORT useCallback
+import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Search, Filter, Plus, AlertCircle } from "lucide-react";
 import { Button } from "./ui/button";
@@ -7,7 +7,8 @@ import { CourseCard } from "./CourseCard";
 import { CourseRegisterDialog } from "./CourseRegisterDialog";
 import { Dialog, DialogTrigger } from "./ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
-import { API_BASE_URL } from "../ApiClient";
+
+import { useApiClient } from "../ApiClientContext";
 
 export interface CourseSummary {
     id: string;
@@ -19,44 +20,35 @@ export interface CourseSummary {
     created_at: string;
 }
 
-// --- 2. DEFINE THE API RESPONSE STRUCTURE ---
-interface CourseApiResponse {
-    total: number;
-    courses: CourseSummary[];
-}
-// --- END ---
 
-// --- 3. ADD THIS HELPER FUNCTION ---
-// (This fixes the 'semesterIdToString' not found error in handleViewCourse)
+
 function semesterIdToString(id: number | undefined): string {
     if (id === undefined) return "N/A";
     switch (id) {
         case 1: return "Spring";
         case 2: return "Summer";
         case 3: return "Fall";
-        case 4: return "Fall"; // Handling the '4' seen in Swagger example
         default: return "Unknown";
     }
 }
-// --- END OF ADDED FUNCTION ---
 
 export function InstructorCourses() {
     const { instructorId } = useParams<{ instructorId: string }>();
     console.log("InstructorCourses mounted with instructorId:", instructorId);
 
     const navigate = useNavigate();
+    // --- 2. INITIALIZE the apiClient ---
+    const apiClient = useApiClient();
+
     const [searchTerm, setSearchTerm] = useState("");
     const [courses, setCourses] = useState<CourseSummary[]>([]);
-    // --- 4. ADD STATE FOR TOTAL ---
     const [total, setTotal] = useState(0);
-    // --- END ---
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
     const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
 
-    // --- 5. FIX: Moved fetchCourses outside useEffect and wrapped in useCallback ---
-    // (This fixes the 'Cannot find name fetchCourses' error)
+
     const fetchCourses = useCallback(async () => {
         setDeleteError(null);
 
@@ -71,79 +63,52 @@ export function InstructorCourses() {
         setIsLoading(true);
         setError(null);
 
-        const url = `${API_BASE_URL}/instructors/${instructorId}/courses?order_by=created_at&order_dir=desc`;
-        console.log("Fetching courses from:", url);
 
-        try {
-            const response = await fetch(url);
-            if (!response.ok) {
-                let errorDetail = `Failed to fetch courses (Status: ${response.status})`;
-                try {
-                    const errorData = await response.json();
-                    if (Array.isArray(errorData.detail)) {
-                        errorDetail = errorData.detail.map((err: any) => `${err.loc.join('.')} - ${err.msg}`).join(', ');
-                    } else if (errorData.detail) {
-                        errorDetail = errorData.detail;
-                    }
-                } catch (_) {
-                    errorDetail = (await response.text()) || errorDetail;
-                }
-                throw new Error(errorDetail);
-            }
+        const { data, errorMessage } = await apiClient.listInstructorCourses(instructorId, {
+            order_by: "created_at",
+            order_dir: "desc"
+        });
 
-            // --- 6. FIX: Correctly parse the API response object ---
-            const data: CourseApiResponse = await response.json();
-            console.log("Fetched courses successfully:", data);
-            setCourses(data.courses); // Set courses from the 'courses' property
-            setTotal(data.total);     // Set total from the 'total' property
-            // --- END FIX ---
-
-        } catch (err: any) {
-            console.error("Fetch courses error:", err);
-            if (err instanceof TypeError && err.message === "Failed to fetch") {
+        if (errorMessage) {
+            console.error("Fetch courses error:", errorMessage);
+            if (errorMessage.includes("Failed to fetch")) { // Check for network error
                 setError("Could not connect to the server.");
             } else {
-                setError(err.message || "An error occurred while fetching courses.");
+                setError(errorMessage || "An error occurred while fetching courses.");
             }
             setCourses([]);
-            setTotal(0); // Reset total on error
-        } finally {
-            console.log("Fetch finished, setting loading to false.");
-            setIsLoading(false);
+            setTotal(0);
+        } else if (data) {
+            console.log("Fetched courses successfully:", data);
+            setCourses(data.courses || []); // Set courses from the 'courses' property
+            setTotal(data.total || 0);     // Set total from the 'total' property
         }
-    }, [instructorId]); // --- END MOVED FUNCTION ---
 
-    // --- Fetch Courses Effect ---
+        console.log("Fetch finished, setting loading to false.");
+        setIsLoading(false);
+
+    }, [instructorId, apiClient]); // Added apiClient dependency
+
     useEffect(() => {
-        // --- 7. FIX: Call the stable fetchCourses function ---
         fetchCourses();
-    }, [fetchCourses]); // Use the useCallback function as dependency
-    // --- End Fetch Courses ---
+    }, [fetchCourses]);
 
-    // --- Delete Course Handler ---
+
+
     const handleDeleteCourse = async (courseId: string) => {
         console.log(`Attempting to delete course ${courseId}`);
         setDeleteError(null);
         try {
-            const response = await fetch(`${API_BASE_URL}/courses/${courseId}`, {
-                method: 'DELETE',
-                headers: { 'accept': '*/*' }
-            });
+            // Use the apiClient to delete
+            const { errorMessage } = await apiClient.deleteCourse(courseId);
 
-            if (response.status === 204) {
-                console.log(`Course ${courseId} deleted successfully.`);
-                await fetchCourses(); // Refresh the course list
-                return;
+            if (errorMessage) {
+                throw new Error(errorMessage);
             }
 
-            if (!response.ok) {
-                let errorDetail = `Failed to delete course (Status: ${response.status})`;
-                try {
-                    const errorData = await response.json();
-                    errorDetail = errorData.detail || errorDetail;
-                } catch (_) {}
-                throw new Error(errorDetail);
-            }
+            console.log(`Course ${courseId} deleted successfully.`);
+            await fetchCourses(); // Refresh the course list
+            return; // Success
 
         } catch (err: any) {
             console.error("Failed to delete course:", err);
@@ -155,17 +120,15 @@ export function InstructorCourses() {
             throw err;
         }
     };
-    // --- End Delete Course Handler ---
 
-    const handleViewCourse = (course: CourseSummary) => { // Updated to pass full object
+
+    const handleViewCourse = (course: CourseSummary) => {
         console.log("Navigating to view course:", course.name);
-
-        // Pass course info in navigation state to fix "ugly name" issue
         navigate(`/courses/${course.id}`, {
             state: {
                 courseName: course.name,
                 institution: course.institution,
-                semester: semesterIdToString(course.semester_id), // Send the string name
+                semester: semesterIdToString(course.semester_id),
                 year: course.year,
                 courseCode: `CS ${course.semester_id}01` // Example, adjust as needed
             }
@@ -174,10 +137,14 @@ export function InstructorCourses() {
 
     const handleCourseCreated = () => {
         setIsRegisterDialogOpen(false);
-        fetchCourses(); // Re-fetch the course list (This will now work)
+        fetchCourses(); // Re-fetch the course list
     };
 
-    // This line will no longer crash
+
+    const handleCourseUpdated = () => {
+        fetchCourses(); // Re-fetch the course list
+    }
+
     const filteredCourses = courses.filter((course) =>
         course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         course.institution.toLowerCase().includes(searchTerm.toLowerCase())
@@ -246,8 +213,9 @@ export function InstructorCourses() {
                         key={course.id}
                         course={course}
                         onViewCourse={() => handleViewCourse(course)}
-                        // --- 8. FIX: Pass the required 'onDelete' prop ---
                         onDelete={() => handleDeleteCourse(course.id)}
+                        // --- 5. PASS THE PROP ---
+                        onCourseUpdated={handleCourseUpdated}
                     />
                 ))}
             </div>
@@ -257,7 +225,6 @@ export function InstructorCourses() {
                     No courses match your search term.
                 </p>
             )}
-            {/* --- 9. FIX: Use 'total' to check for no courses --- */}
             {!isLoading && total === 0 && !error && (
                 <p className="text-center text-muted-foreground mt-10">
                     You haven't registered any courses yet.
@@ -266,4 +233,3 @@ export function InstructorCourses() {
         </div>
     );
 }
-

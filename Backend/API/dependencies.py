@@ -1,22 +1,16 @@
-from functools import lru_cache
-import os, platform, json
-from chromadb import Client, PersistentClient
-from fastapi.security import OAuth2PasswordBearer
-from langchain_core.language_models import BaseLanguageModel
-from dotenv import load_dotenv
-from fastapi import Depends, HTTPException, status
-# from transformers import AutoTokenizer, AutoModelForSeq2SeqLM, pipeline
-# from langchain_huggingface import HuggingFacePipeline
-# from transformers import AutoTokenizer, AutoModelForCausalLM, pipeline
-# from huggingface_hub import InferenceClient
-from langchain.llms.base import LLM
-from typing import Optional, List, Any
-from pydantic import BaseModel
-from jwt import ExpiredSignatureError, PyJWTError
-import os
-from langchain_community.llms import Ollama
 
-from langchain_community.llms import Ollama
+import os
+import logging
+from typing import Dict
+from functools import lru_cache
+from dotenv import load_dotenv
+from chromadb import Client, PersistentClient
+from fastapi import Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from langchain_core.language_models import BaseChatModel
+from langchain_ollama import ChatOllama
+from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
+
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Service.document_service import DocumentService
@@ -25,17 +19,19 @@ from API.Service.rag_service import RAGService
 from API.Service.courses_service import CourseService
 from API.Service.instructors_service import InstructorService
 from API.Service.students_service import StudentService
+from API.Service.queries_service import QueryService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import Loader
+from API.Util.rag_strategy import STRATEGY_CLASS_REGISTRY, IRAGStrategy, RAGStrategyFactory
 from API.Util.splitters import Splitter
-from API.Util.prompt_builders import PromptBuilder
 from API.Util.auth import decrypt_access_token
-
-from langchain_community.llms import Ollama
 
 
 load_dotenv()
+
+
+logger = logging.getLogger(__name__)
 
 
 # ============================================================
@@ -97,12 +93,13 @@ def authorize(
 ) -> dict:
     """Decode JWT (fake JSON token) and return instructor record from DB."""
     if not token or token.strip() == "":
-        raise HTTPException(status_code=401, detail="Missing authorization token", headers={"WWW-Authenticate": "Bearer"})
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Missing authorization token", headers={"WWW-Authenticate": "Bearer"})
 
-    payload = decrypt_access_token(token)
-    token_instructor_id = payload.get("id")
-    if not token_instructor_id:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload", headers={"WWW-Authenticate": "Bearer"})
+    try:
+        payload = decrypt_access_token(token)
+        token_instructor_id = payload["id"]
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {str(e)}", headers={"WWW-Authenticate": "Bearer"})
 
     instructor = sql_repo.read_instructor(token_instructor_id)
     if not instructor:
@@ -130,16 +127,23 @@ def authorize_admin(
     return auth
 
 
-def authorize_course(
+def validate_course(
     course_id: str,
-    auth: dict = Depends(authorize),
     sql_repo: SQLRepository = Depends(get_sql_repository),
 ) -> dict:
-    """Authorize access to a course based on instructor ownership or ADMIN role."""
+    """Validate that the course exists."""
     course = sql_repo.read_course(course_id)
     if not course:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Course not found")
 
+    return course
+
+
+def authorize_course(
+    auth: dict = Depends(authorize),
+    course: dict = Depends(validate_course),
+) -> dict:
+    """Authorize access to a course based on instructor ownership or ADMIN role."""
     if auth["role"] != "ADMIN" and course["instructor_id"] != auth["id"]:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to access this course")
 
@@ -162,68 +166,62 @@ def get_splitter() -> Splitter:
     """Return a Singleton Splitter instance for document chunking."""
     return Splitter()
 
+
 @lru_cache()
-def get_prompt_builder() -> PromptBuilder:
-    """Return a Singleton PromptBuilder instance."""
-    return PromptBuilder()
+def get_rag_strategy_factory(
+    sql_repo: SQLRepository = Depends(get_sql_repository)
+) -> RAGStrategyFactory:
+    """Build RagStrategyFactory from DB: rag_strategy_id → instantiated strategy class."""
+    rag_strategies = sql_repo.read_all_rag_strategies()   # returns { id, type_name, class_name, description }
 
-# Custom LangChain-compatible wrapper
-# class HuggingFaceScoutLLM(LLM):
-#     """Custom LangChain-compatible wrapper for Hugging Face Llama 4 Scout."""
-#     model_id: str = os.getenv("LLM_MODEL", "meta-llama/Llama-4-Scout-17B-16E-Instruct")
-#     token: Optional[str] = os.getenv("HUGGINGFACE_TOKEN")
+    # Detect invalid classes from DB
+    invalid = { row["class_name"] for row in rag_strategies if row["class_name"] not in STRATEGY_CLASS_REGISTRY }
+    if invalid:
+        raise ValueError(
+            f"Invalid strategy classes in rag_types table: {invalid}. "
+            f"Valid: {list(STRATEGY_CLASS_REGISTRY.keys())}"
+        )
 
-#     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
-#         client = InferenceClient(model=self.model_id, token=self.token)
-
-#         response = client.chat.completions.create(
-#             model=self.model_id,
-#             messages=[
-#                 {"role": "system", "content": "You are a helpful and concise assistant."},
-#                 {"role": "user", "content": prompt}
-#             ],
-#             max_tokens=500,
-#             temperature=0.5,
-#         )
-
-#         return response.choices[0].message.content
-
-#     @property
-#     def _llm_type(self) -> str:
-#         return "huggingface-scout"
+    rag_strategy_registry_from_db: Dict[str, IRAGStrategy] = {
+        str(row["id"]): STRATEGY_CLASS_REGISTRY[row["class_name"]]()
+        for row in rag_strategies
+        if row["class_name"] in STRATEGY_CLASS_REGISTRY
+    }
+    return RAGStrategyFactory(rag_strategy_registry_from_db)
 
 
-# @lru_cache()
-# def get_llm() -> LLM:
-#     """Use Hugging Face Inference API for Llama 4 Scout (no local download)."""
-#     llm_instance = HuggingFaceScoutLLM()
-#     print(f"[LLM INIT] Loaded model: {llm_instance.model_id}")
-#     return llm_instance
+@lru_cache()
+def get_llm() -> BaseChatModel:
+    llm_provider = os.environ["LLM_PROVIDER"].lower()
+    logger.info(f"[LLM] LLM_PROVIDER detected as {llm_provider}.")
+
+    if llm_provider == "huggingface":
+        model_id, token = os.environ["LLM_MODEL"], os.environ["HUGGINGFACEHUB_API_TOKEN"]
+        logger.info(f"[LLM INIT] Initializing HuggingFace Chat Model ID: {model_id}")
+        
+        endpoint = HuggingFaceEndpoint(
+            repo_id=model_id,
+            task="text-generation",
+            max_new_tokens=512,
+            do_sample=False,
+            repetition_penalty=1.03,
+            temperature=0.0,
+            provider="auto"
+        )
+
+        return ChatHuggingFace(llm=endpoint)
+
+    if llm_provider == "ollama":
+        model_name, base_url = os.environ["LLM_MODEL"], os.environ["LLM_BASE_URL"]
+        logger.info(f"[LLM INIT] Initializing Ollama model '{model_name}' at {base_url}")
+        return ChatOllama(model=model_name, base_url=base_url, temperature=0)
+
+    raise ValueError(f"Unknown LLM_PROVIDER: {llm_provider}")
 
 
 # ============================================================
 # 🧩 SERVICE SETUP
 # ============================================================
-
-# ============================================================
-# 🧠 LOCAL OLLAMA LLaMA-3 SETUP
-# ============================================================
-
-@lru_cache()
-def get_llm() -> LLM:
-    """
-    Use local Ollama (LLaMA-3) model instead of Hugging Face API.
-    Requires Ollama running on localhost:11434
-    """
-    from langchain_community.llms import Ollama
-    import os
-
-    model_name = os.getenv("LLM_MODEL", "llama3")
-    base_url = os.getenv("LLM_BASE_URL", "http://localhost:11434")
-
-    print(f"[LLM INIT] Using local Ollama model: {model_name} at {base_url}")
-    return Ollama(model=model_name, base_url=base_url)
-
 
 
 def get_auth_service(
@@ -256,11 +254,12 @@ def get_rag_service(
     loader: Loader = Depends(get_loader),
     splitter: Splitter = Depends(get_splitter),
     vector_repo: IVectorRepository = Depends(get_vector_repository),
-    prompt_builder: PromptBuilder = Depends(get_prompt_builder),
-    llm: BaseLanguageModel = Depends(get_llm),
+    sql_repo: IVectorRepository = Depends(get_sql_repository),
+    rag_strategy_factory: RAGStrategyFactory = Depends(get_rag_strategy_factory),
+    llm: BaseChatModel = Depends(get_llm),
 ) -> RAGService:
     """Provide a fully configured RAGService instance."""
-    return RAGService(loader, splitter, vector_repo, prompt_builder, llm)
+    return RAGService(loader, splitter, vector_repo, sql_repo, rag_strategy_factory, llm)
 
 
 def get_document_service(
@@ -269,3 +268,10 @@ def get_document_service(
 ) -> DocumentService:
     """Provide a DocumentService using the SQL repository and RAGService."""
     return DocumentService(sql_repo, rag_service)
+
+def get_query_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+    rag_service: RAGService = Depends(get_rag_service),
+) -> QueryService:
+    """Provide a QueryService using the SQL repository and RAGService."""
+    return QueryService(sql_repo, rag_service)

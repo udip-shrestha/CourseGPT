@@ -44,6 +44,7 @@ async def on_guild_join(guild):
 
 # Ask command
 @bot.tree.command(name="ask", description="Ask a question to the bot")
+@app_commands.describe(question="Your question about the course material of this course")
 async def ask(interaction: discord.Interaction, question: str):
     # Get course_id from guild name using API
     guild_name = interaction.guild.name if interaction.guild else ""
@@ -71,17 +72,23 @@ async def ask(interaction: discord.Interaction, question: str):
     # Get answer from AI model
     answer, sources = await ask_AI_model(question, course_id)
     
-    # Log the query
-    await log_query(student_id, course_id, question, answer)
-    
     # Format response with sources if available
     response = answer
-    if sources:
-        response += "\n\n📚 **Sources:**\n"
-        for source in sources:
-            response += f"• {source}\n"
 
-    await interaction.followup.send(response)
+    # Safely verify sources is a non-empty list of strings
+    if isinstance(sources, list):
+        clean_sources = [s for s in sources if isinstance(s, str) and s.strip()]
+        if clean_sources:
+            formattedSources = await formatSources(clean_sources)
+            if formattedSources:
+                response += "\n\n📚 **Sources:**\n" + formattedSources
+
+    # Send response in chunks if it exceeds Discord's 2000 character limit 
+    message_chunks = await split_message(response)
+    
+    for i, chunk in enumerate(message_chunks):
+        if chunk.strip():  # Only send non-empty chunks
+            await interaction.followup.send(chunk)
 
 # Register to the course        
 @bot.tree.command(name="register", description="Register for the course")
@@ -98,7 +105,7 @@ async def register(interaction: discord.Interaction):
         return
     
     # Check if student is already registered
-    registered = await is_registered(str(interaction.user.id), course_id)
+    registered, _ = await is_registered(str(interaction.user.id), course_id)
     if registered:
         await interaction.followup.send(
             "🚫 You are already registered for this course."
@@ -163,6 +170,43 @@ async def courses(interaction: discord.Interaction):
         message += f"- **{course_name}** ({institution}, {year})\n"
 
     await interaction.followup.send(message, ephemeral=True)
+
+# Unregister from a course        
+@bot.tree.command(name="unregister", description="Unregister from a course given the course name")
+@app_commands.describe(course_name="Name of the course to unregister from. Note: This is the Discord server name of that course.")
+async def unregister(interaction: discord.Interaction, course_name: str):
+    await interaction.response.defer(thinking=True, ephemeral=True)
+    course_id = await get_course_id(course_name)
+    
+    if not course_id:
+        await interaction.followup.send(
+            "🚫 Course not found. Try a different course name or checking the spelling in /courses"
+        )
+        return
+    
+    # Check if student is already unregistered
+    registered, _ = await is_registered(str(interaction.user.id), course_id)
+    if not registered:
+        await interaction.followup.send(
+            "🚫 You are currently not registered for this course."
+        )
+        return
+    
+    # Unregister student using API
+    success, message = await unregister_student(
+        str(interaction.user.id),
+        course_id
+    )
+
+    # Send response based on registration result
+    if success:
+        emoji = "✅"  
+        disclaimer = "⚠️ Ensure to leave the course's Discord server to avoid being registered automatically." 
+    else:
+        emoji = "🚫"
+        disclaimer = ""
+    await interaction.followup.send(f"{emoji} {message}\n\n{disclaimer}")
+
 
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")

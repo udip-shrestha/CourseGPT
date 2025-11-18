@@ -1,80 +1,204 @@
-from fastapi import APIRouter, Depends, status, Path, Query, HTTPException
-from API.Service.rag_service import RAGService
-from API.dependencies import get_rag_service
-from API.Service.students_service import StudentService
-from API.dependencies import get_student_service
-from typing import List, Dict
+from fastapi import APIRouter, Depends, status, Path, Query
+from typing import Optional
+from API.Service.queries_service import QueryService
+from API.dependencies import get_query_service, validate_course
 
-router = APIRouter(tags=["Questions"])
+
+router = APIRouter(tags=["Queries"])
 
 
 @router.post(
     "/courses/{course_id}/queries",
     status_code=status.HTTP_200_OK,
-    summary="Ask a question about a course",
+    summary="Ask a new question about a course",
     description=(
-        "**Action:** Runs the full RAG pipeline to answer a user's question based on "
-        "documents previously uploaded for the specified course.\n\n"
-        "**Returns:** A JSON object containing the generated answer and document sources."
+        "**Action:** Executes the full RAG pipeline using stored course materials. "
+        "The system retrieves relevant chunks, builds a grounded prompt, and returns the generated answer.\n\n"
+        "**Returns:** JSON containing the generated answer, retrieved source chunks, "
+        "and internal metadata (timestamps, IDs)."
     ),
 )
 def ask_question(
     course_id: str = Path(
         ...,
-        description="UUID of the course to query (e.g., 'data-structures-2025').",
+        description="UUID of the course the question belongs to.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
     question: str = Query(
         ...,
-        description="The question to ask about the course materials.",
-        example="What is polymorphism in object-oriented programming?",
+        description="The student's natural-language question.",
+        examples={"example": "What is the difference between a controller and a service?"},
     ),
-    rag_service: RAGService = Depends(get_rag_service),
+    student_id: Optional[str] = Query(
+        None,
+        description="Optional student UUID (used for author attribution and analytics).",
+        examples={"example": "c3e82b9d-f24d-4b1e-9e5c-0affd12e90b3"},
+    ),
+    course: dict = Depends(validate_course),
+    service: QueryService = Depends(get_query_service),
 ):
-    """
-    **Pipeline:** Retriever → Prompt → LLM  
-    Uses stored course documents to generate an answer with sources.
-    """
-    if not question.strip():
-        return {"answer": "Question cannot be empty.", "sources": ""}
+    """Run the full RAG answer-generation pipeline for a single question."""
+    return service.ask_question(course_id=course_id, course=course, student_id=student_id, question=question)
 
-    return rag_service.query(course_id, question)
 
-# ------------------------------------------------------
-# Get All Queries by Student
-# ------------------------------------------------------
 @router.get(
-    "/courses/{course_id}/{student_id}/queries",
-    summary="Get all queries from a specific student in a specific course",
-    description="Fetches a list of all queries (with responses) made by a given student in a specific course."
+    "/courses/{course_id}/queries",
+    status_code=status.HTTP_200_OK,
+    summary="List all queries for a course (with pagination)",
+    description=(
+        "**Action:** Retrieves a paginated list of all questions asked in the course. "
+        "Supports ordering and pagination to efficiently navigate the query history.\n\n"
+        "**Returns:** `{ total, queries: [...] }` including question text, answer, timestamps, and student metadata."
+    ),
+)
+def get_course_queries(
+    course_id: str = Path(
+        ...,
+        description="UUID of the course.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
+    ),
+    limit: int = Query(
+        10,
+        ge=1,
+        description="Maximum number of results per page.",
+        examples={"example": 10},
+    ),
+    offset: int = Query(
+        0,
+        ge=0,
+        description="Pagination offset (starting index).",
+        examples={"example": 0},
+    ),
+    order_by: str = Query(
+        "asked_at",
+        description="Field to sort by: `asked_at`, `student_id`, or `question`.",
+        examples={"example": "asked_at"},
+    ),
+    order_dir: str = Query(
+        "desc",
+        description="Sort direction.",
+        examples={"example": "desc"},
+        pattern="^(asc|desc)$",
+    ),
+    _course: dict = Depends(validate_course),
+    service: QueryService = Depends(get_query_service),
+):
+    """Retrieve paginated Q/A history for an entire course."""
+    return service.get_course_queries(
+        course_id=course_id,
+        limit=limit,
+        offset=offset,
+        order_by=order_by,
+        order_dir=order_dir,
+    )
+
+
+@router.get(
+    "/courses/{course_id}/students/{student_id}/queries",
+    status_code=status.HTTP_200_OK,
+    summary="List all queries for a specific student in a course",
+    description=(
+        "**Action:** Retrieves all questions asked by a specific student, with pagination and sorting.\n\n"
+        "**Returns:** `{ total, queries: [...] }` including timestamps and answers."
+    ),
 )
 def get_student_queries(
-    course_id: str = Path(..., description="Course ID."),
-    student_id: str = Path(..., description="Student's unique ID."),
-    service: StudentService = Depends(get_student_service)
-) -> Dict[str, List[Dict[str, str]]]:
-    try:
-        queries = service.sql_repo.read_queries_by_student(student_id, course_id)
-        return {"queries": queries}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve queries: {e}")
-    
-# ------------------------------------------------------
-# Log a Student Query
-# ------------------------------------------------------
-@router.post(
-    "/students/log_query", 
-    summary="Log a query made by a student",
-    description="Stores a student's question and the corresponding system response."
+    course_id: str = Path(
+        ...,
+        description="UUID of the course.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
+    ),
+    student_id: str = Path(
+        ...,
+        description="UUID of the student.",
+        examples={"example": "c3e82b9d-f24d-4b1e-9e5c-0affd12e90b3"},
+    ),
+    limit: int = Query(
+        10,
+        ge=1,
+        description="Maximum results per page.",
+        examples={"example": 10},
+    ),
+    offset: int = Query(
+        0,
+        ge=0,
+        description="Number of items to skip.",
+        examples={"example": 0},
+    ),
+    order_by: str = Query(
+        "asked_at",
+        description="Field to sort by.",
+        examples={"example": "asked_at"},
+    ),
+    order_dir: str = Query(
+        "desc",
+        description="Sort direction.",
+        examples={"example": "desc"},
+        pattern="^(asc|desc)$",
+    ),
+    _course: dict = Depends(validate_course),
+    service: QueryService = Depends(get_query_service),
+):
+    """Fetch all Q/A history for a single student."""
+    return service.get_student_queries(
+        course_id=course_id,
+        student_id=student_id,
+        limit=limit,
+        offset=offset,
+        order_by=order_by,
+        order_dir=order_dir,
+    )
+
+
+@router.get(
+    "/courses/{course_id}/queries/{query_id}",
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve a specific query by ID",
+    description=(
+        "**Action:** Fetch a single stored question/answer entry by its unique ID.\n\n"
+        "**Returns:** The full record including question text, answer, sources, and timestamps."
+    ),
 )
-def log_query(
-    student_id: str = Query(..., description="Student's unique ID."),
-    course_id: str = Query(..., description="Course ID related to the query."),
-    query_text: str = Query(..., description="Text of the student's question."),
-    response_text: str = Query(..., description="System's response text."),
-    service: StudentService = Depends(get_student_service)
-) -> Dict[str, str]:
-    try:
-        query_id = service.sql_repo.create_query_log(student_id, course_id, query_text, response_text)
-        return {"message": "Query logged successfully", "query_id": query_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Logging failed: {e}")
+def read_query(
+    course_id: str = Path(
+        ...,
+        description="UUID of the course.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
+    ),
+    query_id: str = Path(
+        ...,
+        description="UUID of the query.",
+        examples={"example": "fa0d35a3-7d23-4e2e-8f0b-f34f42a8832c"},
+    ),
+    _course: dict = Depends(validate_course),
+    service: QueryService = Depends(get_query_service),
+):
+    """Fetch one stored question/answer by ID."""
+    return service.get_query(course_id, query_id)
+
+
+@router.delete(
+    "/courses/{course_id}/queries/{query_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a stored query",
+    description=(
+        "**Action:** Permanently deletes a question/answer pair from the system.\n\n"
+        "**Returns:** 204 No Content when successful."
+    ),
+)
+def delete_query(
+    course_id: str = Path(
+        ...,
+        description="UUID of the course.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
+    ),
+    query_id: str = Path(
+        ...,
+        description="UUID of the query to delete.",
+        examples={"example": "fa0d35a3-7d23-4e2e-8f0b-f34f42a8832c"},
+    ),
+    _course: dict = Depends(validate_course),
+    service: QueryService = Depends(get_query_service),
+):
+    """Delete a stored query entry."""
+    return service.delete_query(course_id, query_id)

@@ -199,7 +199,7 @@ endif
 # Database Make Commands
 # ===========================================
 
-.PHONY: db-setup db-init db-seed db-shell db-deploy
+.PHONY: db-setup db-init db-seed db-shell
 
 # -------------------------------------------
 # db-setup: Windows uses PowerShell, others use Bash
@@ -209,14 +209,18 @@ ifeq ($(UNAME_S),Windows)
 	@echo Checking PostgreSQL installation...
 	@powershell -ExecutionPolicy Bypass -File Script/install_postgres_windows.ps1
 	@echo db-setup complete. Please restart PowerShell.
+else ifneq ($(CODESPACES),)
+	@echo "Detected GitHub Codespace environment..."
+	@bash Script/install_postgres_codespace.sh
+	@echo "db-setup complete (Codespaces)."
 else ifeq ($(UNAME_S),Darwin)
 	@echo "Checking PostgreSQL installation..."
 	@bash Script/install_postgres_mac.sh
-	@echo "db-setup complete."
+	@echo "db-setup complete (macOS)."
 else
 	@echo "Checking PostgreSQL installation..."
 	@bash Script/install_postgres_linux.sh
-	@echo "db-setup complete."
+	@echo "db-setup complete (Linux)."
 endif
 
 # -------------------------------------------
@@ -246,27 +250,70 @@ db-shell:
 	@echo "Connecting to PostgreSQL database '$(DB_NAME)'..."
 	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME)
 
-# -------------------------------------------
-# Deploy database (create if missing, keep data intact)
-# -------------------------------------------
-ifeq ($(OS),Windows_NT)
-db-deploy:
-	@echo "Checking if database $(DB_NAME) exists..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" | findstr 1 >NUL 2>&1 && \
-		echo "Database $(DB_NAME) already exists: skipping creation." || ( \
-			echo "Creating database $(DB_NAME)..." && \
-			psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)" )
-	@echo "Applying schema to $(DB_NAME)..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
-	@echo "Database deployed successfully."
-else
-db-deploy:
-	@echo "Checking if database $(DB_NAME) exists..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$(DB_NAME)'" | grep -q 1 && \
-		echo "Database $(DB_NAME) already exists — skipping creation." || ( \
-			echo "Creating database $(DB_NAME)..." && \
-			psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d postgres -c "CREATE DATABASE $(DB_NAME)" )
-	@echo "Applying schema to $(DB_NAME)..."
-	@psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) -f $(SCHEMA_FILE)
-	@echo "Database deployed successfully."
-endif
+
+
+
+
+# ===========================================
+# Database Migration Commands (Export -> Load -> Import)
+# ===========================================
+
+.PHONY: db-dump-old db-load-old db-import-new migrate
+
+# ---------------------------------------------------------
+# Step 1: Export OLD schema data into LOAD_OLD_DATA_SCRIPT
+# ---------------------------------------------------------
+db-dump-old:
+	@echo "=============================================="
+	@echo " Exporting OLD database data -> $(LOAD_OLD_DATA_SCRIPT)"
+	@echo "=============================================="
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) \
+		-f $(EXPORT_OLD_DATA_SCRIPT) > $(LOAD_OLD_DATA_SCRIPT)
+	@echo "Export complete: $(LOAD_OLD_DATA_SCRIPT)"
+	@echo ""
+
+# ---------------------------------------------------------
+# Step 2: Load OLD data (INSERTs) into temporary old_* tables
+# ---------------------------------------------------------
+db-load-old:
+	@echo "=============================================="
+	@echo " Loading exported OLD data -> temporary old_* tables"
+	@echo "=============================================="
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) \
+		-f $(LOAD_OLD_DATA_SCRIPT)
+	@echo "Old data loaded successfully."
+	@echo ""
+
+# ---------------------------------------------------------
+# Step 3: Import old_* -> new schema (transform + insert)
+# ---------------------------------------------------------
+db-move-old:
+	@echo "=============================================="
+	@echo " Importing OLD data → NEW schema"
+	@echo "=============================================="
+	psql -U $(DB_USER) -h $(DB_HOST) -p $(DB_PORT) -d $(DB_NAME) \
+		-f $(IMPORT_OLD_DATA_SCRIPT)
+	@echo "New schema imported successfully."
+	@echo ""
+
+# ---------------------------------------------------------
+# Full migration pipeline (recommended)
+# ---------------------------------------------------------
+db-migrate:
+	@echo "=============================================="
+	@echo " FULL DB MIGRATION PIPELINE"
+	@echo " Steps:"
+	@echo "   1) db-dump-old     -> Export old schema data"
+	@echo "   2) db-init         -> Reset DB using NEW schema"
+	@echo "   3) db-load-old     -> Load old_* rows"
+	@echo "   4) db-move-old   -> Import + transform → new tables"
+	@echo "=============================================="
+	$(MAKE) db-dump-old
+	$(MAKE) db-init
+	$(MAKE) db-seed
+	$(MAKE) db-load-old
+	$(MAKE) db-move-old
+	@echo "=============================================="
+	@echo " Migration completed successfully!"
+	@echo "=============================================="
+

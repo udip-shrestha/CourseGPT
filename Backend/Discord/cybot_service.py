@@ -4,7 +4,47 @@ from typing import Optional, Tuple, List
 import httpx
 
 API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
-DEFAULT_TIMEOUT = 10.0
+DEFAULT_TIMEOUT = 15.0
+LLM_TIMEOUT = 60.0
+
+async def unregister_student(discord_id: str, course_id: str) -> Tuple[bool, str]:
+    """Unregister a student based on the discord_id and course_id"""
+    url = f"{API_BASE_URL.rstrip('/')}/students/unregister"
+    params = {"discord_id": discord_id, "course_id": course_id}
+    try:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            resp = await client.delete(url, params=params)
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                return True, data.get("message", "Unregistered successfully")
+            try:
+                return False, resp.json().get("error", resp.text)
+            except Exception:
+                return False, resp.text
+    except httpx.HTTPError as e:
+        return False, f"Unregistration error: {e}"
+
+    
+async def split_message(text: str, max_length: int = 1900) -> list:
+    """Split text into chunks of max_length characters."""
+    if len(text) <= max_length:
+        return [text]
+    
+    chunks = []
+    current_chunk = ""
+    
+    for line in text.split("\n"):
+        if len(current_chunk) + len(line) + 1 > max_length:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = line
+        else:
+            current_chunk += ("\n" if current_chunk else "") + line
+    
+    if current_chunk:
+        chunks.append(current_chunk)
+    
+    return chunks
 
 async def get_student_courses(discord_id: str):
     """Retrieve all courses a student is registered in."""
@@ -30,7 +70,7 @@ async def auto_register_member(member):
     
     registered, _ = await is_registered(str(member.id), course_id)
     if registered:
-        print(f"Member {member.display_name} is already registered for course {guild_name}")
+        # print(f"Member {member.display_name} is already registered for course {guild_name}")
         return
     
     success, message, student_id = await register_student(
@@ -77,6 +117,8 @@ async def register_student(discord_id: str, name: str, course_id: str) -> Tuple[
                 return False, resp.text, None
     except httpx.HTTPError as e:
         return False, f"Registration error: {e}", None
+    
+
 
 
 async def is_registered(discord_id: str, course_id: str) -> Tuple[bool, Optional[str]]:
@@ -94,38 +136,12 @@ async def is_registered(discord_id: str, course_id: str) -> Tuple[bool, Optional
     return False, None
 
 
-async def log_query(student_id: str, course_id: str, query_text: str, response_text: str) -> bool:
-    """Log a query to the database via API."""
-    url = f"{API_BASE_URL.rstrip('/')}/students/log_query"
-    params = {
-        "student_id": student_id,
-        "course_id": course_id,
-        "query_text": query_text,
-        "response_text": response_text,
-    }
-    try:
-        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
-            resp = await client.post(url, params=params)
-            return resp.status_code in (200, 201)
-    except httpx.HTTPError:
-        return False
-
-
 async def ask_AI_model(question: str, course_id: str) -> Tuple[str, List[str]]:
-    """
-    Ask a question about course materials using the RAG pipeline.
-    
-    Args:
-        question (str): The question to ask about the course materials
-        course_id (str): UUID of the course to query
-    
-    Returns:
-        Tuple[str, List[str]]: (answer text, list of document sources)
-    """
+    """Ask a question about course materials using the RAG pipeline."""
     url = f"{API_BASE_URL.rstrip('/')}/courses/{course_id}/queries"
     params = {"question": question}
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
             resp = await client.post(url, params=params)
             if resp.status_code != 200:
                 return f"⚠️ Backend error ({resp.status_code}): {resp.text}", []
@@ -139,3 +155,50 @@ async def ask_AI_model(question: str, course_id: str) -> Tuple[str, List[str]]:
         return "⚠️ Request timed out.", []
     except httpx.HTTPError as e:
         return f"Error connecting to backend: {e}", []
+
+async def formatSources(raw: Optional[List[str]]) -> str:
+    """
+    Group sources like 'File.pdf (page N)' into:
+      File.pdf (page 1) (page 2) (page 6) ...
+    Deduplicates and sorts page numbers numerically.
+    """
+    if not raw:
+        return ""
+
+    # Normalize to a flat list of strings
+    tokens: List[str] = []
+    if isinstance(raw, list):
+        for item in raw:
+            if isinstance(item, str):
+                tokens.append(item.strip())
+    elif isinstance(raw, str):
+        tokens = [raw.strip()]
+    else:
+        return ""
+
+    groups: dict[str, set[int]] = {}
+
+    for t in tokens:
+        if not t:
+            continue
+        # Extract page number
+        page_match = re.search(r"\(.*?(\d+).*?\)", t)
+        page_num = int(page_match.group(1)) if page_match else None
+
+        # Extract filename (remove all parentheses groups)
+        filename = re.sub(r"\(.*?\)", "", t).strip()
+        if not filename:
+            continue
+
+        if filename not in groups:
+            groups[filename] = set()
+        if page_num is not None:
+            groups[filename].add(page_num)
+
+    lines: List[str] = []
+    for filename, pages in groups.items():
+        sorted_pages = sorted(pages)
+        pages_str = " " + " ".join(f"(page {p})" for p in sorted_pages) if sorted_pages else ""
+        lines.append(f"{filename}{pages_str}")
+
+    return "\n".join(lines)

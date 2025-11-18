@@ -1,7 +1,7 @@
 from fastapi import HTTPException, status
 from typing import List, Optional
 from langchain_core.documents import Document
-
+from psycopg.errors import UniqueViolation
 from API.Repository.i_sql_repository import ISQLRepository
 from API.Service.rag_service import RAGService
 from API.Util.decorators import clean_service
@@ -23,7 +23,7 @@ class DocumentService:
         self.rag_service = rag_service
 
     @clean_service
-    def create_document(self, course_id: str, file_name: str, file_bytes: bytes, mime_type: str):
+    def create_document(self, course_id: str, file_name: str, file_bytes: bytes, mime_type: str) -> dict:
         """
         1️⃣ Determine file type and save original file in SQL.
         2️⃣ Extract and split file text into chunks.
@@ -41,7 +41,13 @@ class DocumentService:
         file_type = file_type["extension"]
 
         # --- Step 2: Save file in SQL ---
-        doc_id = self.sql_repo.create_document(course_id, file_name, file_bytes, file_type_id)
+        try:
+            doc_id = self.sql_repo.create_document(course_id, file_name, file_bytes, file_type_id)
+        except UniqueViolation:
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"A document named '{file_name}' already exists in this course."
+            )
 
         # --- Step 3: Index document in vector store ---
         try:
@@ -72,7 +78,7 @@ class DocumentService:
         offset: int = 0,
         order_by: str = "uploaded_at",
         order_dir: str = "desc"
-    ) -> List[dict]:
+    ) -> dict:
         """Fetch all uploaded documents with pagination and filters."""
 
         file_type_id = None
@@ -98,7 +104,7 @@ class DocumentService:
         )
 
     @clean_service
-    def delete_document(self, course_id: str, doc_id: str):
+    def delete_document(self, course_id: str, doc_id: str) -> dict:
         """
         Remove a document from both SQL and vector stores.
         Keeps systems consistent.
