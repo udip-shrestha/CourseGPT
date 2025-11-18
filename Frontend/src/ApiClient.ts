@@ -6,7 +6,7 @@ export class APIClient {
     private controllers = new Map<string, AbortController>();
 
     constructor(baseUrl: string) {
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl; // normalize trailing slash
+        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
         this.loadToken();
     }
 
@@ -43,16 +43,15 @@ export class APIClient {
         return localStorage.getItem(this.instructorKey);
     }
 
-    // ===== FUNCTION TO LOGOUT ========
+    // ===== LOGOUT =====
     logout(): void {
         this.clearToken();
         localStorage.removeItem(this.instructorKey);
-        // cancel any in-flight requests
         for (const c of this.controllers.values()) c.abort();
         this.controllers.clear();
     }
 
-    // ===== INTERNAL: CONTROLLER MANAGEMENT =====
+    // ===== INTERNAL CONTROLLER MANAGEMENT =====
     private getController(operationId: string): AbortController {
         if (this.controllers.has(operationId)) {
             this.controllers.get(operationId)?.abort();
@@ -62,7 +61,7 @@ export class APIClient {
         return controller;
     }
 
-    // ===== CORE REQUEST WRAPPER =====
+    // ===== CORE REQUEST =====
     async request<T = any>(
         method: string,
         endpoint: string,
@@ -83,13 +82,12 @@ export class APIClient {
         } = {}
     ): Promise<{ data?: T; errorStatus?: number; errorMessage?: string }> {
         const controller = signal
-            ? { signal } // highest priority: external AbortSignal
+            ? { signal }
             : operationId
                 ? this.getController(operationId)
                 : undefined;
 
         try {
-            // --- Build URL + query params ---
             const url = new URL(endpoint, this.baseUrl);
             if (query) {
                 Object.entries(query).forEach(([key, value]) => {
@@ -97,16 +95,13 @@ export class APIClient {
                 });
             }
 
-            // --- Construct headers ---
             const finalHeaders = new Headers(headers || {});
             if (this.token) finalHeaders.set("Authorization", `Bearer ${this.token}`);
             if (isJson && !(body instanceof FormData)) {
                 finalHeaders.set("Content-Type", "application/json");
             }
 
-            // --- Prepare body ---
             let requestBody: BodyInit | undefined;
-
             if (body !== undefined) {
                 if (body instanceof FormData || body instanceof URLSearchParams) {
                     requestBody = body;
@@ -117,7 +112,6 @@ export class APIClient {
                 }
             }
 
-            // --- Perform fetch ---
             const response = await fetch(url, {
                 method,
                 headers: finalHeaders,
@@ -125,11 +119,9 @@ export class APIClient {
                 signal: controller?.signal,
             });
 
-            // --- Handle errors gracefully (no throw) ---
             if (!response.ok) {
                 const contentType = response.headers.get("content-type");
                 let errorMessage = response.statusText;
-
                 if (contentType?.includes("application/json")) {
                     const err = await response.json().catch(() => null);
                     errorMessage = err?.detail || JSON.stringify(err) || errorMessage;
@@ -137,24 +129,14 @@ export class APIClient {
                     const text = await response.text().catch(() => "");
                     if (text) errorMessage = text;
                 }
-
-                return {
-                    errorStatus: response.status,
-                    errorMessage,
-                };
+                return { errorStatus: response.status, errorMessage };
             }
 
-            // --- Parse success ---
-            // Handle 204 No Content (for DELETE requests)
-            if (response.status === 204) {
-                return { data: null as T };
-            }
+            if (response.status === 204) return { data: null as T };
 
             const contentType = response.headers.get("content-type");
             if (contentType?.includes("application/json")) {
-                const data = (await response
-                    .text()
-                    .then((t) => (t ? JSON.parse(t) : {}))) as T;
+                const data = (await response.text().then((t) => (t ? JSON.parse(t) : {}))) as T;
                 return { data };
             }
             if (contentType?.startsWith("text/")) {
@@ -164,17 +146,12 @@ export class APIClient {
 
             return { data: null as T };
         } catch (err: any) {
-            // Ignore intentional aborts
-            if (err.name === "AbortError") {
-                return { errorStatus: 0, errorMessage: undefined };
-            }
-
+            if (err.name === "AbortError") return { errorStatus: 0, errorMessage: undefined };
             return { errorStatus: -1, errorMessage: err.message };
         }
     }
 
-    // ===== AUTH ENDPOINTS =====
-
+    // ===== AUTH =====
     async login(username: string, password: string) {
         const form = new URLSearchParams();
         form.append("grant_type", "password");
@@ -187,32 +164,19 @@ export class APIClient {
         const { data, errorStatus, errorMessage } = await this.request(
             "POST",
             "/auth/login",
-            {
-                body: form,
-                isJson: false,
-                operationId: "auth-login",
-            }
+            { body: form, isJson: false, operationId: "auth-login" }
         );
 
         if (data?.access_token && data?.instructor_id) {
             this.setToken(data.access_token);
             this.setInstructorId(data.instructor_id);
-            return { data, errorStatus, errorMessage }; // success
+            return { data, errorStatus, errorMessage };
         }
-
-        const message =
-            errorMessage ||
-            "Critical Error: Invalid login response structure (missing token or instructor_id).";
+        const message = errorMessage || "Critical Error: Invalid login response structure.";
         return { data, errorStatus: errorStatus ?? -1, errorMessage: message };
     }
 
-    async register(
-        name: string,
-        title: string,
-        university: string,
-        email: string,
-        password: string
-    ) {
+    async register(name: string, title: string, university: string, email: string, password: string) {
         const form = new URLSearchParams();
         form.append("name", name);
         form.append("title", title);
@@ -223,183 +187,75 @@ export class APIClient {
         const { data, errorStatus, errorMessage } = await this.request(
             "POST",
             "/auth/register",
-            {
-                body: form,
-                isJson: false,
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                operationId: "auth-register",
-            }
+            { body: form, isJson: false, headers: { "Content-Type": "application/x-www-form-urlencoded" }, operationId: "auth-register" }
         );
 
         if (data?.access_token && data?.instructor_id) {
             this.setToken(data.access_token);
             this.setInstructorId(data.instructor_id);
-            return { data, errorStatus, errorMessage }; // success
+            return { data, errorStatus, errorMessage };
         }
-
-        const message =
-            errorMessage ||
-            "Critical Error: Invalid login response structure (missing token or instructor_id).";
+        const message = errorMessage || "Critical Error: Invalid register response structure.";
         return { data, errorStatus: errorStatus ?? -1, errorMessage: message };
     }
 
     // ===== DOCUMENT ENDPOINTS =====
-
     async uploadDocument(courseId: string, file: File) {
-        if (!courseId || !file) {
-            return { errorMessage: "Course ID and file are required." };
-        }
-
+        if (!courseId || !file) return { errorMessage: "Course ID and file are required." };
         const formData = new FormData();
         formData.append("file", file);
-
-        return this.request("POST", `/courses/${courseId}/documents`, {
-            body: formData,
-            isJson: false,
-            operationId: `documents-upload-${courseId}`,
-        });
+        return this.request("POST", `/courses/${courseId}/documents`, { body: formData, isJson: false, operationId: `documents-upload-${courseId}` });
     }
 
-    async listDocuments(
-        courseId: string,
-        filters?: {
-            file_type?: string;
-            limit?: number;
-            offset?: number;
-            order_by?: "uploaded_at" | "file_name";
-            order_dir?: "asc" | "desc";
-        }
-    ) {
-        const query = Object.fromEntries(
-            Object.entries(filters || {}).filter(
-                ([, v]) => v !== undefined && v !== null
-            )
-        );
-
-        return this.request("GET", `/courses/${courseId}/documents`, {
-            query,
-            operationId: `documents-list-${courseId}`,
-        });
+    async listDocuments(courseId: string, filters?: { file_type?: string; limit?: number; offset?: number; order_by?: "uploaded_at" | "file_name"; order_dir?: "asc" | "desc" }) {
+        const query = Object.fromEntries(Object.entries(filters || {}).filter(([_, v]) => v !== undefined && v !== null));
+        return this.request("GET", `/courses/${courseId}/documents`, { query, operationId: `documents-list-${courseId}` });
     }
 
     async getDocument(courseId: string, docId: string) {
-        if (!courseId || !docId) {
-            return { errorMessage: "Course ID and Document ID are required." };
-        }
-
-        return this.request("GET", `/courses/${courseId}/documents/${docId}`, {
-            operationId: `documents-get-${docId}`,
-        });
+        if (!courseId || !docId) return { errorMessage: "Course ID and Document ID are required." };
+        return this.request("GET", `/courses/${courseId}/documents/${docId}`, { operationId: `documents-get-${docId}` });
     }
 
     async deleteDocument(courseId: string, docId: string) {
-        if (!courseId || !docId) {
-            return { errorMessage: "Course ID and Document ID are required." };
-        }
-
-        return this.request("DELETE", `/courses/${courseId}/documents/${docId}`, {
-            operationId: `documents-delete-${docId}`,
-        });
+        if (!courseId || !docId) return { errorMessage: "Course ID and Document ID are required." };
+        return this.request("DELETE", `/courses/${courseId}/documents/${docId}`, { operationId: `documents-delete-${docId}` });
     }
 
     // ===== COURSE ENDPOINTS =====
-
-    async listInstructorCourses(
-        instructorId: string,
-        options?: {
-            institution?: string;
-            limit?: number;
-            offset?: number;
-            order_by?: string;
-            order_dir?: "asc" | "desc";
-        }
-    ) {
-        const query = Object.fromEntries(
-            Object.entries(options || {}).filter(([_, v]) => v !== undefined)
-        );
-
-        return this.request("GET", `/instructors/${instructorId}/courses`, {
-            query,
-            operationId: `instructor-courses-${instructorId}`,
-        });
+    async listInstructorCourses(instructorId: string, options?: { institution?: string; limit?: number; offset?: number; order_by?: string; order_dir?: "asc" | "desc" }) {
+        const query = Object.fromEntries(Object.entries(options || {}).filter(([_, v]) => v !== undefined));
+        return this.request("GET", `/instructors/${instructorId}/courses`, { query, operationId: `instructor-courses-${instructorId}` });
     }
 
     async getCourse(courseId: string) {
-        if (!courseId) {
-            return { errorMessage: "Course ID is required." };
-        }
-
-        return this.request("GET", `/courses/${courseId}`, {
-            operationId: `course-get-${courseId}`,
-        });
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.request("GET", `/courses/${courseId}`, { operationId: `course-get-${courseId}` });
     }
 
     async deleteCourse(courseId: string) {
-        if (!courseId) {
-            return { errorMessage: "Course ID is required." };
-        }
-
-        return this.request("DELETE", `/courses/${courseId}`, {
-            operationId: `course-delete-${courseId}`,
-        });
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.request("DELETE", `/courses/${courseId}`, { operationId: `course-delete-${courseId}` });
     }
 
-    async createCourse(
-        instructorId: string,
-        params: {
-            name: string;
-            institution: string;
-            semester_id: number;
-            year: number;
-        }
-    ) {
-        if (!instructorId) {
-            return { errorMessage: "Instructor ID is required." };
-        }
-
-        return this.request("POST", `/instructors/${instructorId}/courses`, {
-            query: params,
-            isJson: false,
-            operationId: `course-create-${instructorId}`,
-        });
+    async createCourse(instructorId: string, params: { name: string; institution: string; semester_id: number; year: number }) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.request("POST", `/instructors/${instructorId}/courses`, { query: params, isJson: false, operationId: `course-create-${instructorId}` });
     }
 
-    // --- ADDED THIS FUNCTION ---
-    async updateCourse(
-        courseId: string,
-        params: {
-            name?: string;
-            institution?: string;
-            semester_id?: number;
-            year?: number;
-        }
-    ) {
-        if (!courseId) {
-            return { errorMessage: "Course ID is required." };
-        }
-
-        // Filter out undefined values so we only send what's changed
-        const query = Object.fromEntries(
-            Object.entries(params || {}).filter(([_, v]) => v !== undefined)
-        );
-
-        return this.request(
-            "PUT", // Use PUT as per your Swagger doc
-            `/courses/${courseId}`,
-            {
-                query: query, // Send data as query parameters
-                isJson: false, // Not a JSON request
-                operationId: `course-update-${courseId}`,
-            }
-        );
+    async updateCourse(courseId: string, params: { name?: string; institution?: string; semester_id?: number; year?: number }) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        const query = Object.fromEntries(Object.entries(params || {}).filter(([_, v]) => v !== undefined));
+        return this.request("PUT", `/courses/${courseId}`, { query, isJson: false, operationId: `course-update-${courseId}` });
     }
-    // --- END OF ADDED FUNCTION ---
+
+    // ===== COURSE QUERY (OLD) =====
+    async queryCourse(courseId: string, question: string) {
+        if (!courseId || !question) return { errorMessage: "Course ID and question are required." };
+        const params = { course_id: courseId, question };
+        return this.request("POST", `/courses/${courseId}/queries`, { query: params, operationId: `course-query-${courseId}` });
+    }
 }
 
-/**
- * Default API client instance.
- * Base URL is resolved from environment, falling back to localhost.
- */
-export const API_BASE_URL =
-    import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:8000";
 export const apiClient = new APIClient(API_BASE_URL);
