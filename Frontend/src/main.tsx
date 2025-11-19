@@ -5,13 +5,9 @@ import { BrowserRouter } from "react-router-dom";
 // Import Tailwind base styles (order matters)
 import './index.css';
 
-// Import your global design system styles (theme, font sizing, etc.)
-// (Assuming you have this file from your branch)
-//import './globals.css';
-
 import App from './App.tsx';
 // --- 1. Import the ApiClientProvider ---
-import { ApiClientProvider } from './ApiClientContext.tsx';
+import { ApiClientProvider } from './clients/ApiClientContext.tsx';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>

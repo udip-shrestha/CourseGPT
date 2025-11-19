@@ -12,7 +12,7 @@ import {
     DialogClose
 } from "./ui/dialog";
 
-import { useApiClient } from "../ApiClientContext";
+import { useApiClient } from "../clients/ApiClientContext";
 
 // Define props for the dialog
 interface CourseRegisterDialogProps {
@@ -36,7 +36,7 @@ const semesterOptions = ["Spring", "Summer", "Fall"];
 
 export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }: CourseRegisterDialogProps) {
     // --- 3. INITIALIZE THE API CLIENT ---
-    const apiClient = useApiClient();
+    const { courseClient } = useApiClient();
 
     const [name, setName] = useState("");
     const [institution, setInstitution] = useState("");
@@ -46,7 +46,7 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // --- 4. REPLACED 'handleSubmit' TO USE 'apiClient' ---
+    // --- 4. REPLACED 'handleSubmit' TO USE 'courseClient' ---
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
@@ -87,7 +87,7 @@ export function CourseRegisterDialog({ instructorId, onCourseCreated, onClose }:
             // This now calls the 'createCourse' function from ApiClient.ts
             // which handles the query params, auth token, and
             // uses the CORRECT URL: /instructors/{id}/courses
-            const { data, errorMessage } = await apiClient.createCourse(instructorId, courseData);
+            const { data, errorMessage } = await courseClient.createCourse(instructorId, courseData);
 
             if (errorMessage) {
                 // If the backend sends an error, display it

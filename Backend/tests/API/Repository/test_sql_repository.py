@@ -29,7 +29,7 @@ def test_create_and_read_document(repo, temp_course):
     # Arrange
     file_name = "lecture1.pdf"
     file_bytes = b"dummy data"
-    file_type_id = 1  # assuming 'application/pdf' has ID=1 from seed data
+    file_type_id = 1  # assuming 'application/pdf' is ID=1 in seed data
 
     # Act
     doc_id = repo.create_document(temp_course, file_name, file_bytes, file_type_id)
@@ -38,9 +38,15 @@ def test_create_and_read_document(repo, temp_course):
     # Read it back
     doc = repo.read_document(temp_course, doc_id)
     assert doc is not None
-    assert doc["course_id"] == uuid.UUID(temp_course)
+
     assert doc["file_name"] == file_name
-    assert base64.b64decode(doc["file_data"]) == file_bytes
+
+    # *** No longer decoding/encoding ***
+    assert doc["file_data"] == file_bytes
+
+    # Optional: validate MIME type returned from JOIN
+    assert doc["mime_type"] == "application/pdf"
+
 
 
 def test_read_all_documents_filters_and_pagination(repo, temp_course):

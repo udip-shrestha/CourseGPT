@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Send, Loader2 } from "lucide-react";
-import { useApiClient } from "../ApiClientContext.tsx";
+import { useApiClient } from "../clients/ApiClientContext";
 
 interface Message {
   id?: string;
@@ -13,7 +13,7 @@ interface Message {
 }
 
 export function CourseChatPage({ course }: { course: any }) {
-  const apiClient = useApiClient();
+  const { queryClient } = useApiClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
   const [loading, setLoading] = useState(false);
@@ -127,7 +127,7 @@ export function CourseChatPage({ course }: { course: any }) {
       setMessages((prev) => [...prev, placeholderMessage]);
 
       // Use ApiClient to query the course
-      const { data, errorMessage } = await apiClient.queryCourse(
+      const { data, errorMessage } = await queryClient.queryCourse(
         course.id,
         userMessage.content
       );

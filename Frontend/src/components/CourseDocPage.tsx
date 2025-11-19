@@ -4,7 +4,7 @@ import { Card, CardContent } from "./ui/card";
 import { Plus, Download, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { FileUpload } from "./FileUpload";
-import { useApiClient } from "../ApiClientContext.tsx";
+import { useApiClient } from "../clients/ApiClientContext.tsx";
 
 
 
@@ -12,7 +12,7 @@ import { useApiClient } from "../ApiClientContext.tsx";
 
 
 export function CourseDocPage({ course }: { course: any }) {
-    const apiClient = useApiClient();
+    const { documentClient } = useApiClient();
 
     const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -35,7 +35,7 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(true);
         const offset = (page - 1) * limit;
 
-        const { data, errorMessage } = await apiClient.listDocuments(course.id, {
+        const { data, errorMessage } = await documentClient.listDocuments(course.id, {
             order_by: "uploaded_at",
             order_dir: "desc",
             limit,
@@ -68,7 +68,7 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(true);
         try {
             for (const file of selectedFiles) {
-                const { errorMessage } = await apiClient.uploadDocument(course.id, file);
+                const { errorMessage } = await documentClient.uploadDocument(course.id, file);
                 if (errorMessage) {
                     setUploadError(`Failed to upload ${file.name}: ${errorMessage}`);
                     setLoading(false);
@@ -91,7 +91,7 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(true);
         setDeleteError(null);
 
-        const { errorMessage } = await apiClient.deleteDocument(course.id, docToDelete);
+        const { errorMessage } = await documentClient.deleteDocument(course.id, docToDelete);
         if (errorMessage) {
             setDeleteError("Failed to delete document. Please try again.");
         } else {
@@ -108,81 +108,34 @@ export function CourseDocPage({ course }: { course: any }) {
         setIsDeleteDialogOpen(true);
     }
 
-    // async function handleDownload(docId: string, fileName: string) {
-    //     const { data, errorMessage } = await apiClient.getDocument(course.id, docId);
-    //     if (errorMessage || !data?.file_data) {
-    //         setError("Failed to download document.");
-    //         return;
-    //     }
-
-    //     const blob = b64toBlob(data.file_data, "application/pdf");
-    //     const url = URL.createObjectURL(blob);
-    //     const a = document.createElement("a");
-    //     a.href = url;
-    //     a.download = fileName;
-    //     a.click();
-    //     URL.revokeObjectURL(url);
-    // }
-
-    // function b64toBlob(base64: string, type = "application/pdf") {
-    //     const binary = atob(base64);
-    //     const array = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    //     return new Blob([array], { type });
-    // }
-
-    async function handleDownload(docId: string, fileName: string) {
-        const url = `${apiClient["baseUrl"]}/courses/${course.id}/documents/${docId}/download`;
-
-        const response = await fetch(url, {
-            headers: {
-                Authorization: `Bearer ${apiClient.getToken()}`,
-            },
-        });
-
-        if (!response.ok) {
-            console.error("Download failed");
+    async function handleDownload(docId: string, fallbackName: string) {
+        const { data, errorMessage } = await documentClient.downloadDocument(course.id, docId);
+    
+        if (errorMessage || !data?.blob) {
+            setError(errorMessage || "Failed to download document.");
             return;
         }
-
-        const blob = await response.blob();
-
+    
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-
-        // Use the REAL filename from DB
-        link.download = fileName;
-
+        link.href = URL.createObjectURL(data.blob);
+        link.download = data.fileName || fallbackName || "download";
+        
         link.click();
-
         URL.revokeObjectURL(link.href);
     }
 
-
     async function handlePreview(docId: string) {
-            const url = `${apiClient["baseUrl"]}/courses/${course.id}/documents/${docId}/preview`;
-
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${apiClient.getToken()}`,
-                },
-            });
-
-            if (!response.ok) {
-                console.error("Preview failed");
-                return;
-            }
-
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl, "_blank");
+        const { data, errorMessage } = await documentClient.previewDocument(course.id, docId);
+    
+        if (errorMessage || !data?.blob) {
+            setError(errorMessage || "Failed to preview document.");
+            return;
         }
-
-
-
-
-
-
-
+    
+        const url = URL.createObjectURL(data.blob);
+        window.open(url, "_blank");
+    }
+    
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const canPrev = page > 1;
     const canNext = page < totalPages;

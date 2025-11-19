@@ -17,7 +17,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./ui/select";
-import { useApiClient } from "../ApiClientContext";
+import { useApiClient } from "../clients/ApiClientContext";
 
 interface Course {
     id: string;
@@ -39,7 +39,7 @@ const SEMESTER_OPTIONS = [
 
 export function SettingsPage() {
     const navigate = useNavigate();
-    const apiClient = useApiClient();
+    const { courseClient } = useApiClient();
     const { courseId } = useParams<{ courseId: string }>();
 
     // Course data state
@@ -56,15 +56,9 @@ export function SettingsPage() {
     const [isSaving, setIsSaving] = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
     const [saveSuccess, setSaveSuccess] = useState(false);
-
-    const isAuthenticated = apiClient.isAuthenticated?.() ?? false;
-
+    
     // Fetch course data on mount
     useEffect(() => {
-        if (!isAuthenticated) {
-            navigate("/login", { replace: true });
-            return;
-        }
 
         if (!courseId) {
             setLoadError("Course ID is required.");
@@ -76,7 +70,7 @@ export function SettingsPage() {
             setIsLoading(true);
             setLoadError(null);
             try {
-                const { data, errorMessage } = await apiClient.getCourse(
+                const { data, errorMessage } = await courseClient.getCourse(
                     courseId,
                 );
                 const courseData = data as Course | undefined;
@@ -103,7 +97,7 @@ export function SettingsPage() {
         };
 
         fetchCourse();
-    }, [isAuthenticated, courseId, navigate, apiClient]);
+    }, [courseId, navigate, courseClient]);
 
     const handleInputChange = (
         field: keyof typeof formData,
@@ -122,7 +116,7 @@ export function SettingsPage() {
         setSaveSuccess(false);
 
         try {
-            const { errorMessage } = await apiClient.updateCourse(courseId, {
+            const { errorMessage } = await courseClient.updateCourse(courseId, {
                 name: formData.name,
                 institution: formData.institution,
                 semester_id: formData.semester_id,
@@ -136,7 +130,7 @@ export function SettingsPage() {
 
             setSaveSuccess(true);
             // Refresh course data to get updated values
-            const { data } = await apiClient.getCourse(courseId);
+            const { data } = await courseClient.getCourse(courseId);
             const updatedData = data as Course | undefined;
             if (updatedData) {
                 setFormData({
