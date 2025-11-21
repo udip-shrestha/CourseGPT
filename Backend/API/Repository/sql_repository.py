@@ -69,27 +69,15 @@ class SQLRepository(ISQLRepository):
     def read_document(self, course_id: str, doc_id: str) -> Optional[dict]:
         sql = """
             SELECT 
-                d.id,
-                d.course_id,
                 d.file_name,
                 d.file_data,
-                ft.mime_type,
-                ft.extension,
-                d.uploaded_at
+                ft.mime_type
             FROM documents d
             LEFT JOIN file_types ft ON d.file_type_id = ft.id
             WHERE d.id = %s AND d.course_id = %s;
         """
 
-        row = self.cm.select_one(sql, (doc_id, course_id))
-
-        if not row:
-            return None
-
-        if row.get("file_data") is not None:
-            row["file_data"] = base64.b64encode(row["file_data"]).decode("utf-8")
-
-        return row
+        return self.cm.select_one(sql, (doc_id, course_id))
 
     def delete_document(self, course_id: str, doc_id: str) -> None:
         sql = "DELETE FROM documents WHERE id = %s AND course_id = %s;"
