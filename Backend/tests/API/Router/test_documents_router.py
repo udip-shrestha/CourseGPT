@@ -59,36 +59,6 @@ def test_upload_document_invalid_file(client: TestClient, mock_document_service:
     mock_document_service.create_document.assert_not_called()
 
 
-def test_get_document_by_id_success(client: TestClient, mock_document_service: DocumentService):
-    """Should retrieve a document by its ID."""
-    mock_document_service.read_document.return_value = {
-        "id": "doc-123",
-        "file_name": "Backend_Knowledge.pdf",
-        "mime_type": "application/pdf"
-    }
-
-    response = client.get("/courses/course-1/documents/doc-123")
-
-    assert response.status_code == status.HTTP_200_OK
-    assert response.json()["id"] == "doc-123"
-    mock_document_service.read_document.assert_called_once_with("course-1", "doc-123")
-
-
-def test_get_document_by_id_not_found(client: TestClient, mock_document_service: DocumentService):
-    """Should return 404 if document not found."""
-    from fastapi import HTTPException, status
-
-    mock_document_service.read_document.side_effect = HTTPException(
-        status_code=status.HTTP_404_NOT_FOUND,
-        detail="Document with id=invalid-id not found."
-    )
-
-    response = client.get("/courses/course-1/documents/invalid-id")
-
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert "not found" in response.json()["detail"]
-
-
 def test_get_all_documents_success(client: TestClient, mock_document_service: DocumentService):
     """Should return a list of documents for a course."""
     mock_document_service.read_all_documents.return_value = [
@@ -140,3 +110,67 @@ def test_delete_document_success(client: TestClient, mock_document_service: Docu
     assert response.content == b""
     mock_document_service.delete_document.assert_called_once_with("course-1", "doc-123")
 
+
+def test_download_document_success(client, mock_document_service):
+    mock_document_service.read_document.return_value = {
+        "file_name": "Backend_Knowledge.pdf",
+        "file_data": b"hello world",
+        "mime_type": "application/pdf",
+    }
+
+    response = client.get("/courses/course-1/documents/doc-123/download")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content == b"hello world"
+    assert response.headers["content-disposition"].startswith("attachment; filename=")
+
+    mock_document_service.read_document.assert_called_once_with("course-1", "doc-123")
+
+
+def test_download_document_not_found(client, mock_document_service):
+    from fastapi import HTTPException
+
+    mock_document_service.read_document.side_effect = HTTPException(
+        status_code=404,
+        detail="Document not found"
+    )
+
+    response = client.get("/courses/course-1/documents/invalid/download")
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"]
+
+
+def test_preview_document_success(client, mock_document_service):
+    mock_document_service.read_document.return_value = {
+        "file_name": "Backend_Knowledge.pdf",
+        "file_data": b"hello world",
+        "mime_type": "application/pdf",
+    }
+
+    response = client.get("/courses/course-1/documents/doc-123/preview")
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.content == b"hello world"
+    assert response.headers["content-disposition"].startswith("inline; filename=")
+
+    mock_document_service.read_document.assert_called_once_with("course-1", "doc-123")
+
+def test_preview_document_not_found(client, mock_document_service):
+    """Should return 404 when trying to preview a non-existent document."""
+    from fastapi import HTTPException
+
+    mock_document_service.read_document.side_effect = HTTPException(
+        status_code=404,
+        detail="Document not found"
+    )
+
+    response = client.get("/courses/course-1/documents/invalid-id/preview")
+
+    assert response.status_code == 404
+    assert "not found" in response.json()["detail"].lower()
+
+    mock_document_service.read_document.assert_called_once_with(
+        "course-1",
+        "invalid-id"
+    )

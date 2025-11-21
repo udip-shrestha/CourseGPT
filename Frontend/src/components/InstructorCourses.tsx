@@ -8,7 +8,7 @@ import { CourseRegisterDialog } from "./CourseRegisterDialog";
 import { Dialog, DialogTrigger } from "./ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
 
-import { useApiClient } from "../ApiClientContext";
+import { useApiClient } from "../clients/ApiClientContext";
 
 export interface CourseSummary {
     id: string;
@@ -37,8 +37,8 @@ export function InstructorCourses() {
     console.log("InstructorCourses mounted with instructorId:", instructorId);
 
     const navigate = useNavigate();
-    // --- 2. INITIALIZE the apiClient ---
-    const apiClient = useApiClient();
+    // --- 2. INITIALIZE the courseClient ---
+    const { courseClient } = useApiClient();
 
     const [searchTerm, setSearchTerm] = useState("");
     const [courses, setCourses] = useState<CourseSummary[]>([]);
@@ -64,7 +64,7 @@ export function InstructorCourses() {
         setError(null);
 
 
-        const { data, errorMessage } = await apiClient.listInstructorCourses(instructorId, {
+        const { data, errorMessage } = await courseClient.listInstructorCourses(instructorId, {
             order_by: "created_at",
             order_dir: "desc"
         });
@@ -87,7 +87,7 @@ export function InstructorCourses() {
         console.log("Fetch finished, setting loading to false.");
         setIsLoading(false);
 
-    }, [instructorId, apiClient]); // Added apiClient dependency
+    }, [instructorId, courseClient]); // Added courseClient dependency
 
     useEffect(() => {
         fetchCourses();
@@ -99,8 +99,8 @@ export function InstructorCourses() {
         console.log(`Attempting to delete course ${courseId}`);
         setDeleteError(null);
         try {
-            // Use the apiClient to delete
-            const { errorMessage } = await apiClient.deleteCourse(courseId);
+            // Use the courseClient to delete
+            const { errorMessage } = await courseClient.deleteCourse(courseId);
 
             if (errorMessage) {
                 throw new Error(errorMessage);
