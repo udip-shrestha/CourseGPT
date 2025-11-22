@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebSocket Pub/Sub Playground</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+        }
+
+        h1 {
+            margin-bottom: 30px;
+        }
+
+        h2 {
+            margin-top: 40px;
+            margin-bottom: 10px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+        }
+
+        /* Row: input + subscribe + disconnect (all full width) */
+        .row {
+            display: grid;
+            grid-template-columns: 1fr 160px 160px;
+            gap: 10px;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        input, textarea, button {
+            font-size: 16px;
+            padding: 8px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        button {
+            cursor: pointer;
+        }
+
+        #messages {
+            border: 1px solid #ccc;
+            padding: 10px;
+            height: 300px;
+            width: 100%;
+            background: #fafafa;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        #messages li {
+            font-family: monospace;
+            padding: 6px;
+            border-bottom: 1px solid #eee;
+            white-space: pre-wrap;
+        }
+
+        textarea {
+            width: 100%;
+            height: 120px;
+            margin-top: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>WebSocket Pub/Sub Playground</h1>
+
+    <!-- ===================================================== -->
+    <!-- SUBSCRIBE SECTION -->
+    <!-- ===================================================== -->
+    <div class="section">
+        <h2>Subscribe to Topic</h2>
+
+        <div class="row">
+            <input id="wsUrl" placeholder="Topic to subscribe to (eg ws://localhost:8000/courses/123/queries)" />
+            <button onclick="subscribeWS()">Subscribe</button>
+            <button onclick="unsubscribeWS()">Unsubscribe</button>
+        </div>
+
+        <h3>Incoming Messages</h3>
+        <ul id="messages"></ul>
+    </div>
+
+    <!-- ===================================================== -->
+    <!-- PUBLISH SECTION -->
+    <!-- ===================================================== -->
+    <hr>
+    <div class="section">
+        <h2>Publish to Topic</h2>
+
+        <label>Message (JSON or text):</label>
+        <textarea id="publishText">{ "message": "Hello world!" }</textarea>
+
+        <!-- Row: Topic + Send -->
+        <div class="row" style="grid-template-columns: 2fr 1fr;">
+            <input id="publishTopic" placeholder="Topic to publish to (eg ws://localhost:8000/courses/123/queries)" />
+            <button onclick="publishWS()" style="margin-top: 0;">Publish Message</button>
+        </div>
+    </div>
+
+
+    <script>
+        let ws = null;
+
+        function subscribeWS() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                alert("Already connected.");
+                return;
+            }
+
+            const url = document.getElementById("wsUrl").value.trim();
+            if (!url) {
+                alert("Enter a WebSocket URL.");
+                return;
+            }
+
+            ws = new WebSocket(url);
+
+            ws.onopen = () => console.log("Connected:", url);
+
+            ws.onmessage = (event) => {
+                const list = document.getElementById("messages");
+                const li = document.createElement("li");
+
+                try {
+                    const json = JSON.parse(event.data);
+                    li.textContent = JSON.stringify(json, null, 2);
+                } catch {
+                    li.textContent = event.data;
+                }
+
+                list.appendChild(li);
+                list.scrollTop = list.scrollHeight;
+            };
+
+            ws.onerror = err => console.error("WS error:", err);
+            ws.onclose = () => console.log("WebSocket closed.");
+        }
+
+        function unsubscribeWS() {
+            if (ws) {
+                ws.close();
+                ws = null;
+            }
+        }
+
+        function publishWS() {
+            const topicUrl = document.getElementById("publishTopic").value.trim();
+            if (!topicUrl) {
+                alert("Enter a WebSocket topic URL to publish to.");
+                return;
+            }
+
+            const msgText = document.getElementById("publishText").value.trim();
+            if (!msgText) {
+                alert("Message cannot be empty.");
+                return;
+            }
+
+            let payload = null;
+
+            // ---- JSON Validation ----
+            try {
+                const parsed = JSON.parse(msgText);   // throws if invalid
+                payload = JSON.stringify(parsed);     // normalized JSON
+            } catch (err) {
+                alert("Message must be valid JSON.\n\nError: " + err.message);
+                return;
+            }
+
+            // ---- Open temporary WebSocket for publishing ----
+            const pubSocket = new WebSocket(topicUrl);
+
+            pubSocket.onopen = () => {
+                console.log("Publisher WS connected. Sending JSON message...");
+                pubSocket.send(payload);
+                pubSocket.close();
+            };
+
+            pubSocket.onerror = err => {
+                console.error("Publish WS error:", err);
+                alert("Failed to publish message. See console for details.");
+            };
+
+            pubSocket.onclose = () => console.log("Publisher WS closed after sending.");
+        }
+
+    </script>
+
+</body>
+</html>

@@ -26,6 +26,7 @@ from API.Util.loaders import Loader
 from API.Util.rag_strategy import STRATEGY_CLASS_REGISTRY, IRAGStrategy, RAGStrategyFactory
 from API.Util.splitters import Splitter
 from API.Util.auth import decrypt_access_token
+from API.Util.web_socket_manager import WebSocketManager
 
 
 load_dotenv()
@@ -151,6 +152,23 @@ def authorize_course(
 
 
 # ============================================================
+# 🔌 WEBSOCKET MANAGER SETUP
+# ============================================================
+
+
+@lru_cache()
+def get_web_socket_manager() -> WebSocketManager:
+    """
+    Provide a singleton WebSocketManager instance.
+
+    - Manages WebSocket connections grouped by topic (URL path)
+    - Subscribes/unsubscribes clients automatically
+    - Allows broadcast of real-time updates to subscribed clients
+    """
+    return WebSocketManager()
+
+
+# ============================================================
 # 🧠 LLM  SETUP
 # ============================================================
 
@@ -230,6 +248,7 @@ def get_auth_service(
     """Provide an AuthService using the SQL repository."""
     return AuthService(sql_repo)
 
+
 def get_course_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
     vector_repo: IVectorRepository = Depends(get_vector_repository),
@@ -237,11 +256,13 @@ def get_course_service(
     """Provide a CourseService using the SQL repository."""
     return CourseService(sql_repo, vector_repo)
 
+
 def get_instructor_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
 ) -> InstructorService:
     """Provide an InstructorService using the SQL repository."""
     return InstructorService(sql_repo)
+
 
 def get_student_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
@@ -275,3 +296,4 @@ def get_query_service(
 ) -> QueryService:
     """Provide a QueryService using the SQL repository and RAGService."""
     return QueryService(sql_repo, rag_service)
+
