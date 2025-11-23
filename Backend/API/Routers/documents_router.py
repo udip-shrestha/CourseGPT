@@ -3,10 +3,10 @@ from typing import Optional
 
 from fastapi import APIRouter, UploadFile, File, Query, Depends, status, Path
 from fastapi.responses import StreamingResponse
-from langchain_core.documents import Document
 
 from API.Service.document_service import DocumentService
 from API.dependencies import authorize_course, get_document_service
+from API.Util.files import convert_to_html_bytes
 
 
 router = APIRouter(tags=["Documents"])
@@ -206,12 +206,11 @@ def preview_document(
     Streams the binary file associated with a document so it can be displayed
     by the browser inline (for example, PDFs or images).
     """
-    # Fetch raw file data + metadata
-    doc = service.read_document(course_id, doc_id)
+    file_name, file_bytes, mime_type = service.preview_document(course_id, doc_id)
     return StreamingResponse(
-        BytesIO(doc["file_data"]),
-        media_type=doc["mime_type"],
+        BytesIO(file_bytes),
+        media_type=mime_type,
         headers={
-            "Content-Disposition": f'inline; filename="{doc["file_name"]}"; filename*=UTF-8\'\'{doc["file_name"]}'
+            "Content-Disposition": f'inline; filename="{file_name}"; filename*=UTF-8\'\'{file_name}'
         },
     )

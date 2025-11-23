@@ -192,9 +192,17 @@ export function CourseDocPage({ course }: { course: any }) {
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                                                <span className="text-xs font-medium">
-                                                    {(doc.file_type || "FILE").toUpperCase()}
-                                                </span>
+                                            <span className="text-xs font-medium">
+                                                {(() => {
+                                                    if (!doc.file_name) return "TEXT";
+
+                                                    const parts = doc.file_name.split(".");
+                                                    if (parts.length < 2) return "TEXT";
+
+                                                    const ext = parts.pop()?.trim();
+                                                    return ext ? ext.toUpperCase() : "TEXT";
+                                                })()}
+                                            </span>
                                             </div>
                                             <div>
                                                 <p className="font-medium">{doc.file_name}</p>
@@ -205,13 +213,15 @@ export function CourseDocPage({ course }: { course: any }) {
                                         </div>
                                         <div className="flex gap-2">
                                             {/* Preview Button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handlePreview(doc.id)}
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
+                                            {doc.can_preview && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => handlePreview(doc.id)}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                            )}
 
                                             {/* Download Button */}
                                             <Button

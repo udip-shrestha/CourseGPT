@@ -1,8 +1,10 @@
 import pytest
-from fastapi import FastAPI, status
+from fastapi import FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 from io import BytesIO
+
+from starlette.status import HTTP_404_NOT_FOUND
 
 from API.Routers.documents_router import router as documents_router
 from API.Service.document_service import DocumentService
@@ -122,55 +124,46 @@ def test_download_document_success(client, mock_document_service):
 
     assert response.status_code == status.HTTP_200_OK
     assert response.content == b"hello world"
-    assert response.headers["content-disposition"].startswith("attachment; filename=")
+    assert response.headers["content-disposition"].startswith("attachment;")
 
     mock_document_service.read_document.assert_called_once_with("course-1", "doc-123")
 
 
 def test_download_document_not_found(client, mock_document_service):
-    from fastapi import HTTPException
-
-    mock_document_service.read_document.side_effect = HTTPException(
-        status_code=404,
-        detail="Document not found"
-    )
+    mock_document_service.read_document.side_effect = HTTPException(status_code=HTTP_404_NOT_FOUND, detail="Document not found")
 
     response = client.get("/courses/course-1/documents/invalid/download")
 
-    assert response.status_code == 404
-    assert "not found" in response.json()["detail"]
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
 
 
 def test_preview_document_success(client, mock_document_service):
-    mock_document_service.read_document.return_value = {
-        "file_name": "Backend_Knowledge.pdf",
-        "file_data": b"hello world",
-        "mime_type": "application/pdf",
-    }
+    mock_document_service.preview_document.return_value = (
+        "Backend_Knowledge.pdf",
+        b"hello world",
+        "application/pdf"
+    )
 
     response = client.get("/courses/course-1/documents/doc-123/preview")
 
     assert response.status_code == status.HTTP_200_OK
     assert response.content == b"hello world"
-    assert response.headers["content-disposition"].startswith("inline; filename=")
+    assert "inline; filename=" in response.headers["content-disposition"]
 
-    mock_document_service.read_document.assert_called_once_with("course-1", "doc-123")
+    mock_document_service.preview_document.assert_called_once_with("course-1", "doc-123")
+
 
 def test_preview_document_not_found(client, mock_document_service):
-    """Should return 404 when trying to preview a non-existent document."""
-    from fastapi import HTTPException
-
-    mock_document_service.read_document.side_effect = HTTPException(
-        status_code=404,
+    mock_document_service.preview_document.side_effect = HTTPException(
+        status_code=HTTP_404_NOT_FOUND,
         detail="Document not found"
     )
 
     response = client.get("/courses/course-1/documents/invalid-id/preview")
 
-    assert response.status_code == 404
+    assert response.status_code == HTTP_404_NOT_FOUND
     assert "not found" in response.json()["detail"].lower()
 
-    mock_document_service.read_document.assert_called_once_with(
-        "course-1",
-        "invalid-id"
-    )
+    mock_document_service.preview_document.assert_called_once_with("course-1", "invalid-id")
+

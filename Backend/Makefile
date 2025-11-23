@@ -102,28 +102,21 @@ else
 endif
 endif
 
-
 # -------------------------------------------
 # Ensure venv exists (cross-platform)
 # -------------------------------------------
+ifeq ($(wildcard $(ACTIVATE_PATH)),)
+ensure-activate:
 ifeq ($(OS),Windows_NT)
-$(ACTIVATE_PATH):
-	@echo Checking virtual environment...
-	@if not exist "$(VENV_DIR)" ( \
-		echo Virtual environment not found. Creating and installing dependencies... && \
-		$(MAKE) install \
-	) else ( \
-		echo Virtual environment exists. \
-	)
+	@echo "Virtual environment not found. Creating and installing dependencies..."
+	@$(MAKE) install
 else
-$(ACTIVATE_PATH):
-	@echo "Checking virtual environment..."
-	@if [ ! -d "$(VENV_DIR)" ]; then \
-		echo "Virtual environment not found. Creating and installing dependencies..."; \
-		$(MAKE) install; \
-	else \
-		echo "Virtual environment exists."; \
-	fi
+	@echo "Virtual environment not found. Creating and installing dependencies..."
+	@$(MAKE) install
+endif
+else
+ensure-activate:
+	@echo "Found virtual environment."
 endif
 
 
@@ -140,14 +133,14 @@ endif
 # Run FastAPI backend
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
-api-run: $(ACTIVATE_PATH)
+api-run: ensure-activate
 	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
 	@cmd /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
 		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR) \
 	)"
 else
-api-run: $(ACTIVATE_PATH)
+api-run: ensure-activate
 	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
 	@bash -c "source $(VENV_DIR)/bin/activate && \
 		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR)"
@@ -157,7 +150,7 @@ endif
 # Run API Tests
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
-api-test: $(ACTIVATE_PATH)
+api-test: ensure-activate
 	@echo "Running API tests..."
 	@cmd /C "( \
 		set PYTHONPATH=. && \
@@ -165,7 +158,7 @@ api-test: $(ACTIVATE_PATH)
 		pytest tests\\API -v --override-ini="addopts=" \
 	)"
 else
-api-test: $(ACTIVATE_PATH)
+api-test: ensure-activate
 	@echo "Running API tests..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
@@ -176,7 +169,7 @@ endif
 # Run API Tests with Coverage
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
-api-coverage: $(ACTIVATE_PATH)
+api-coverage: ensure-activate
 	@echo "Running API tests with coverage..."
 	@cmd /C "( \
 		set PYTHONPATH=. && \
@@ -184,7 +177,7 @@ api-coverage: $(ACTIVATE_PATH)
 		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests\\API -v \
 	)"
 else
-api-coverage: $(ACTIVATE_PATH)
+api-coverage: ensure-activate
 	@echo "Running API tests with coverage..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
