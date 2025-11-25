@@ -13,4 +13,4 @@ def websocket_test_page(request: Request):
     """
     Serves the websocket.html test UI.
     """
-    return templates.TemplateResponse("websocket.html", {"request": request})
+    return templates.TemplateResponse(request, "websocket.html")

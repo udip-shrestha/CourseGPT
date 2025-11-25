@@ -1,9 +1,10 @@
-from typing import Protocol, List, Dict, Type, Optional
+from typing import Protocol, List, Dict, Type, Optional, runtime_checkable
 from langchain_core.documents import Document
 from langchain_community.document_loaders import UnstructuredPDFLoader, TextLoader, UnstructuredExcelLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader, UnstructuredPowerPointLoader, UnstructuredWordDocumentLoader, UnstructuredXMLLoader, UnstructuredCSVLoader
 from API.Util.files import create_temp_file_from_bytes
 
 
+@runtime_checkable
 class ILoader(Protocol):
     """Extracts LangChain Documents from raw bytes."""
     def load(self, file_name: str, file_bytes: bytes) -> List[Document]:

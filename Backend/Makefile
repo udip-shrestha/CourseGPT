@@ -155,14 +155,17 @@ api-test: ensure-activate
 	@cmd /C "( \
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
-		pytest tests\\API -v --override-ini="addopts=" \
+		pytest tests\\API -v  \
+			--override-ini=asyncio_default_fixture_loop_scope=function \
+			--override-ini=asyncio_mode=auto \
+			--override-ini=addopts= \
 	)"
 else
 api-test: ensure-activate
 	@echo "Running API tests..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
-		pytest tests/API -v --override-ini="addopts=" 
+		pytest tests/API -v --override-ini=asyncio_default_fixture_loop_scope=function --override-ini=asyncio_mode=auto --override-ini=addopts= "
 endif
 
 # -------------------------------------------
@@ -174,14 +177,17 @@ api-coverage: ensure-activate
 	@cmd /C "( \
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
-		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests\\API -v \
+		pytest tests\\API -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html \
+			--override-ini=asyncio_default_fixture_loop_scope=function \
+			--override-ini=asyncio_mode=auto \
+			--override-ini=addopts= \
 	)"
 else
 api-coverage: ensure-activate
 	@echo "Running API tests with coverage..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
-		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests/API -v"
+		pytest tests/API -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html --override-ini=asyncio_default_fixture_loop_scope=function --override-ini=asyncio_mode=auto --override-ini=addopts= "
 endif
 
 
