@@ -1,6 +1,5 @@
 from fastapi import HTTPException, status
-from typing import List, Optional
-from langchain_core.documents import Document
+from typing import Optional, Tuple
 from psycopg.errors import UniqueViolation
 from API.Repository.i_sql_repository import ISQLRepository
 from API.Service.rag_service import RAGService
@@ -37,21 +36,16 @@ class DocumentService:
         if not file_type:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported MIME type: {mime_type}")
 
-        file_type_id = file_type["id"]
-        file_type = file_type["extension"]
-
         # --- Step 2: Save file in SQL ---
         try:
+            file_type_id = file_type["id"]
             doc_id = self.sql_repo.create_document(course_id, file_name, file_bytes, file_type_id)
         except UniqueViolation:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail=f"A document named '{file_name}' already exists in this course."
-            )
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"A document named '{file_name}' already exists in this course.")
 
         # --- Step 3: Index document in vector store ---
         try:
-            self.rag_service.create_index(course_id, doc_id, "RecursiveCharacterTextSplitterType", file_name, file_type, file_bytes)
+            self.rag_service.create_index(course_id, doc_id, file_name, mime_type, file_bytes)
         except Exception as e:
             # Rollback SQL if vector indexing fails
             self.sql_repo.delete_document(course_id, doc_id)
@@ -113,3 +107,21 @@ class DocumentService:
         self.rag_service.delete_index(course_id, doc_id)
 
         return {"status": "deleted", "course_id": course_id, "doc_id": doc_id}
+
+    @clean_service
+    def download_document(self, course_id: str, doc_id: str) -> tuple:
+        """Returns raw file bytes + metadata. Used by router /download endpoint."""
+        doc = self.sql_repo.read_document(course_id, doc_id)
+
+        return doc["file_name"], doc["file_data"], doc["mime_type"],
+
+    @clean_service
+    def preview_document(self, course_id: str, doc_id: str) -> tuple:
+        """Returns raw file bytes + metadata. Used by router /preview endpoint."""
+        doc = self.read_document(course_id, doc_id)
+
+        if not doc["can_preview"]:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Preview not supported for file type: {doc['mime_type']}")
+
+        return doc["file_name"], doc["file_data"], doc["mime_type"] if doc["native_preview"] else "text/plain"
+

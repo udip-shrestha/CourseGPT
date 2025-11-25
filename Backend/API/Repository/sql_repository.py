@@ -1,9 +1,6 @@
-import base64
 from typing import Optional, List, Dict, Any
-from unittest import result
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
 from API.Repository.i_sql_repository import ISQLRepository
-from fastapi import HTTPException, status
 
 
 class SQLRepository(ISQLRepository):
@@ -71,7 +68,9 @@ class SQLRepository(ISQLRepository):
             SELECT 
                 d.file_name,
                 d.file_data,
-                ft.mime_type
+                ft.mime_type,
+                ft.can_preview,
+                ft.native_preview
             FROM documents d
             LEFT JOIN file_types ft ON d.file_type_id = ft.id
             WHERE d.id = %s AND d.course_id = %s;
@@ -87,6 +86,7 @@ class SQLRepository(ISQLRepository):
         self,
         course_id: str,
         file_type_id: Optional[str] = None,
+        file_name: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "uploaded_at",
@@ -104,27 +104,31 @@ class SQLRepository(ISQLRepository):
         params = [course_id]
 
         if file_type_id:
-            filters.append("file_type_id = %s")
+            filters.append("d.file_type_id = %s")
             params.append(file_type_id)
+        if file_name:
+            filters.append("d.file_name ILIKE %s")
+            params.append(f"%{file_name}%")
 
         where_clause = f"WHERE {' AND '.join(filters)}"
 
-        # --- Count total matching records (before pagination)
-        count_sql = f"SELECT COUNT(*) AS total FROM documents {where_clause};"
+        # --- Count total matching records
+        count_sql = f"SELECT COUNT(*) AS total FROM documents d {where_clause};"
         total_row = self.cm.select_one(count_sql, tuple(params))
         total_count = total_row["total"] if total_row else 0
 
         # --- Fetch paginated results
         data_sql = f"""
             SELECT 
-                d.id, 
-                d.course_id, 
-                d.file_name, 
+                d.id,
+                d.course_id,
+                d.file_name,
                 d.uploaded_at,
-                ft.extension AS file_type
+                d.file_type_id,
+                ft.can_preview
             FROM documents d
             LEFT JOIN file_types ft ON d.file_type_id = ft.id
-                {where_clause}
+            {where_clause}
             ORDER BY {order_by} {order_dir}
             LIMIT %s OFFSET %s;
         """
@@ -141,13 +145,6 @@ class SQLRepository(ISQLRepository):
     # INSTRUCTORS
     # ======================================================
     def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
-        existing = self.read_instructor_by_email(email)
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Instructor with email={email} already exists."
-            )
-
         sql = """
             INSERT INTO instructors (name, title, university, email, password, role_id)
             VALUES (
@@ -214,7 +211,7 @@ class SQLRepository(ISQLRepository):
             filters.append("i.email ILIKE %s")
             params.append(f"%{email}%")
         if role:
-            filters.append("r.role_name = %s")
+            filters.append("i.role_id = %s")
             params.append(role)
 
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
@@ -232,7 +229,8 @@ class SQLRepository(ISQLRepository):
         # --- Data query ---
         data_sql = f"""
             SELECT i.id, i.name, i.title, i.university, i.email,
-                r.role_name AS role, i.created_at, i.updated_at
+                i.role_id, r.role_name AS role, 
+                i.created_at, i.updated_at
             FROM instructors i
             LEFT JOIN instructor_roles r ON i.role_id = r.id
             {where_clause}
@@ -257,13 +255,6 @@ class SQLRepository(ISQLRepository):
         Update instructor fields dynamically based on provided key-value pairs.
         Returns the updated instructor record.
         """
-
-        if not updates:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No valid fields provided for update."
-            )
-
         # Build dynamic SET clause
         set_clause = ", ".join([f"{key} = %s" for key in updates.keys()])
         values = list(updates.values()) + [instructor_id]
@@ -272,35 +263,14 @@ class SQLRepository(ISQLRepository):
             UPDATE instructors
             SET {set_clause}, updated_at = NOW()
             WHERE id = %s
-            RETURNING id, name, title, university, email, 
-                        (SELECT role_name FROM instructor_roles WHERE id = role_id) AS role,
-                        created_at, updated_at;
+            RETURNING *;
         """
-
-        updated = self.cm.select_one(sql, tuple(values))
-        if not updated:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Instructor with id={instructor_id} not found."
-            )
-
-        return updated
+        return self.cm.select_one(sql, tuple(values))
 
     # ======================================================
     # COURSES
     # ======================================================
     def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int, rag_strategy_id: Optional[int] = None) -> str:
-        existing_sql = """
-            SELECT id FROM courses
-            WHERE name = %s AND institution = %s AND year = %s AND semester_id = %s;
-        """
-        existing = self.cm.select_one(existing_sql, (name, institution, year, semester_id))
-        if existing:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Course '{name}' at '{institution}' for {year} semester {semester_id} already exists."
-            )
-
         columns = ["instructor_id", "name", "institution", "semester_id", "year"]
         values = [instructor_id, name, institution, semester_id, year]
 
@@ -316,6 +286,14 @@ class SQLRepository(ISQLRepository):
             RETURNING id;
         """
         return self.cm.insert_one(sql, tuple(values))
+
+    def read_course_by_name(self, name: str, instructor_id: str) -> dict | None:
+        sql = """
+            SELECT id, name, institution, year, semester_id, instructor_id, rag_strategy_id
+            FROM courses
+            WHERE name = %s AND instructor_id = %s;
+        """
+        return self.cm.select_one(sql, (name, instructor_id))
 
     def read_course(self, course_id: str) -> Optional[dict]:
         sql = """
@@ -336,6 +314,9 @@ class SQLRepository(ISQLRepository):
         self,
         instructor_id: Optional[str] = None,
         institution: Optional[str] = None,
+        name: Optional[str] = None,
+        semester_id: Optional[int] = None,
+        rag_strategy_id: Optional[int] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
@@ -355,28 +336,39 @@ class SQLRepository(ISQLRepository):
         params = []
 
         if instructor_id:
-            filters.append("instructor_id = %s")
+            filters.append("c.instructor_id = %s")
             params.append(instructor_id)
         if institution:
-            filters.append("institution ILIKE %s")
+            filters.append("c.institution ILIKE %s")
             params.append(f"%{institution}%")
+        if name:
+            filters.append("c.name ILIKE %s")
+            params.append(f"%{name}%")
+        if semester_id:
+            filters.append("c.semester_id = %s")
+            params.append(semester_id)
+        if rag_strategy_id:
+            filters.append("c.rag_strategy_id = %s")
+            params.append(rag_strategy_id)
 
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
 
         # --- Count total matching records ---
-        count_sql = f"SELECT COUNT(*) AS total FROM courses {where_clause};"
+        count_sql = f"SELECT COUNT(*) AS total FROM courses c {where_clause};"
         total_row = self.cm.select_one(count_sql, tuple(params))
         total_count = total_row["total"] if total_row else 0
 
         # --- Fetch paginated results ---
         data_sql = f"""
             SELECT 
-                c.id, c.instructor_id, c.name, c.institution, 
-                c.semester_id, c.year, c.created_at, i.name AS instructor_name,
-                rs.id AS rag_strategy_id, rs.type_name AS rag_strategy_name
+                c.id, c.name, c.year, c.created_at, c.institution, 
+                c.instructor_id, i.name AS instructor_name,
+                c.rag_strategy_id, rs.type_name AS rag_strategy_name,
+                c.semester_id, s.name AS semester_name
             FROM courses c
             LEFT JOIN instructors i ON c.instructor_id = i.id
             LEFT JOIN rag_strategies rs ON c.rag_strategy_id = rs.id
+            LEFT JOIN semesters s ON c.semester_id = s.id
             {where_clause}
             ORDER BY c.{order_by} {order_dir}
             LIMIT %s OFFSET %s;
@@ -405,37 +397,18 @@ class SQLRepository(ISQLRepository):
         """
         return self.cm.select_one(sql, (course_name,))
     
-
     def update_course(self, course_id: str, updates: dict) -> dict:
-        """
-        Dynamically update course fields and return the updated record.
-        """
-        if not updates:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No valid fields provided for update."
-            )
-
-        # Build dynamic SQL set clause
         set_clause = ", ".join([f"{key} = %s" for key in updates.keys()])
         values = list(updates.values()) + [course_id]
 
         sql = f"""
             UPDATE courses
-            SET {set_clause}
+            SET {set_clause}, updated_at = NOW()
             WHERE id = %s
-            RETURNING id, name, institution, semester_id, year,
-                        instructor_id, created_at;
+            RETURNING *;
         """
+        return self.cm.select_one(sql, tuple(values))
 
-        updated = self.cm.select_one(sql, tuple(values))
-        if not updated:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Course with id={course_id} not found."
-            )
-
-        return updated
 
     # ======================================================
     # STUDENTS
