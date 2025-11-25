@@ -1,7 +1,7 @@
 import pytest
-from fastapi import FastAPI, HTTPException, status
+from fastapi import BackgroundTasks, FastAPI, HTTPException, status
 from fastapi.testclient import TestClient
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 from io import BytesIO
 
 from starlette.status import HTTP_404_NOT_FOUND
@@ -17,9 +17,34 @@ def mock_document_service() -> DocumentService:
 
 
 @pytest.fixture
-def client(mock_document_service: DocumentService) -> TestClient:
+def capture_background_tasks(monkeypatch):
+    scheduled_tasks = []
+
+    def fake_add_task(self, func, *args, **kwargs):
+        scheduled_tasks.append((func, args, kwargs))
+
+    monkeypatch.setattr(BackgroundTasks, "add_task", fake_add_task)
+
+    return scheduled_tasks
+
+
+@pytest.fixture
+def mock_ws_manager():
+    manager = MagicMock()
+
+    async def fake_handle_subscription(topic, websocket):
+        await websocket.accept()
+
+    manager.handle_subscription = AsyncMock(side_effect=fake_handle_subscription)
+    manager.publish = MagicMock()
+
+    return manager
+
+
+@pytest.fixture
+def client(mock_document_service: DocumentService, mock_ws_manager) -> TestClient:
     """Creates a test client with dependency overrides."""
-    from API.dependencies import get_document_service, authorize_course
+    from API.dependencies import get_document_service, authorize_course, validate_course, get_web_socket_manager
 
     app = FastAPI()
     app.include_router(documents_router)
@@ -27,6 +52,8 @@ def client(mock_document_service: DocumentService) -> TestClient:
     # Override dependencies
     app.dependency_overrides[get_document_service] = lambda: mock_document_service
     app.dependency_overrides[authorize_course] = lambda: {"user": "mock-user"}  # fake auth
+    app.dependency_overrides[validate_course] = lambda: {"id": "course-1"}  
+    app.dependency_overrides[get_web_socket_manager] = lambda: mock_ws_manager
 
     return TestClient(app)
 
@@ -50,6 +77,50 @@ def test_upload_document_success(client: TestClient, mock_document_service: Docu
     assert kwargs["file_name"] == "Backend_Knowledge.pdf"
     assert kwargs["mime_type"] == "application/pdf"
     assert isinstance(kwargs["file_bytes"], bytes)
+
+
+def test_upload_document_uses_background_tasks_and_web_socket_manager_publish(
+    client,
+    mock_document_service,
+    mock_ws_manager,
+    capture_background_tasks,
+):
+    scheduled_tasks = capture_background_tasks
+
+    mock_document_service.create_document.return_value = {"doc_id": "doc-123"}
+
+    file_bytes = b"hello world"
+    file_obj = BytesIO(file_bytes)
+
+    response = client.post(
+        "/courses/course-1/documents",
+        files={"file": ("Doc.pdf", file_obj, "application/pdf")}
+    )
+
+    assert response.status_code == 201
+
+    # One background task was scheduled
+    assert len(scheduled_tasks) == 1
+
+    func, args, kwargs = scheduled_tasks[0]
+
+    assert func == mock_document_service.vectorize_document
+
+    assert args[0] == "course-1"
+    assert args[1] == "doc-123"
+    assert args[2] == "Doc.pdf"
+    assert args[3] == "application/pdf"
+    assert args[4] == file_bytes
+
+    callback = args[5]
+    assert callable(callback)
+
+    callback({"done": True})
+
+    mock_ws_manager.publish.assert_called_once_with(
+        "/courses/course-1/documents",
+        {"done": True}
+    )
 
 
 def test_upload_document_invalid_file(client: TestClient, mock_document_service: DocumentService):
@@ -181,3 +252,16 @@ def test_preview_document_not_found(client, mock_document_service):
 
     mock_document_service.preview_document.assert_called_once_with("course-1", "invalid-id")
 
+
+def test_websocket_subscribe_to_course_documents(client: TestClient, mock_ws_manager):
+    with client.websocket_connect("/courses/course-1/documents") as ws:
+        assert ws is not None
+        ws.close()
+
+    mock_ws_manager.handle_subscription.assert_called_once()
+
+    topic, websocket = mock_ws_manager.handle_subscription.call_args[0]
+
+    assert topic == "/courses/course-1/documents"
+    assert hasattr(websocket, "send_text")
+    assert hasattr(websocket, "accept")
