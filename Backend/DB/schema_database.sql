@@ -136,6 +136,21 @@ VALUES
 ON CONFLICT (mime_type) DO NOTHING;
 
 -- -----------------------------
+-- Processing Status Table
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS processing_statuses (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(20) NOT NULL UNIQUE
+);
+
+INSERT INTO processing_statuses (name)
+VALUES 
+    ('PROCESSING'),
+    ('COMPLETED'),
+    ('FAILED')
+ON CONFLICT (name) DO NOTHING;
+
+-- -----------------------------
 -- Documents Table
 -- -----------------------------
 CREATE TABLE IF NOT EXISTS documents (
@@ -143,6 +158,7 @@ CREATE TABLE IF NOT EXISTS documents (
     course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     file_name VARCHAR(255) NOT NULL CHECK (trim(file_name) <> ''),
     file_type_id INT NOT NULL REFERENCES file_types(id) ON DELETE RESTRICT,
+    processing_status_id INT NOT NULL REFERENCES processing_statuses(id) ON DELETE RESTRICT,
     file_data BYTEA NOT NULL,
     uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (course_id, file_name)

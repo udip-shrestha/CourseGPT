@@ -1,3 +1,4 @@
+from unittest.mock import MagicMock
 import pytest
 from fastapi import HTTPException, status
 from API.Service.document_service import DocumentService
@@ -19,7 +20,6 @@ def test_create_document_success(document_service: DocumentService, mock_sql_rep
 
     mock_sql_repo.read_file_type_by_mime.assert_called_once_with("application/pdf")
     mock_sql_repo.create_document.assert_called_once_with("course-1", "lecture1.pdf", b"fake-binary", 1)
-    mock_rag_service.create_index.assert_called_once_with("course-1", "doc-123", "lecture1.pdf", "application/pdf", b"fake-binary")
     assert result == {"doc_id": "doc-123"}
 
 
@@ -34,17 +34,49 @@ def test_create_document_invalid_mime(document_service, mock_sql_repo):
     mock_sql_repo.create_document.assert_not_called()
 
 
-def test_create_document_vector_index_fails(document_service, mock_sql_repo, mock_rag_service):
-    mock_sql_repo.read_file_type_by_mime.return_value = {"id": 1, "extension": "pdf"}
-    mock_sql_repo.create_document.return_value = "doc-123"
-    mock_rag_service.create_index.side_effect = Exception("Indexing error")
+def test_vectorize_document_success(document_service, mock_sql_repo, mock_rag_service):
+    publish_mock = MagicMock()
 
-    with pytest.raises(HTTPException) as exc_info:
-        document_service.create_document("c1", "a.pdf", b"data", "application/pdf")
+    document_service.vectorize_document(
+        course_id="c1",
+        doc_id="doc-123",
+        file_name="a.pdf",
+        mime_type="application/pdf",
+        file_bytes=b"data",
+        publish_to_documents_ws_route=publish_mock,
+    )
 
-    mock_sql_repo.delete_document.assert_called_once_with("c1", "doc-123")
-    assert exc_info.value.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
-    assert "Vector indexing failed" in exc_info.value.detail
+    mock_rag_service.create_index.assert_called_once_with("c1", "doc-123", "a.pdf", "application/pdf", b"data")
+    mock_sql_repo.update_document_processing_status_completed.assert_called_once_with("doc-123")
+
+    publish_mock.assert_called_once_with({
+        "event": "processing_status_changed",
+        "doc_id": "doc-123",
+        "status": "COMPLETED",
+    })
+
+
+def test_vectorize_document_failure(document_service, mock_sql_repo, mock_rag_service):
+    publish_mock = MagicMock()
+    mock_rag_service.create_index.side_effect = Exception("Index error")
+
+    document_service.vectorize_document(
+        course_id="c1",
+        doc_id="doc-123",
+        file_name="a.pdf",
+        mime_type="application/pdf",
+        file_bytes=b"data",
+        publish_to_documents_ws_route=publish_mock,
+    )
+
+    mock_rag_service.create_index.assert_called_once()
+    mock_sql_repo.update_document_processing_status_failed.assert_called_once_with("doc-123")
+
+    publish_mock.assert_called_once_with({
+        "event": "processing_status_changed",
+        "doc_id": "doc-123",
+        "status": "FAILED",
+    })
 
 
 def test_read_document_success(document_service, mock_sql_repo):

@@ -77,10 +77,20 @@
         <h2>Subscribe to Topic</h2>
 
         <div class="row">
-            <input id="wsUrl" placeholder="Topic to subscribe to (eg ws://localhost:8000/courses/123/queries)" />
+
+            <!-- Topic -->
+            <select id="topicType">
+                <option value="">-- Select Topic --</option>
+                <option value="queries">Course Queries</option>
+                <option value="documents">Course Documents</option>
+            </select>
+        
+            <!-- Course ID -->
+            <input id="courseId" placeholder="Course ID (required)" />
+        
             <button onclick="subscribeWS()">Subscribe</button>
             <button onclick="unsubscribeWS()">Unsubscribe</button>
-        </div>
+        </div>        
 
         <h3>Incoming Messages</h3>
         <ul id="messages"></ul>
@@ -113,11 +123,20 @@
                 return;
             }
 
-            const url = document.getElementById("wsUrl").value.trim();
-            if (!url) {
-                alert("Enter a WebSocket URL.");
+            const topic = document.getElementById("topicType").value.trim();
+            const courseId = document.getElementById("courseId").value.trim();
+
+            if (!topic) {
+                alert("Select a topic.");
                 return;
             }
+
+            if (!courseId) {
+                alert("Course ID is required.");
+                return;
+            }
+
+            const url = `ws://localhost:8000/courses/${courseId}/${topic}`;
 
             ws = new WebSocket(url);
 

@@ -114,6 +114,7 @@ def test_read_all_documents_filter_by_type(repo, temp_course):
 
     # PDF filter
     pdf_docs = repo.read_all_documents(course_id=temp_course, file_type_id=pdf_id)
+    assert len(pdf_docs["documents"]) == 1
     for d in pdf_docs["documents"]:
         assert d["file_name"].endswith(".pdf")
 
@@ -129,6 +130,36 @@ def test_delete_document(repo, temp_course):
 
     repo.delete_document(temp_course, doc_id)
     assert repo.read_document(temp_course, doc_id) is None
+
+
+def test_update_document_processing_status_completed(repo, temp_course):
+    # Create a new document (initial status = PROCESSING)
+    doc_id = repo.create_document(temp_course, "complete_test.pdf", b"x", file_type_id=1)
+
+    # Update to COMPLETED
+    repo.update_document_processing_status_completed(doc_id)
+
+    # Read the full record using read_all_documents
+    res = repo.read_all_documents(course_id=temp_course, file_name="complete_test")
+    assert len(res["documents"]) == 1
+
+    doc = res["documents"][0]
+    assert doc["processing_status"] == "COMPLETED"
+
+
+def test_update_document_processing_status_failed(repo, temp_course):
+    # Create a new document (initial status = PROCESSING)
+    doc_id = repo.create_document(temp_course, "failed_test.pdf", b"y", file_type_id=1)
+
+    # Update to FAILED
+    repo.update_document_processing_status_failed(doc_id)
+
+    # Read using read_all_documents
+    res = repo.read_all_documents(course_id=temp_course, file_name="failed_test")
+    assert len(res["documents"]) == 1
+
+    doc = res["documents"][0]
+    assert doc["processing_status"] == "FAILED"
 
 
 # ==========================================================
