@@ -17,7 +17,7 @@ export class DocumentClient {
         });
     }
 
-    async listDocuments(courseId: string, filters?: { file_type?: string; limit?: number; offset?: number; order_by?: "uploaded_at" | "file_name"; order_dir?: "asc" | "desc" }) {
+    async listDocuments(courseId: string, filters?: { mime_type?: string; file_name?: string; limit?: number; offset?: number; order_by?: "uploaded_at" | "file_name"; order_dir?: "asc" | "desc" }) {
         const query = Object.fromEntries(Object.entries(filters || {}).filter(([_, v]) => v !== undefined && v !== null));
         return this.baseClient.request("GET", `/courses/${courseId}/documents`, { query, operationId: `documents-list-${courseId}` });
     }

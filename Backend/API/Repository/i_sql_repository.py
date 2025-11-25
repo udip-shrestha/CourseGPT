@@ -52,6 +52,14 @@ class ISQLRepository(Protocol):
     ) -> dict:
         """Return paginated, filtered documents."""
         ...
+  
+    def update_document_processing_status_completed(self, doc_id: str) -> None:
+        """Mark a document's processing_status as COMPLETED."""
+        ...
+
+    def update_document_processing_status_failed(self, doc_id: str) -> None:
+        """Mark a document's processing_status as FAILED."""
+        ...
 
     # ======================================================
     # COURSES

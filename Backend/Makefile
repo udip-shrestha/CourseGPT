@@ -303,9 +303,9 @@ db-migrate:
 	@echo "=============================================="
 	$(MAKE) db-dump-old
 	$(MAKE) db-init
-	$(MAKE) db-seed
 	$(MAKE) db-load-old
 	$(MAKE) db-move-old
+	$(MAKE) db-seed
 	@echo "=============================================="
 	@echo " Migration completed successfully!"
 	@echo "=============================================="

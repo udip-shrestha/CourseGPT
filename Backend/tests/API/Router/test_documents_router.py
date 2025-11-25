@@ -44,7 +44,9 @@ def test_upload_document_success(client: TestClient, mock_document_service: Docu
     assert response.status_code == status.HTTP_201_CREATED
     assert response.json() == {"doc_id": "doc-123"}
     mock_document_service.create_document.assert_called_once()
-    args, kwargs = mock_document_service.create_document.call_args
+    _, kwargs = mock_document_service.create_document.call_args
+    
+    assert kwargs["course_id"] == "course-1"
     assert kwargs["file_name"] == "Backend_Knowledge.pdf"
     assert kwargs["mime_type"] == "application/pdf"
     assert isinstance(kwargs["file_bytes"], bytes)
@@ -63,38 +65,50 @@ def test_upload_document_invalid_file(client: TestClient, mock_document_service:
 
 def test_get_all_documents_success(client: TestClient, mock_document_service: DocumentService):
     """Should return a list of documents for a course."""
-    mock_document_service.read_all_documents.return_value = [
-        {"id": "doc-1", "file_name": "a.pdf", "mime_type": "application/pdf"},
-        {"id": "doc-2", "file_name": "b.pdf", "mime_type": "application/pdf"},
-    ]
+    mock_document_service.read_all_documents.return_value = {
+        "total": 2,
+        "documents": [
+            {"id": "doc-1", "file_name": "a.pdf", "mime_type": "application/pdf"},
+            {"id": "doc-2", "file_name": "b.pdf", "mime_type": "application/pdf"},
+        ]
+    }
 
     response = client.get("/courses/course-1/documents")
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) == 2
+    data = response.json()
+    assert data["total"] == 2
+    assert len(data["documents"]) == 2
     mock_document_service.read_all_documents.assert_called_once_with(
         course_id="course-1",
-        file_type=None,
+        mime_type=None,
+        file_name=None,
         limit=10,
         offset=0,
         order_by="uploaded_at",
-        order_dir="desc"
+        order_dir="desc",
     )
 
 
 def test_get_all_documents_with_filter(client: TestClient, mock_document_service: DocumentService):
     """Should filter documents by MIME type."""
-    mock_document_service.read_all_documents.return_value = [
-        {"id": "doc-1", "file_name": "filtered.pdf", "mime_type": "application/pdf"}
-    ]
+    mock_document_service.read_all_documents.return_value = {
+        "total": 1,
+        "documents": [
+            {"id": "doc-1", "file_name": "filtered.pdf", "mime_type": "application/pdf"}
+        ]
+    }
 
-    response = client.get("/courses/course-1/documents", params={"file_type": "application/pdf"})
+    response = client.get("/courses/course-1/documents", params={"mime_type": "application/pdf"})
 
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) == 1
+    data = response.json()
+    assert data["total"] == 1
+    assert len(data["documents"]) == 1
     mock_document_service.read_all_documents.assert_called_once_with(
         course_id="course-1",
-        file_type="application/pdf",
+        mime_type="application/pdf",
+        file_name=None,
         limit=10,
         offset=0,
         order_by="uploaded_at",

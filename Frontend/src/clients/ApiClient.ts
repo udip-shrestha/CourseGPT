@@ -141,7 +141,6 @@ export class APIClient {
             const disposition = response.headers.get("content-disposition");
             console.log(disposition);
             if (disposition) {
-                console.log(" I have disposition");
                 const blob = await response.blob();
 
                 let fileName = "download";

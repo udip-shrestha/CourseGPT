@@ -1,15 +1,18 @@
 from io import BytesIO
 from typing import Optional
 
-from fastapi import APIRouter, UploadFile, File, Query, Depends, status, Path
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Query, Depends, WebSocket, status, Path
 from fastapi.responses import StreamingResponse
 
 from API.Service.document_service import DocumentService
-from API.dependencies import authorize_course, get_document_service
-from API.Util.files import convert_to_html_bytes
+from API.dependencies import authorize_course, get_document_service, get_web_socket_manager, validate_course
+from API.Util.web_socket_manager import WebSocketManager
 
 
 router = APIRouter(tags=["Documents"])
+
+
+COURSE_DOCUMENTS_WS_ROUTE = "/courses/{course_id}/documents"
 
 
 @router.post(
@@ -23,6 +26,7 @@ router = APIRouter(tags=["Documents"])
     ),
 )
 def upload_document(
+    background_tasks: BackgroundTasks,
     course_id: str = Path(
         ...,
         description="UUID of the course (e.g., the 'Data Structures' course).",
@@ -33,15 +37,23 @@ def upload_document(
     ),
     _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
+    ws_manager: WebSocketManager = Depends(get_web_socket_manager),
 ):
     """Uploads a new document for a specific course."""
     content = file.file.read()
-    return service.create_document(
-        course_id=course_id,
-        file_name=file.filename,
-        file_bytes=content,
-        mime_type=file.content_type,
+    doc = service.create_document(course_id=course_id, file_name=file.filename, file_bytes=content, mime_type=file.content_type)
+
+    background_tasks.add_task(
+        service.vectorize_document,
+        course_id,
+        doc["doc_id"],
+        file.filename,
+        file.content_type,
+        content,
+        lambda payload: ws_manager.publish(COURSE_DOCUMENTS_WS_ROUTE.format(course_id=course_id), payload)
     )
+
+    return doc
 
 
 @router.get(
@@ -60,10 +72,15 @@ def get_all_documents(
         description="UUID of the course.",
         examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
-    file_type: Optional[str] = Query(
+    mime_type: Optional[str] = Query(
         None,
         description="Optional MIME type to filter by (e.g., `application/pdf`, `text/plain`).",
         examples={"example": "application/pdf"},
+    ),
+    file_name: Optional[str] = Query(
+        None,
+        description="Optional substring to filter file names (case-insensitive).",
+        examples={"example": "chapter"},
     ),
     limit: int = Query(
         10,
@@ -94,7 +111,8 @@ def get_all_documents(
     """Retrieve all documents with optional filters and pagination."""
     return service.read_all_documents(
         course_id=course_id,
-        file_type=file_type,
+        mime_type=mime_type,
+        file_name=file_name,
         limit=limit,
         offset=offset,
         order_by=order_by,
@@ -214,3 +232,14 @@ def preview_document(
             "Content-Disposition": f'inline; filename="{file_name}"; filename*=UTF-8\'\'{file_name}'
         },
     )
+
+@router.websocket(COURSE_DOCUMENTS_WS_ROUTE)
+async def subscribe_to_course_queries(
+    websocket: WebSocket,
+    _course: dict = Depends(validate_course),
+    manager: WebSocketManager = Depends(get_web_socket_manager),
+):
+    """
+    WebSocket endpoint for subscribing to real-time query updates for a course.
+    """
+    await manager.handle_subscription(websocket.url.path, websocket)

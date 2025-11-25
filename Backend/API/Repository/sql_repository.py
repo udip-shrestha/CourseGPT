@@ -57,8 +57,11 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     def create_document(self, course_id: str, file_name: str, file_bytes: bytes, file_type_id: str) -> str:
         sql = """
-            INSERT INTO documents (course_id, file_name, file_data, file_type_id)
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO documents (course_id, file_name, file_data, file_type_id, processing_status_id)
+            VALUES (
+                %s, %s, %s, %s,
+                (SELECT id FROM processing_statuses WHERE name = 'PROCESSING')
+            )
             RETURNING id;
         """
         return self.cm.insert_one(sql, (course_id, file_name, file_bytes, file_type_id))
@@ -125,9 +128,11 @@ class SQLRepository(ISQLRepository):
                 d.file_name,
                 d.uploaded_at,
                 d.file_type_id,
-                ft.can_preview
+                ft.can_preview,
+                ps.name AS processing_status
             FROM documents d
             LEFT JOIN file_types ft ON d.file_type_id = ft.id
+            LEFT JOIN processing_statuses ps ON d.processing_status_id = ps.id
             {where_clause}
             ORDER BY {order_by} {order_dir}
             LIMIT %s OFFSET %s;
@@ -140,6 +145,21 @@ class SQLRepository(ISQLRepository):
             "documents": results
         }
 
+    def update_document_processing_status_completed(self, doc_id: str) -> None:
+        sql = """
+            UPDATE documents
+            SET processing_status_id = ( SELECT id FROM processing_statuses WHERE name = 'COMPLETED' )
+            WHERE id = %s;
+        """
+        self.cm.execute(sql, (doc_id,))
+
+    def update_document_processing_status_failed(self, doc_id: str) -> None:
+        sql = """
+            UPDATE documents
+            SET processing_status_id = ( SELECT id FROM processing_statuses WHERE name = 'FAILED' )
+            WHERE id = %s;
+        """
+        self.cm.execute(sql, (doc_id,))
 
     # ======================================================
     # INSTRUCTORS
