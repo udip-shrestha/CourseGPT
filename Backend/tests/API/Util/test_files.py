@@ -1,48 +1,65 @@
 import os
+import uuid
 import pytest
-from API.Util.files import create_temp_file_from_bytes  # adjust path as needed
+from unittest.mock import patch, MagicMock
+
+from API.Util.files import (
+    create_temp_file_from_bytes,
+    convert_to_html,
+    convert_to_html_bytes,
+)
 
 
-def test_create_temp_file_from_bytes_creates_file_and_writes_data():
-    """Should create a real temp file and write bytes correctly."""
-    data = b"Hello, World!"
-    suffix = ".txt"
+def test_create_temp_file_from_bytes_creates_and_deletes_temp_file():
+    original_name = "test_document.pdf"
+    data = b"hello world"
 
-    with create_temp_file_from_bytes(suffix, data) as file_path:
+    with create_temp_file_from_bytes(original_name, data) as temp_path:
         # File should exist
-        assert os.path.exists(file_path)
-        assert file_path.endswith(suffix)
+        assert os.path.exists(temp_path)
 
-        # Read back contents
-        with open(file_path, "rb") as f:
-            contents = f.read()
-        assert contents == data
+        # Path should end with "_<original filename>"
+        assert temp_path.endswith("_" + original_name)
 
-    # After context, file should still exist (delete=False)
-    assert os.path.exists(file_path)
+        # UUID prefix check
+        prefix = os.path.basename(temp_path).split("_")[0]
+        uuid.UUID(prefix)  # will raise if invalid
 
-    # Manual cleanup
-    os.remove(file_path)
-    assert not os.path.exists(file_path)
+        # File content should match
+        with open(temp_path, "rb") as f:
+            assert f.read() == data
 
-
-def test_create_temp_file_from_bytes_with_empty_data():
-    """Should handle empty bytes gracefully."""
-    data = b""
-    with create_temp_file_from_bytes(".bin", data) as file_path:
-        assert os.path.exists(file_path)
-        assert os.path.getsize(file_path) == 0
-    os.remove(file_path)
+    # After context manager, file should be deleted
+    assert not os.path.exists(temp_path)
 
 
-def test_create_temp_file_from_bytes_returns_unique_files():
-    """Each invocation should produce a different file path."""
-    with create_temp_file_from_bytes(".tmp", b"data1") as path1, \
-         create_temp_file_from_bytes(".tmp", b"data2") as path2:
-        assert path1 != path2
-        assert os.path.exists(path1)
-        assert os.path.exists(path2)
+def test_convert_to_html_with_mocked_partition():
+    # Mock element with working to_html()
+    mock_element = MagicMock()
+    mock_element.to_html.return_value = "<p>Hello</p>"
 
-    # Cleanup both
-    os.remove(path1)
-    os.remove(path2)
+    with patch("API.Util.files.partition", return_value=[mock_element]) as mock_partition:
+        html = convert_to_html(b"xxx", "file.docx")
+
+    mock_partition.assert_called_once()
+    assert html == "<p>Hello</p>"
+
+
+def test_convert_to_html_falls_back_to_str_when_to_html_fails():
+    bad_element = MagicMock()
+    bad_element.to_html.side_effect = Exception("cannot convert")
+
+    with patch("API.Util.files.partition", return_value=[bad_element]):
+        html = convert_to_html(b"abc", "bad.docx")
+
+    # Should fall back to str(element)
+    assert html == str(bad_element)
+
+
+def test_convert_to_html_bytes_encodes_utf8():
+    with patch("API.Util.files.convert_to_html", return_value="<p>Text</p>") as mock_html:
+        result = convert_to_html_bytes(b"xxx", "filename.docx")
+
+    mock_html.assert_called_once()
+    assert isinstance(result, bytes)
+    assert result == b"<p>Text</p>"

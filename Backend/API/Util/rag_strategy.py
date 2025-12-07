@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 import re
 import logging
-from typing import Any, List, Dict, Optional, Protocol, Tuple
+from typing import Any, List, Dict, Optional, Protocol, Tuple, runtime_checkable
 
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
@@ -15,6 +15,7 @@ from API.Repository.i_sql_repository import ISQLRepository
 logger = logging.getLogger(__name__)
 
 
+@runtime_checkable
 class IRAGStrategy(Protocol):
     """Strategy interface for different RAG implementations."""
 

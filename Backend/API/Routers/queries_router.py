@@ -1,10 +1,14 @@
-from fastapi import APIRouter, Depends, status, Path, Query
+from fastapi import APIRouter, Depends, WebSocket, status, Path, Query
 from typing import Optional
 from API.Service.queries_service import QueryService
-from API.dependencies import get_query_service, validate_course
+from API.dependencies import get_query_service, validate_course, get_web_socket_manager
+from API.Util.web_socket_manager import WebSocketManager
 
 
 router = APIRouter(tags=["Queries"])
+
+
+COURSE_QUERIES_WS_ROUTE = "/courses/{course_id}/queries"
 
 
 @router.post(
@@ -36,9 +40,21 @@ def ask_question(
     ),
     course: dict = Depends(validate_course),
     service: QueryService = Depends(get_query_service),
+    web_socket_manager: WebSocketManager = Depends(get_web_socket_manager),
 ):
     """Run the full RAG answer-generation pipeline for a single question."""
-    return service.ask_question(course_id=course_id, course=course, student_id=student_id, question=question)
+
+    # Step 1: run RAG + save in DB
+    result = service.ask_question(course_id=course_id, course=course, student_id=student_id, question=question)
+
+    # Step 2: broadcast event to websocket subscribers
+    web_socket_manager.publish(COURSE_QUERIES_WS_ROUTE.format(course_id=course_id), {
+        "event": "new_query",
+        "question": question,
+        "answer": result.get("answer", ""),
+    })
+
+    return result
 
 
 @router.get(
@@ -202,3 +218,16 @@ def delete_query(
 ):
     """Delete a stored query entry."""
     return service.delete_query(course_id, query_id)
+
+
+@router.websocket(COURSE_QUERIES_WS_ROUTE)
+async def subscribe_to_course_queries(
+    websocket: WebSocket,
+    _course: dict = Depends(validate_course),
+    manager: WebSocketManager = Depends(get_web_socket_manager),
+):
+    """
+    WebSocket endpoint for subscribing to real-time query updates for a course.
+    """
+    await manager.handle_subscription(websocket.url.path, websocket)
+

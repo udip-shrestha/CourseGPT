@@ -8,6 +8,7 @@ import './index.css';
 import App from './App.tsx';
 // --- 1. Import the ApiClientProvider ---
 import { ApiClientProvider } from './clients/ApiClientContext.tsx';
+import { WebSocketClientProvider } from './clients/WebSocketClientContext.tsx';
 
 createRoot(document.getElementById('root')!).render(
     <StrictMode>
@@ -15,7 +16,9 @@ createRoot(document.getElementById('root')!).render(
         <BrowserRouter>
             {/* 3. ApiClientProvider wraps App */}
             <ApiClientProvider>
-                <App />
+                <WebSocketClientProvider>
+                    <App />
+                </WebSocketClientProvider>
             </ApiClientProvider>
         </BrowserRouter>
     </StrictMode>
