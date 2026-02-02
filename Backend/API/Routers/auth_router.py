@@ -1,9 +1,10 @@
 from fastapi import APIRouter, Depends, status, Form
 from fastapi.security import OAuth2PasswordRequestForm
+from Metrics.metrics import MetricsRoute
 from API.Service.auth_service import AuthService
 from API.dependencies import get_auth_service
 
-router = APIRouter(tags=["Auth"])
+router = APIRouter(tags=["Auth"], route_class=MetricsRoute)
 
 
 # ---------------------------------------------------------------------

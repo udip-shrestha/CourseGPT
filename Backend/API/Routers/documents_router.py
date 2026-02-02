@@ -7,9 +7,10 @@ from fastapi.responses import StreamingResponse
 from API.Service.document_service import DocumentService
 from API.dependencies import authorize_course, get_document_service, get_web_socket_manager, validate_course
 from API.Util.web_socket_manager import WebSocketManager
+from Metrics.metrics import MetricsRoute
 
 
-router = APIRouter(tags=["Documents"])
+router = APIRouter(tags=["Documents"], route_class=MetricsRoute)
 
 
 COURSE_DOCUMENTS_WS_ROUTE = "/courses/{course_id}/documents"

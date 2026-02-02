@@ -1,8 +1,9 @@
 from fastapi import APIRouter, Request
 from fastapi.templating import Jinja2Templates
+from Metrics.metrics import MetricsRoute
 
 
-router = APIRouter(tags=["WebSocket UI"])
+router = APIRouter(tags=["WebSocket UI"], route_class=MetricsRoute)
 
 
 templates = Jinja2Templates(directory="API/Templates")
