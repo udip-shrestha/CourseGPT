@@ -3,9 +3,10 @@ from typing import Optional
 from API.Service.queries_service import QueryService
 from API.dependencies import get_query_service, validate_course, get_web_socket_manager
 from API.Util.web_socket_manager import WebSocketManager
+from Metrics.metrics import MetricsRoute
 
 
-router = APIRouter(tags=["Queries"])
+router = APIRouter(tags=["Queries"], route_class=MetricsRoute)
 
 
 COURSE_QUERIES_WS_ROUTE = "/courses/{course_id}/queries"
