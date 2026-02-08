@@ -21,7 +21,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 @bot.event
 async def on_ready():
-    start_http_server(9091, addr="0.0.0.0")  # Start Prometheus metrics server on port 8001
+    start_http_server(9091, addr="0.0.0.0")  # Start Prometheus metrics server on port 9091
     await bot.tree.sync()
     print(f"{bot.user} is online!")
     # register existing members when bot starts
