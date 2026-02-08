@@ -9,7 +9,10 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-    restart: unless-stopped
+    restart_policy:
+      condition: on-failure
+      delay: 5s
+      max_attempts: 5
 
   grafana:
     image: grafana/grafana:latest
