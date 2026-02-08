@@ -5,7 +5,7 @@ global:
 scrape_configs:
   - job_name: "fastapi"
     static_configs:
-      - targets: ["localhost:8000"]
+      - targets: ["sdmay26-37.ece.iastate.edu:8000"]
         labels:
           app: "coursegpt"
     metrics_path: "/metrics"
@@ -13,7 +13,7 @@ scrape_configs:
 
   - job_name: "discord-bot"
     static_configs:
-      - targets: ["localhost:9091"]
+      - targets: ["sdmay26-37.ece.iastate.edu:9091"]
         labels:
           app: "coursegpt"
     metrics_path: "/metrics"
