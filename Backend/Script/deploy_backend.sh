@@ -74,4 +74,10 @@ sudo systemctl restart backend-coursegpt.service
 sudo systemctl restart cybot.service 
 sudo systemctl enable backend-coursegpt.service cybot.service
 
+# Restart monitoring services (Docker Compose)  
+echo "Restarting monitoring services (Docker Compose)"
+cd "$PERSISTENT_ROOT"
+sudo docker compose down
+sudo docker compose up -d
+
 echo "Backend deploy complete"
