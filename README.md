@@ -108,15 +108,3 @@ make db-shell
 ```
 
 **Note:** For local default password for postgres is `postgres`
-
-
-## Running the Backend on Windows
-
-###  Run the backend 
-
-```powershell
-cd Backend
-.\venv\Scripts\Activate.ps1
-pip install -r requirements.txt
-make db-init
-uvicorn API.main:app --reload
