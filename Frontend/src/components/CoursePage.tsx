@@ -1,19 +1,18 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 
-import { useParams, Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { useParams, Routes, Route, Navigate } from "react-router-dom";
 
-import { useApiClient } from "../ApiClientContext.tsx";
+import { useApiClient } from "../clients/ApiClientContext.tsx";
 import { CourseDocPage } from "./CourseDocPage";
-import { NotFoundPage } from "./NotFoundPage";
 import { CourseIntegrationsPage } from "./CourseIntegrationsPage.tsx";
 import { CourseChatPage } from "./CourseChatPage.tsx";
+import { SettingsPage } from "./CourseSettingsPage.tsx";
+import { NotFoundPage } from "./NotFoundPage.tsx";
 
 export function CoursePage() {
     const { courseId } = useParams();
-    const apiClient = useApiClient();
-    const navigate = useNavigate();
+    const { courseClient } = useApiClient();
 
     const [course, setCourse] = useState<any>(null);
     const [loading, setLoading] = useState(true);
@@ -25,7 +24,7 @@ export function CoursePage() {
         setLoading(true);
         setError(null);
 
-        const { data, errorMessage } = await apiClient.getCourse(courseId);
+        const { data, errorMessage } = await courseClient.getCourse(courseId);
 
         if (errorMessage) {
             setError("Failed to load course: " + errorMessage);
@@ -35,7 +34,7 @@ export function CoursePage() {
         }
 
         setLoading(false);
-    }, [courseId, apiClient]); // Added apiClient
+    }, [courseId, courseClient]); // Added courseClient
 
     useEffect(() => {
         fetchCourse();
@@ -71,7 +70,7 @@ export function CoursePage() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
                 <div className="text-center sm:text-left">
 
-                    <Button
+                    {/* <Button
                         variant="ghost"
                         onClick={() =>
                             // This uses the instructor_id from the fetched course data
@@ -81,7 +80,7 @@ export function CoursePage() {
                     >
                         <ChevronLeft className="h-4 w-4 mr-1" />
                         Back to Courses
-                    </Button>
+                    </Button> */}
 
                     <h1 className="text-2xl sm:text-3xl font-bold break-words">
                         {course.name}
@@ -99,12 +98,10 @@ export function CoursePage() {
             {/* Nested Routes */}
             <Routes>
                 <Route index element={<CourseDocPage course={course} />} />
-                <Route path="chat" element={<CourseChatPage course={course} />} />
-                <Route
-                    path="integrations"
-                    element={<CourseIntegrationsPage course={course} />}
-                />
-                <Route path="settings" element={<NotFoundPage />} />
+                <Route path="chats" element={<CourseChatPage course={course} />} />
+                <Route path="integrations" element={<CourseIntegrationsPage course={course} />}/>
+                <Route path="analytics" element={<NotFoundPage />} />
+                <Route path="settings" element={<SettingsPage />} />
                 <Route path="*" element={<Navigate to="." replace />} />
             </Routes>
         </div>

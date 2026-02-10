@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Query, Depends, status, Path
 from API.Service.courses_service import CourseService
+from Metrics.metrics import MetricsRoute
 from API.dependencies import get_course_service
 from typing import Optional
 
 
-router = APIRouter(tags=["Courses"])
+router = APIRouter(tags=["Courses"], route_class=MetricsRoute)
 
 
 @router.post(

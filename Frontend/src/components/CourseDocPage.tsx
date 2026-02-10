@@ -1,10 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
-import { Plus, Download, Trash2, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
 import { FileUpload } from "./FileUpload";
-import { useApiClient } from "../ApiClientContext.tsx";
+import { useApiClient } from "../clients/ApiClientContext.tsx";
+import { DocumentActions } from "./DocumentAction.tsx";
 
 
 
@@ -12,7 +13,7 @@ import { useApiClient } from "../ApiClientContext.tsx";
 
 
 export function CourseDocPage({ course }: { course: any }) {
-    const apiClient = useApiClient();
+    const { documentClient } = useApiClient();
 
     const [isAddDocumentOpen, setIsAddDocumentOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -23,6 +24,7 @@ export function CourseDocPage({ course }: { course: any }) {
     const [error, setError] = useState<string | null>(null);
     const [uploadError, setUploadError] = useState<string | null>(null);
     const [deleteError, setDeleteError] = useState<string | null>(null);
+    const [searchTerm, setSearchTerm] = useState("");
 
     const [page, setPage] = useState(1);
     const [total, setTotal] = useState(0);
@@ -35,7 +37,8 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(true);
         const offset = (page - 1) * limit;
 
-        const { data, errorMessage } = await apiClient.listDocuments(course.id, {
+        const { data, errorMessage } = await documentClient.listDocuments(course.id, {
+            file_name: searchTerm,
             order_by: "uploaded_at",
             order_dir: "desc",
             limit,
@@ -52,11 +55,14 @@ export function CourseDocPage({ course }: { course: any }) {
         }
 
         setLoading(false);
-    }, [course?.id, page]);
+    }, [course?.id, page, searchTerm]);
 
     useEffect(() => {
-        fetchDocuments();
-    }, [fetchDocuments]);
+        const delay = setTimeout(() => {
+            fetchDocuments();
+        }, 500);
+        return () => clearTimeout(delay);
+    }, [searchTerm, fetchDocuments]);    
 
     async function handleUpload() {
         if (selectedFiles.length === 0) {
@@ -68,7 +74,7 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(true);
         try {
             for (const file of selectedFiles) {
-                const { errorMessage } = await apiClient.uploadDocument(course.id, file);
+                const { errorMessage } = await documentClient.uploadDocument(course.id, file);
                 if (errorMessage) {
                     setUploadError(`Failed to upload ${file.name}: ${errorMessage}`);
                     setLoading(false);
@@ -91,7 +97,7 @@ export function CourseDocPage({ course }: { course: any }) {
         setLoading(true);
         setDeleteError(null);
 
-        const { errorMessage } = await apiClient.deleteDocument(course.id, docToDelete);
+        const { errorMessage } = await documentClient.deleteDocument(course.id, docToDelete);
         if (errorMessage) {
             setDeleteError("Failed to delete document. Please try again.");
         } else {
@@ -108,81 +114,34 @@ export function CourseDocPage({ course }: { course: any }) {
         setIsDeleteDialogOpen(true);
     }
 
-    // async function handleDownload(docId: string, fileName: string) {
-    //     const { data, errorMessage } = await apiClient.getDocument(course.id, docId);
-    //     if (errorMessage || !data?.file_data) {
-    //         setError("Failed to download document.");
-    //         return;
-    //     }
-
-    //     const blob = b64toBlob(data.file_data, "application/pdf");
-    //     const url = URL.createObjectURL(blob);
-    //     const a = document.createElement("a");
-    //     a.href = url;
-    //     a.download = fileName;
-    //     a.click();
-    //     URL.revokeObjectURL(url);
-    // }
-
-    // function b64toBlob(base64: string, type = "application/pdf") {
-    //     const binary = atob(base64);
-    //     const array = Uint8Array.from(binary, (char) => char.charCodeAt(0));
-    //     return new Blob([array], { type });
-    // }
-
-    async function handleDownload(docId: string, fileName: string) {
-        const url = `${apiClient["baseUrl"]}/courses/${course.id}/documents/${docId}/download`;
-
-        const response = await fetch(url, {
-            headers: {
-                Authorization: `Bearer ${apiClient.getToken()}`,
-            },
-        });
-
-        if (!response.ok) {
-            console.error("Download failed");
+    async function handleDownload(docId: string, fallbackName: string) {
+        const { data, errorMessage } = await documentClient.downloadDocument(course.id, docId);
+    
+        if (errorMessage || !data?.blob) {
+            setError(errorMessage || "Failed to download document.");
             return;
         }
-
-        const blob = await response.blob();
-
+    
         const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-
-        // Use the REAL filename from DB
-        link.download = fileName;
-
+        link.href = URL.createObjectURL(data.blob);
+        link.download = data.fileName || fallbackName || "download";
+        
         link.click();
-
         URL.revokeObjectURL(link.href);
     }
 
-
     async function handlePreview(docId: string) {
-            const url = `${apiClient["baseUrl"]}/courses/${course.id}/documents/${docId}/preview`;
-
-            const response = await fetch(url, {
-                headers: {
-                    Authorization: `Bearer ${apiClient.getToken()}`,
-                },
-            });
-
-            if (!response.ok) {
-                console.error("Preview failed");
-                return;
-            }
-
-            const blob = await response.blob();
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl, "_blank");
+        const { data, errorMessage } = await documentClient.previewDocument(course.id, docId);
+    
+        if (errorMessage || !data?.blob) {
+            setError(errorMessage || "Failed to preview document.");
+            return;
         }
-
-
-
-
-
-
-
+    
+        const url = URL.createObjectURL(data.blob);
+        window.open(url, "_blank");
+    }
+    
     const totalPages = Math.max(1, Math.ceil(total / limit));
     const canPrev = page > 1;
     const canNext = page < totalPages;
@@ -199,6 +158,29 @@ export function CourseDocPage({ course }: { course: any }) {
                     <Plus className="h-4 w-4 mr-2" />
                     Add Document
                 </Button>
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex gap-4 mb-5">
+                <div className="relative flex-1">
+                    <svg
+                        className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        viewBox="0 0 24 24"
+                    >
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+
+                    <input
+                        placeholder="Search documents by name..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 w-full border rounded-md px-3 py-2 text-sm"
+                    />
+                </div>
             </div>
 
             <Card>
@@ -239,9 +221,17 @@ export function CourseDocPage({ course }: { course: any }) {
                                     >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 bg-muted rounded-lg flex items-center justify-center">
-                                                <span className="text-xs font-medium">
-                                                    {(doc.file_type || "FILE").toUpperCase()}
-                                                </span>
+                                            <span className="text-xs font-medium">
+                                                {(() => {
+                                                    if (!doc.file_name) return "TEXT";
+
+                                                    const parts = doc.file_name.split(".");
+                                                    if (parts.length < 2) return "TEXT";
+
+                                                    const ext = parts.pop()?.trim();
+                                                    return ext ? ext.toUpperCase() : "TEXT";
+                                                })()}
+                                            </span>
                                             </div>
                                             <div>
                                                 <p className="font-medium">{doc.file_name}</p>
@@ -250,35 +240,13 @@ export function CourseDocPage({ course }: { course: any }) {
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex gap-2">
-                                            {/* Preview Button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handlePreview(doc.id)}
-                                            >
-                                                <Eye className="h-4 w-4" />
-                                            </Button>
-
-                                            {/* Download Button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => handleDownload(doc.id, doc.file_name)}
-                                            >
-                                                <Download className="h-4 w-4" />
-                                            </Button>
-
-                                            {/* Delete Button */}
-                                            <Button
-                                                variant="ghost"
-                                                size="sm"
-                                                onClick={() => openDeleteDialog(doc.id)}
-                                            >
-                                                <Trash2 className="h-4 w-4 text-destructive" />
-                                            </Button>
-                                        </div>
-
+                                        <DocumentActions
+                                            courseId={course.id}
+                                            doc={doc}
+                                            onPreview={() => handlePreview(doc.id)}
+                                            onDownload={() => handleDownload(doc.id, doc.file_name)}
+                                            onDelete={() => openDeleteDialog(doc.id)}
+                                        />
                                     </div>
                                 ))}
                             </div>

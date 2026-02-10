@@ -5,13 +5,13 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 // --- 1. Import the ApiClient hook ---
-import { useApiClient } from "../ApiClientContext";
+import { useApiClient } from "../clients/ApiClientContext";
 
 // Renamed component for clarity
 export function RegisterPage() {
     const navigate = useNavigate();
     // --- 2. Initialize the ApiClient ---
-    const apiClient = useApiClient();
+    const { authClient } = useApiClient();
 
     // --- 3. Add state for all required fields ---
     const [name, setName] = useState("");
@@ -49,7 +49,7 @@ export function RegisterPage() {
         // --- ACTUAL API CALL using ApiClient ---
         try {
             // ApiClient.register handles the form-urlencoded part
-            const { data, errorMessage } = await apiClient.register(
+            const { data, errorMessage } = await authClient.register(
                 name,
                 title,
                 university,

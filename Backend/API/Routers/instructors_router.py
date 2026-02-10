@@ -1,10 +1,11 @@
 from fastapi import APIRouter, Query, Depends, status, Path
 from API.Service.instructors_service import InstructorService
 from API.dependencies import get_instructor_service
+from Metrics.metrics import MetricsRoute
 from typing import Optional
 
 
-router = APIRouter(tags=["Instructors"])
+router = APIRouter(tags=["Instructors"], route_class=MetricsRoute)
 
 
 @router.post(

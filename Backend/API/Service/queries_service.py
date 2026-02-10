@@ -44,12 +44,7 @@ class QueryService:
             return {"answer": "Question cannot be empty.", "sources": ""}
 
         # --- Run RAG strategy (automatically logs query in DB) ---
-        return self.rag_service.query(
-            course_id=course_id,
-            course=course,
-            student_id=student_id,
-            question=question
-        )
+        return self.rag_service.query(course_id=course_id, course=course, student_id=student_id, question=question)
 
     @clean_service
     def get_student_queries(
