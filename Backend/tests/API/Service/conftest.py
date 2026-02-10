@@ -1,8 +1,5 @@
-import pytest
-from unittest.mock import MagicMock
 from langchain_core.language_models import BaseLanguageModel
-from langchain_text_splitters import TextSplitter
-
+import pytest
 from API.Repository.i_sql_repository import ISQLRepository 
 from API.Service.document_service import DocumentService 
 from API.Service.rag_service import RAGService 
@@ -12,8 +9,11 @@ from API.Service.instructors_service import InstructorService
 from API.Service.students_service import StudentService
 from API.Service.queries_service import QueryService
 from API.Repository.i_vector_repository import IVectorRepository
+from unittest.mock import MagicMock
+from API.Util.loaders import Loader
+from API.Util.splitters import Splitter
 from API.Util.rag_strategy import RAGStrategyFactory
-from API.Util.loaders import LoaderFactory
+from langchain_core.language_models import BaseLanguageModel
 
 
 @pytest.fixture
@@ -29,15 +29,15 @@ def mock_vector_repo() -> IVectorRepository:
 
 
 @pytest.fixture
-def mock_loader_factory() -> LoaderFactory:
+def mock_loader() -> Loader:
     """Provides an empty mocked Loader instance."""
-    return MagicMock(spec=LoaderFactory)
+    return MagicMock(spec=Loader)
 
 
 @pytest.fixture
-def mock_splitter() -> TextSplitter:
+def mock_splitter() -> Splitter:
     """Provides an empty mocked Splitter instance."""
-    return MagicMock(spec=TextSplitter)
+    return MagicMock(spec=Splitter)
 
 
 @pytest.fixture
@@ -59,8 +59,8 @@ def mock_rag_service() -> RAGService:
 
 @pytest.fixture
 def rag_service(
-    mock_loader_factory: LoaderFactory,
-    mock_splitter: TextSplitter,
+    mock_loader: Loader,
+    mock_splitter: Splitter,
     mock_rag_strategy_factory: RAGStrategyFactory,
     mock_vector_repo: IVectorRepository,
     mock_sql_repo: ISQLRepository,
@@ -68,11 +68,11 @@ def rag_service(
 ) -> RAGService:
     """Provides a RAGService wired with plain mock dependencies."""
     return RAGService(
+        loader=mock_loader,
+        splitter=mock_splitter,
         vector_repo=mock_vector_repo,
         sql_repo=mock_sql_repo,
-        loader_factory=mock_loader_factory,
         rag_strategy_factory=mock_rag_strategy_factory,
-        splitter=mock_splitter,
         llm=mock_llm,
     )
 

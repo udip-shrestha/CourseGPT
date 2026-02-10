@@ -102,21 +102,28 @@ else
 endif
 endif
 
+
 # -------------------------------------------
 # Ensure venv exists (cross-platform)
 # -------------------------------------------
-ifeq ($(wildcard $(ACTIVATE_PATH)),)
-ensure-activate:
 ifeq ($(OS),Windows_NT)
-	@echo "Virtual environment not found. Creating and installing dependencies..."
-	@$(MAKE) install
+$(ACTIVATE_PATH):
+	@echo Checking virtual environment...
+	@if not exist "$(VENV_DIR)" ( \
+		echo Virtual environment not found. Creating and installing dependencies... && \
+		$(MAKE) install \
+	) else ( \
+		echo Virtual environment exists. \
+	)
 else
-	@echo "Virtual environment not found. Creating and installing dependencies..."
-	@$(MAKE) install
-endif
-else
-ensure-activate:
-	@echo "Found virtual environment."
+$(ACTIVATE_PATH):
+	@echo "Checking virtual environment..."
+	@if [ ! -d "$(VENV_DIR)" ]; then \
+		echo "Virtual environment not found. Creating and installing dependencies..."; \
+		$(MAKE) install; \
+	else \
+		echo "Virtual environment exists."; \
+	fi
 endif
 
 
@@ -133,14 +140,14 @@ endif
 # Run FastAPI backend
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
-api-run: ensure-activate
+api-run: $(ACTIVATE_PATH)
 	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
 	@cmd /C "( \
 		call $(VENV_DIR)\Scripts\activate && \
 		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR) \
 	)"
 else
-api-run: ensure-activate
+api-run: $(ACTIVATE_PATH)
 	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
 	@bash -c "source $(VENV_DIR)/bin/activate && \
 		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR)"
@@ -150,44 +157,38 @@ endif
 # Run API Tests
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
-api-test: ensure-activate
+api-test: $(ACTIVATE_PATH)
 	@echo "Running API tests..."
 	@cmd /C "( \
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
-		pytest tests\\API -v  \
-			--override-ini=asyncio_default_fixture_loop_scope=function \
-			--override-ini=asyncio_mode=auto \
-			--override-ini=addopts= \
+		pytest tests\\API -v --override-ini="addopts=" \
 	)"
 else
-api-test: ensure-activate
+api-test: $(ACTIVATE_PATH)
 	@echo "Running API tests..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
-		pytest tests/API -v --override-ini=asyncio_default_fixture_loop_scope=function --override-ini=asyncio_mode=auto --override-ini=addopts= "
+		pytest tests/API -v --override-ini="addopts=" 
 endif
 
 # -------------------------------------------
 # Run API Tests with Coverage
 # -------------------------------------------
 ifeq ($(OS),Windows_NT)
-api-coverage: ensure-activate
+api-coverage: $(ACTIVATE_PATH)
 	@echo "Running API tests with coverage..."
 	@cmd /C "( \
 		set PYTHONPATH=. && \
 		call $(VENV_DIR)\Scripts\activate && \
-		pytest tests\\API -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html \
-			--override-ini=asyncio_default_fixture_loop_scope=function \
-			--override-ini=asyncio_mode=auto \
-			--override-ini=addopts= \
+		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests\\API -v \
 	)"
 else
-api-coverage: ensure-activate
+api-coverage: $(ACTIVATE_PATH)
 	@echo "Running API tests with coverage..."
 	@bash -c "export PYTHONPATH=. && \
 		source $(VENV_DIR)/bin/activate && \
-		pytest tests/API -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html --override-ini=asyncio_default_fixture_loop_scope=function --override-ini=asyncio_mode=auto --override-ini=addopts= "
+		pytest -v --override-ini="addopts=" --cov=API --cov-report=term-missing --cov-report=xml --cov-report=html tests/API -v"
 endif
 
 
@@ -309,9 +310,9 @@ db-migrate:
 	@echo "=============================================="
 	$(MAKE) db-dump-old
 	$(MAKE) db-init
+	$(MAKE) db-seed
 	$(MAKE) db-load-old
 	$(MAKE) db-move-old
-	$(MAKE) db-seed
 	@echo "=============================================="
 	@echo " Migration completed successfully!"
 	@echo "=============================================="

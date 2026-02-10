@@ -120,19 +120,3 @@ def temp_course(connection_manager, temp_instructor):
         (course_id, "Temp Course", "Test U", 2025, 1, temp_instructor)
     )
     return course_id
-
-
-@pytest.fixture
-def temp_student(connection_manager):
-    """Insert a temporary student and return its ID."""
-    student_id = str(uuid.uuid4())
-    sql = """
-        INSERT INTO students (id, name, discord_id)
-        VALUES (%s, %s, %s)
-    """
-    connection_manager.execute(
-        sql,
-        (student_id, "Test Student", None)  # discord_id optional
-    )
-    return student_id
-

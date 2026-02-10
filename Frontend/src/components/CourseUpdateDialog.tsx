@@ -12,7 +12,7 @@ import {
     DialogClose
 } from "./ui/dialog";
 
-import { useApiClient } from "../clients/ApiClientContext";
+import { useApiClient } from "../ApiClientContext";
 import type { CourseSummary } from "./InstructorCourses";
 import { semesterMap, type SemesterName, semesterIdToName } from "../semester";
 
@@ -25,7 +25,7 @@ interface CourseUpdateDialogProps {
 const semesterOptions: SemesterName[] = ["Spring", "Summer", "Fall"];
 
 export function CourseUpdateDialog({ course, onCourseUpdated, onClose }: CourseUpdateDialogProps) {
-    const { courseClient } = useApiClient();
+    const apiClient = useApiClient();
 
     const [name, setName] = useState(course.name);
     const [institution, setInstitution] = useState(course.institution);
@@ -64,7 +64,7 @@ export function CourseUpdateDialog({ course, onCourseUpdated, onClose }: CourseU
         };
 
         try {
-            const { errorMessage } = await courseClient.updateCourse(course.id, updatedData);
+            const { errorMessage } = await apiClient.updateCourse(course.id, updatedData);
 
             if (errorMessage) throw new Error(errorMessage);
 

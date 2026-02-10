@@ -1,5 +1,6 @@
 from fastapi import HTTPException, status
-from typing import Callable, Optional, Tuple
+from typing import List, Optional
+from langchain_core.documents import Document
 from psycopg.errors import UniqueViolation
 from API.Repository.i_sql_repository import ISQLRepository
 from API.Service.rag_service import RAGService
@@ -25,6 +26,8 @@ class DocumentService:
     def create_document(self, course_id: str, file_name: str, file_bytes: bytes, mime_type: str) -> dict:
         """
         1️⃣ Determine file type and save original file in SQL.
+        2️⃣ Extract and split file text into chunks.
+        3️⃣ Store chunks in vector DB for semantic search.
         """
         if not file_bytes:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Uploaded file is empty.")
@@ -34,28 +37,27 @@ class DocumentService:
         if not file_type:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"Unsupported MIME type: {mime_type}")
 
+        file_type_id = file_type["id"]
+        file_type = file_type["extension"]
+
         # --- Step 2: Save file in SQL ---
         try:
-            file_type_id = file_type["id"]
             doc_id = self.sql_repo.create_document(course_id, file_name, file_bytes, file_type_id)
         except UniqueViolation:
-            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail=f"A document named '{file_name}' already exists in this course.")
+            raise HTTPException(
+                status.HTTP_400_BAD_REQUEST,
+                detail=f"A document named '{file_name}' already exists in this course."
+            )
+
+        # --- Step 3: Index document in vector store ---
+        try:
+            self.rag_service.create_index(course_id, doc_id, "RecursiveCharacterTextSplitterType", file_name, file_type, file_bytes)
+        except Exception as e:
+            # Rollback SQL if vector indexing fails
+            self.sql_repo.delete_document(course_id, doc_id)
+            raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Vector indexing failed: {str(e)}")
 
         return {"doc_id": doc_id}
-    
-    def vectorize_document(self, course_id: str, doc_id: str, file_name: str, mime_type: str, file_bytes: bytes, publish_to_documents_ws_route: Callable):        
-        """
-        2️⃣ Extract and split file text into chunks.
-        3️⃣ Store chunks in vector DB for semantic search.
-        """
-        try:
-            self.rag_service.create_index(course_id, doc_id, file_name, mime_type, file_bytes)
-            self.sql_repo.update_document_processing_status_completed(doc_id)
-            publish_to_documents_ws_route({"event": "processing_status_changed", "doc_id": doc_id, "status": "COMPLETED"})
-
-        except Exception:
-            self.sql_repo.update_document_processing_status_failed(doc_id)
-            publish_to_documents_ws_route({"event": "processing_status_changed", "doc_id": doc_id, "status": "FAILED"})
 
     @clean_service
     def read_document(self, course_id: str, doc_id: str) -> dict:
@@ -71,8 +73,7 @@ class DocumentService:
     def read_all_documents(
         self,
         course_id: str,
-        mime_type: Optional[str] = None,
-        file_name: Optional[str] = None,
+        file_type: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "uploaded_at",
@@ -82,21 +83,20 @@ class DocumentService:
 
         file_type_id = None
         # If a MIME type is provided, translate it to its numeric ID
-        if mime_type:
-            ft_record = self.sql_repo.read_file_type_by_mime(mime_type)
+        if file_type:
+            ft_record = self.sql_repo.read_file_type_by_mime(file_type)
             if ft_record:
                 file_type_id = ft_record.get("id")
             else:
                 # If MIME type not found → return a clear HTTP 404 error
                 raise HTTPException(
                     status_code=status.HTTP_404_NOT_FOUND,
-                    detail=f"File type '{mime_type}' not found in file_types table."
+                    detail=f"File type '{file_type}' not found in file_types table."
                 )
 
         return self.sql_repo.read_all_documents(
             course_id=course_id,
             file_type_id=file_type_id,
-            file_name=file_name,
             limit=limit,
             offset=offset,
             order_by=order_by,
@@ -113,21 +113,3 @@ class DocumentService:
         self.rag_service.delete_index(course_id, doc_id)
 
         return {"status": "deleted", "course_id": course_id, "doc_id": doc_id}
-
-    @clean_service
-    def download_document(self, course_id: str, doc_id: str) -> tuple:
-        """Returns raw file bytes + metadata. Used by router /download endpoint."""
-        doc = self.sql_repo.read_document(course_id, doc_id)
-
-        return doc["file_name"], doc["file_data"], doc["mime_type"]
-
-    @clean_service
-    def preview_document(self, course_id: str, doc_id: str) -> tuple:
-        """Returns raw file bytes + metadata. Used by router /preview endpoint."""
-        doc = self.read_document(course_id, doc_id)
-
-        if not doc["can_preview"]:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Preview not supported for file type: {doc['mime_type']}")
-
-        return doc["file_name"], doc["file_data"], doc["mime_type"] if doc["native_preview"] else "text/plain"
-

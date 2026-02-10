@@ -83,84 +83,25 @@ CREATE TABLE IF NOT EXISTS courses (
 CREATE TABLE IF NOT EXISTS file_types (
     id SERIAL PRIMARY KEY,
     mime_type VARCHAR(100) UNIQUE NOT NULL,   -- e.g. 'application/pdf'
-    class_name VARCHAR(100) NOT NULL,
-    native_preview BOOLEAN NOT NULL,
-    can_preview BOOLEAN NOT NULL 
+    extension VARCHAR(10) UNIQUE NOT NULL     -- e.g. 'pdf'
 );
 
-INSERT INTO file_types (mime_type, class_name, native_preview, can_preview)
+INSERT INTO file_types (mime_type, extension)
 VALUES
-    -- PDF
-    ('application/pdf', 'PDFLoader', TRUE, TRUE),
-
-    -- TXT
-    ('text/plain', 'TXTLoader', TRUE, TRUE),
-    ('application/octet-stream', 'TXTLoader', FALSE, TRUE),
-
-    -- Markdown
-    ('text/markdown', 'MDLoader', FALSE, TRUE),
-    ('text/x-markdown', 'MDLoader', FALSE, TRUE),
-    ('application/markdown', 'MDLoader', FALSE, TRUE),
-
-    -- HTML
-    ('text/html', 'HTMLLoader', TRUE, TRUE),
-    ('application/xhtml+xml', 'HTMLLoader', TRUE, TRUE),
-
-    -- XML
-    ('application/xml', 'XMLLoader', TRUE, TRUE),
-    ('text/xml', 'XMLLoader', TRUE, TRUE),
-    ('application/x-xml', 'XMLLoader', TRUE, TRUE),
-
-    -- CSV
-    ('text/csv', 'CSVLoader', FALSE, TRUE),
-    ('application/csv', 'CSVLoader', FALSE, TRUE),
-    ('text/x-comma-separated-values', 'CSVLoader', FALSE, TRUE),
-
-    -- Word
-    ('application/msword', 'DOCXLoader', FALSE, FALSE),
-    ('application/x-msword', 'DOCXLoader', FALSE, FALSE),
-    ('application/vnd.ms-word', 'DOCXLoader', FALSE, FALSE),
-    ('application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'DOCXLoader', FALSE, FALSE),
-
-    -- Excel
-    ('application/vnd.ms-excel', 'XLSXLoader', FALSE, FALSE),
-    ('application/msexcel', 'XLSXLoader', FALSE, FALSE),
-    ('application/x-msexcel', 'XLSXLoader', FALSE, FALSE),
-    ('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'XLSXLoader', FALSE, FALSE),
-
-    -- PowerPoint
-    ('application/vnd.ms-powerpoint', 'PPTXLoader', FALSE, FALSE),
-    ('application/mspowerpoint', 'PPTXLoader', FALSE, FALSE),
-    ('application/x-mspowerpoint', 'PPTXLoader', FALSE, FALSE),
-    ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTXLoader', FALSE, FALSE)
+    ('application/pdf', 'pdf'),
+    ('text/plain', 'txt')
 ON CONFLICT (mime_type) DO NOTHING;
-
--- -----------------------------
--- Processing Status Table
--- -----------------------------
-CREATE TABLE IF NOT EXISTS processing_statuses (
-    id SERIAL PRIMARY KEY,
-    name VARCHAR(20) NOT NULL UNIQUE
-);
-
-INSERT INTO processing_statuses (name)
-VALUES 
-    ('PROCESSING'),
-    ('COMPLETED'),
-    ('FAILED')
-ON CONFLICT (name) DO NOTHING;
 
 -- -----------------------------
 -- Documents Table
 -- -----------------------------
 CREATE TABLE IF NOT EXISTS documents (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
-    file_name VARCHAR(255) NOT NULL CHECK (trim(file_name) <> ''),
-    file_type_id INT NOT NULL REFERENCES file_types(id) ON DELETE RESTRICT,
-    processing_status_id INT NOT NULL REFERENCES processing_statuses(id) ON DELETE RESTRICT,
-    file_data BYTEA NOT NULL,
-    uploaded_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+    file_name VARCHAR(255) NOT NULL,
+    file_type_id INT REFERENCES file_types(id) ON DELETE RESTRICT,
+    file_data BYTEA NOT NULL, -- Ideally max ~10MB to keep DB fast; BYTEA can technically hold up to 1GB
+    uploaded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE (course_id, file_name)
 );
 

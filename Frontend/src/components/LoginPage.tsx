@@ -5,7 +5,7 @@ import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
 // --- 1. IMPORT THE API CLIENT HOOK ---
-import { useApiClient } from "../clients/ApiClientContext";
+import { useApiClient } from "../ApiClientContext";
 
 // --- 2. REMOVED the old 'Instructor' interface ---
 // (No longer needed)
@@ -13,7 +13,7 @@ import { useApiClient } from "../clients/ApiClientContext";
 export function LoginPage() {
     const navigate = useNavigate();
     // --- 3. INITIALIZE THE API CLIENT ---
-    const { authClient } = useApiClient();
+    const apiClient = useApiClient();
 
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -41,13 +41,13 @@ export function LoginPage() {
 
             // This one line handles the API call and password check
             // It correctly sends 'email' as the 'username' field
-            const { data, errorMessage } = await authClient.login(email, password);
+            const { data, errorMessage } = await apiClient.login(email, password);
 
             if (errorMessage) {
                 throw new Error(errorMessage); // Throw error if login fails
             }
 
-            // On success, the authClient has stored the token
+            // On success, the apiClient has stored the token
             // and returned the instructor_id
             const instructorId = data.instructor_id;
             console.log("Login successful for instructor:", instructorId);

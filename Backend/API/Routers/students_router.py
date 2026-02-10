@@ -2,7 +2,6 @@ from fastapi import APIRouter, Query, Path, Depends, HTTPException, status
 from typing import Optional, List, Dict
 from API.Service.students_service import StudentService
 from API.dependencies import get_student_service
-from Metrics.metrics import MetricsRoute
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -12,7 +11,7 @@ class StudentRegistrationStatus(BaseModel):
     student_id: Optional[UUID] = None
 
 
-router = APIRouter(prefix="/students", tags=["Students"], route_class=MetricsRoute)
+router = APIRouter(prefix="/students", tags=["Students"])
 
 
 @router.post(
