@@ -45,13 +45,6 @@ class CourseService:
                 detail=f"Instructor with id={instructor_id} not found."
             )
 
-        course = self.sql_repo.read_course_by_name(name, instructor_id)
-        if course:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail=f"Course '{name}' already exists for instructor {instructor_id}."
-            )
-
         rag_strategy_id: Optional[int] = None
         if rag_strategy is not None:
             strategy_row = self.sql_repo.read_rag_strategy_by_type(rag_strategy)
@@ -170,12 +163,6 @@ class CourseService:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=f"Course with id={course_id} not found."
-            )
-
-        if not updates:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No valid fields provided for update."
             )
 
         updated_course = self.sql_repo.update_course(course_id, updates)

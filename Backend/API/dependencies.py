@@ -10,7 +10,6 @@ from fastapi.security import OAuth2PasswordBearer
 from langchain_core.language_models import BaseChatModel
 from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
-from langchain_text_splitters import RecursiveCharacterTextSplitter, TextSplitter
 
 from API.Repository.sql_repository import SQLRepository
 from API.Repository.postgres_connection_manager import PostgresConnectionManager
@@ -23,10 +22,10 @@ from API.Service.students_service import StudentService
 from API.Service.queries_service import QueryService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
-from API.Util.loaders import LOADER_CLASS_REGISTRY, ILoader, LoaderFactory
+from API.Util.loaders import Loader
 from API.Util.rag_strategy import STRATEGY_CLASS_REGISTRY, IRAGStrategy, RAGStrategyFactory
+from API.Util.splitters import Splitter
 from API.Util.auth import decrypt_access_token
-from API.Util.web_socket_manager import WebSocketManager
 
 
 load_dotenv()
@@ -152,60 +151,20 @@ def authorize_course(
 
 
 # ============================================================
-# 🔌 WEBSOCKET MANAGER SETUP
-# ============================================================
-
-
-@lru_cache()
-def get_web_socket_manager() -> WebSocketManager:
-    """
-    Provide a singleton WebSocketManager instance.
-
-    - Manages WebSocket connections grouped by topic (URL path)
-    - Subscribes/unsubscribes clients automatically
-    - Allows broadcast of real-time updates to subscribed clients
-    """
-    return WebSocketManager()
-
-
-# ============================================================
 # 🧠 LLM  SETUP
 # ============================================================
 
 
 @lru_cache
-def get_splitter() -> TextSplitter:
+def get_loader() -> Loader:
+    """Return a Singleton Loader instance for document parsing."""
+    return Loader()
+
+
+@lru_cache
+def get_splitter() -> Splitter:
     """Return a Singleton Splitter instance for document chunking."""
-    return RecursiveCharacterTextSplitter(
-        chunk_size=1200,
-        chunk_overlap=200,
-        length_function=len,
-        separators=[
-            "\n\n",    # paragraph
-            "\n",      # line
-            ". ",      # sentence
-            "; ",      # semi-structured
-            ", ",      # NEW: improves CSV/XLSX rows
-            " ",       # word level
-            ""         # fallback
-        ],
-    )
-
-
-@lru_cache()
-def get_loader_factory(
-    sql_repo: SQLRepository = Depends(get_sql_repository)
-) -> LoaderFactory:
-    """Builds a LoaderFactory from DB: mime_type → instantiated loader class."""
-    file_types = sql_repo.read_all_file_types()  # expected: List[{ "mime_type": str, "class_name": str }]
-
-    # --- Detect invalid loader classes from DB ---
-    invalid = { row["class_name"] for row in file_types if row["class_name"] not in LOADER_CLASS_REGISTRY}
-    if invalid:
-        raise ValueError(f"Invalid loader classes in file_types table: {invalid}. Valid: {list(LOADER_CLASS_REGISTRY.keys())}")
-
-    loader_registry_from_db: Dict[str, ILoader] = { row["mime_type"]: LOADER_CLASS_REGISTRY[row["class_name"]]() for row in file_types if row["class_name"] in LOADER_CLASS_REGISTRY }
-    return LoaderFactory(loader_registry_from_db)
+    return Splitter()
 
 
 @lru_cache()
@@ -218,9 +177,16 @@ def get_rag_strategy_factory(
     # Detect invalid classes from DB
     invalid = { row["class_name"] for row in rag_strategies if row["class_name"] not in STRATEGY_CLASS_REGISTRY }
     if invalid:
-        raise ValueError(f"Invalid strategy classes in rag_types table: {invalid}. Valid: {list(STRATEGY_CLASS_REGISTRY.keys())}")
+        raise ValueError(
+            f"Invalid strategy classes in rag_types table: {invalid}. "
+            f"Valid: {list(STRATEGY_CLASS_REGISTRY.keys())}"
+        )
 
-    rag_strategy_registry_from_db: Dict[str, IRAGStrategy] = { str(row["id"]): STRATEGY_CLASS_REGISTRY[row["class_name"]]() for row in rag_strategies if row["class_name"] in STRATEGY_CLASS_REGISTRY }
+    rag_strategy_registry_from_db: Dict[str, IRAGStrategy] = {
+        str(row["id"]): STRATEGY_CLASS_REGISTRY[row["class_name"]]()
+        for row in rag_strategies
+        if row["class_name"] in STRATEGY_CLASS_REGISTRY
+    }
     return RAGStrategyFactory(rag_strategy_registry_from_db)
 
 
@@ -264,7 +230,6 @@ def get_auth_service(
     """Provide an AuthService using the SQL repository."""
     return AuthService(sql_repo)
 
-
 def get_course_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
     vector_repo: IVectorRepository = Depends(get_vector_repository),
@@ -272,13 +237,11 @@ def get_course_service(
     """Provide a CourseService using the SQL repository."""
     return CourseService(sql_repo, vector_repo)
 
-
 def get_instructor_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
 ) -> InstructorService:
     """Provide an InstructorService using the SQL repository."""
     return InstructorService(sql_repo)
-
 
 def get_student_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
@@ -288,15 +251,15 @@ def get_student_service(
 
 
 def get_rag_service(
+    loader: Loader = Depends(get_loader),
+    splitter: Splitter = Depends(get_splitter),
     vector_repo: IVectorRepository = Depends(get_vector_repository),
     sql_repo: IVectorRepository = Depends(get_sql_repository),
-    loader_factory: LoaderFactory = Depends(get_loader_factory),
     rag_strategy_factory: RAGStrategyFactory = Depends(get_rag_strategy_factory),
-    splitter: TextSplitter = Depends(get_splitter),
     llm: BaseChatModel = Depends(get_llm),
 ) -> RAGService:
     """Provide a fully configured RAGService instance."""
-    return RAGService(vector_repo, sql_repo, loader_factory, rag_strategy_factory, splitter, llm)
+    return RAGService(loader, splitter, vector_repo, sql_repo, rag_strategy_factory, llm)
 
 
 def get_document_service(
@@ -306,11 +269,9 @@ def get_document_service(
     """Provide a DocumentService using the SQL repository and RAGService."""
     return DocumentService(sql_repo, rag_service)
 
-
 def get_query_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
     rag_service: RAGService = Depends(get_rag_service),
 ) -> QueryService:
     """Provide a QueryService using the SQL repository and RAGService."""
     return QueryService(sql_repo, rag_service)
-

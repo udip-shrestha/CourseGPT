@@ -1,9 +1,8 @@
 import logging
 from contextlib import asynccontextmanager
-from math import exp
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router, auth_router, web_socket_router
+from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router, auth_router
 from API.dependencies import get_connection_manager
 
 
@@ -34,7 +33,6 @@ app.include_router(instructors_router.router)
 app.include_router(courses_router.router)
 app.include_router(students_router.router)
 app.include_router(auth_router.router)
-app.include_router(web_socket_router.router)
 
 
 # --- THIS MIDDLEWARE CONFIGURATION ---
@@ -52,7 +50,6 @@ app = CORSMiddleware(
     allow_credentials=True, # Allow cookies if needed for auth later
     allow_methods=["*"], # Allow all standard methods (GET, POST, PUT, DELETE, OPTIONS,etc.)
     allow_headers=["*"], # Allow all headers
-    expose_headers=["Content-Disposition"]
 )
 # --------------------------------------
 

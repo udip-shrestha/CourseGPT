@@ -19,7 +19,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from "./ui/dialog";
-import { useApiClient } from "../clients/ApiClientContext";
+import { useApiClient } from "../ApiClientContext";
 
 // Interface for the instructor
 interface Instructor {
@@ -34,7 +34,7 @@ interface Instructor {
 export function InstructorProfile() {
     const { instructorId } = useParams<{ instructorId: string }>();
     const navigate = useNavigate();
-    const { apiClient } = useApiClient();
+    const apiClient = useApiClient();
 
     const [instructor, setInstructor] = useState<Instructor | null>(null);
     const [isLoading, setIsLoading] = useState(true);

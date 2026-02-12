@@ -8,7 +8,6 @@ from API.Repository.i_vector_repository import IVectorRepository
 def test_create_course_success(course_service: CourseService, mock_sql_repo: ISQLRepository, mock_vector_repo: IVectorRepository):
     """Should create a course if instructor exists."""
     mock_sql_repo.read_instructor.return_value = {"id": "inst-1"}
-    mock_sql_repo.read_course_by_name.return_value = None
     mock_sql_repo.create_course.return_value = "course-1"
 
     result = course_service.create_course("inst-1", "CS101", "Iowa State", 1, 2025)
@@ -33,7 +32,6 @@ def test_create_course_instructor_not_found(course_service: CourseService, mock_
 def test_create_course_vector_failure_rolls_back(course_service: CourseService, mock_sql_repo: ISQLRepository, mock_vector_repo: IVectorRepository):
     """Should roll back SQL course if vector collection creation fails."""
     mock_sql_repo.read_instructor.return_value = {"id": "inst-1"}
-    mock_sql_repo.read_course_by_name.return_value = None
     mock_sql_repo.create_course.return_value = "course-1"
     mock_vector_repo.create_collection.side_effect = Exception("Vector init failed")
 

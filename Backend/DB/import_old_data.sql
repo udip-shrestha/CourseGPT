@@ -1,6 +1,15 @@
 SET client_min_messages = WARNING;
 
 -------------------------------------------------------
+-- 1. instructor_roles
+-------------------------------------------------------
+INSERT INTO instructor_roles(id, role_name)
+SELECT id, role_name
+FROM old_instructor_roles
+WHERE role_name IS NOT NULL AND trim(role_name) <> ''
+ON CONFLICT (id) DO NOTHING;
+
+-------------------------------------------------------
 -- 2. instructors
 -------------------------------------------------------
 INSERT INTO instructors (
@@ -28,12 +37,21 @@ WHERE
 ON CONFLICT (id) DO NOTHING;
 
 -------------------------------------------------------
--- 4. courses
+-- 3. semesters
+-------------------------------------------------------
+INSERT INTO semesters(id, name)
+SELECT id, name
+FROM old_semesters
+WHERE name IS NOT NULL AND trim(name) <> ''
+ON CONFLICT (id) DO NOTHING;
+
+-------------------------------------------------------
+-- 4. courses (NO rag_strategy_id)
 -------------------------------------------------------
 INSERT INTO courses (
     id, name, institution, year,
     created_at, updated_at,
-    instructor_id, semester_id, rag_strategy_id
+    instructor_id, semester_id
 )
 SELECT
     c.id,
@@ -41,10 +59,9 @@ SELECT
     c.institution,
     c.year,
     c.created_at,
-    COALESCE(c.updated_at, c.created_at),
+    c.created_at AS updated_at,
     c.instructor_id,
-    c.semester_id,
-    c.rag_strategy_id       
+    c.semester_id
 FROM old_courses c
 WHERE
     c.id IS NOT NULL
@@ -53,21 +70,30 @@ WHERE
     AND c.year IS NOT NULL AND c.year >= 0
     AND c.instructor_id IN (SELECT id FROM instructors)
     AND c.semester_id IN (SELECT id FROM semesters)
-    AND c.rag_strategy_id IN (SELECT id FROM rag_strategies)
+ON CONFLICT (id) DO NOTHING;
+
+-------------------------------------------------------
+-- 5. file_types
+-------------------------------------------------------
+INSERT INTO file_types(id, mime_type, extension)
+SELECT id, mime_type, extension
+FROM old_file_types
+WHERE 
+    trim(mime_type) <> '' 
+    AND trim(extension) <> ''
 ON CONFLICT (id) DO NOTHING;
 
 -------------------------------------------------------
 -- 6. documents
 -------------------------------------------------------
 INSERT INTO documents (
-    id, course_id, file_name, file_type_id, processing_status_id, file_data, uploaded_at
+    id, course_id, file_name, file_type_id, file_data, uploaded_at
 )
 SELECT
     id,
     course_id,
     file_name,
     file_type_id,
-    (SELECT id FROM processing_statuses WHERE name = 'COMPLETED'),
     decode(file_data, 'hex'),
     uploaded_at
 FROM old_documents
@@ -76,8 +102,6 @@ WHERE
     AND trim(file_name) <> ''
     AND course_id IN (SELECT id FROM courses)
     AND file_type_id IN (SELECT id FROM file_types)
-    AND file_data IS NOT NULL 
-    AND file_data <> ''
 ON CONFLICT (id) DO NOTHING;
 
 -------------------------------------------------------
@@ -89,7 +113,7 @@ SELECT
     NULLIF(trim(discord_id), ''),
     name,
     created_at,
-    COALESCE(updated_at, created_at)
+    created_at
 FROM old_students
 WHERE
     id IS NOT NULL
@@ -127,3 +151,12 @@ WHERE
     AND course_id IN (SELECT id FROM courses)
     AND trim(query_text) <> ''
 ON CONFLICT (id) DO NOTHING;
+
+-------------------------------------------------------
+-- 10. Set migrated courses to SIMPLE rag strategy
+-------------------------------------------------------
+UPDATE courses
+SET rag_strategy_id = (
+    SELECT id FROM rag_strategies WHERE type_name = 'SIMPLE'
+)
+WHERE rag_strategy_id IS NULL;

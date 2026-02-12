@@ -11,7 +11,7 @@ import {
   DialogClose, // Added DialogClose for convenience
 } from "./ui/dialog";
 import { Info, X } from "lucide-react"; // Kept Info, X
-import { useApiClient } from "../clients/ApiClientContext";
+import { useApiClient } from "../ApiClientContext.tsx";
 
 export function HomePage() {
   // const navigate = useNavigate();
@@ -55,7 +55,7 @@ export function HomePage() {
   ];
 
   // Example user data - replace with actual auth context later
-  const { apiClient } = useApiClient();
+  const apiClient = useApiClient();
   const [user, setUser] = useState<{ name?: string } | null>(null);
   const [loadingUser, setLoadingUser] = useState<boolean>(false);
 
