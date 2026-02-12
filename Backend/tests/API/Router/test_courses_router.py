@@ -46,6 +46,7 @@ def test_add_course_success(
     """Should create a course if instructor exists."""
     # Configure mock returns
     mock_sql_repo.read_instructor.return_value = {"id": "inst-1"}
+    mock_sql_repo.read_course_by_name.return_value = None  # REQUIRED
     mock_sql_repo.create_course.return_value = "course-1"
     mock_vector_repo.create_collection.return_value = None
 

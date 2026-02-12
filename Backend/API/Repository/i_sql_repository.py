@@ -7,81 +7,123 @@ class ISQLRepository(Protocol):
     # FILE TYPES
     # ======================================================
     def read_file_type_by_mime(self, mime_type: str) -> Optional[Dict[str, Any]]:
-        """Return the file type record (id, mime_type, extension) matching a MIME type."""
+        """Return the file type matching a MIME type."""
         ...
 
-    def read_file_type_by_extension(self, extension: str) -> Optional[Dict[str, Any]]:
-        """Return the file type record (id, mime_type, extension) matching a file extension."""
+    def read_all_file_types(self) -> List[Dict[str, Any]]:
+        """Return all file types."""
+        ...
+
+    # ======================================================
+    # RAG STRATEGIES
+    # ======================================================
+    def read_rag_strategy_by_type(self, type_name: str) -> Optional[Dict[str, Any]]:
+        """Return a rag strategy by its type name."""
+        ...
+
+    def read_all_rag_strategies(self) -> List[Dict[str, Any]]:
+        """Return all rag strategies."""
         ...
 
     # ======================================================
     # DOCUMENTS
     # ======================================================
     def create_document(self, course_id: str, file_name: str, file_bytes: bytes, file_type_id: str) -> str:
-        """Save a single uploaded file (binary) in SQL DB and return its document ID."""
+        """Insert a new document and return its ID."""
         ...
 
     def read_document(self, course_id: str, doc_id: str) -> Optional[dict]:
-        """Retrieve a file record by document ID."""
+        """Read a single document (file + metadata)."""
         ...
 
     def delete_document(self, course_id: str, doc_id: str) -> None:
-        """Delete a file record by its ID."""
+        """Delete a document by ID."""
         ...
 
     def read_all_documents(
         self,
         course_id: str,
         file_type_id: Optional[str] = None,
+        file_name: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "uploaded_at",
         order_dir: str = "desc"
-    ) -> List[dict]:
-        """Retrieve files with pagination, optional filters, and sorting."""
+    ) -> dict:
+        """Return paginated, filtered documents."""
+        ...
+  
+    def update_document_processing_status_completed(self, doc_id: str) -> None:
+        """Mark a document's processing_status as COMPLETED."""
+        ...
+
+    def update_document_processing_status_failed(self, doc_id: str) -> None:
+        """Mark a document's processing_status as FAILED."""
         ...
 
     # ======================================================
     # COURSES
     # ======================================================
-    def create_course(self, instructor_id: str, name: str, institution: str, semester_id: int, year: int) -> str:
+    def create_course(
+        self,
+        instructor_id: str,
+        name: str,
+        institution: str,
+        semester_id: int,
+        year: int,
+        rag_strategy_id: Optional[int] = None
+    ) -> str:
         """Create a new course record."""
-    ...
-
-    def read_course(self, course_id: str) -> Optional[dict]:
-        """Retrieve a course record by ID."""
         ...
 
-    def read_all_courses(self, instructor_id: Optional[str] = None) -> List[dict]:
-        """Retrieve all courses, optionally filtered by instructor."""
+    def read_course(self, course_id: str) -> Optional[dict]:
+        """Retrieve a course by ID."""
+        ...
+
+    def read_course_by_name(self, name: str, instructor_id: str) -> Optional[dict]:
+        """Return a course owned by a specific instructor with a matching name."""
+        ...
+
+    def read_all_courses(
+        self,
+        instructor_id: Optional[str] = None,
+        institution: Optional[str] = None,
+        name: Optional[str] = None,
+        semester_id: Optional[int] = None,
+        rag_strategy_id: Optional[int] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        """Return all courses with filtering + pagination."""
         ...
 
     def delete_course(self, course_id: str) -> None:
-        """Delete a course record by ID."""
-        ...
-    
-    def get_course_by_name(self, course_name: str) -> Optional[dict]:
-        """Get a CourseId by Name"""
+        """Delete a course by ID."""
         ...
 
-    
-    def update_course(self, course_id: str, updates: dict) -> dict:
-        """Update course information."""
+    def get_course_by_name(self, course_name: str) -> Optional[dict]:
+        """Return a course by its exact name."""
         ...
-        
+
+    def update_course(self, course_id: str, updates: dict) -> dict:
+        """Update course fields."""
+        ...
+
     # ======================================================
     # INSTRUCTORS
     # ======================================================
     def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
-        """Add a new instructor."""
+        """Create a new instructor."""
         ...
 
     def read_instructor(self, instructor_id: str) -> Optional[dict]:
-        """Retrieve an instructor by ID."""
+        """Read an instructor by ID."""
         ...
 
     def read_instructor_by_email(self, email: str) -> Optional[dict]:
-        """Retrieve an instructor by Email."""
+        """Read an instructor by email."""
         ...
 
     def read_all_instructors(
@@ -95,68 +137,83 @@ class ISQLRepository(Protocol):
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
-    ) -> List[dict]:
-        """Retrieve all instructors, with optional filters and ordering."""
+    ) -> dict:
+        """Return all instructors with filtering + pagination."""
         ...
-    def delete_instructor(self, instructor_id: str) -> Optional[dict]:
+
+    def delete_instructor(self, instructor_id: str) -> None:
         """Delete an instructor by ID."""
         ...
 
     def update_instructor(self, instructor_id: str, updates: dict) -> dict:
-        """Update instructor information."""
+        """Update instructor fields."""
         ...
-    
+
     # ======================================================
     # STUDENTS
     # ======================================================
     def create_student(self, name: str, discord_id: str, course_id: str) -> str:
-        """Create a new student and link them to a course."""
+        """Create a student and register them for a course."""
         ...
 
     def read_student(self, student_id: str) -> Optional[dict]:
-        """Fetch a student by their ID."""
+        """Read a student record by ID."""
         ...
 
     def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
-        """Fetch all students, optionally filtering by course ID."""
+        """Return all students, optionally filtered by course."""
         ...
 
     def delete_student(self, student_id: str) -> None:
-        """Delete a student and remove their course associations."""
-        ...
-
-    def read_courses_by_discord(self, discord_id: str) -> List[dict]:
-        """Get all courses a student is registered in by Discord ID."""
+        """Delete a student + remove links."""
         ...
 
     def read_student_by_discord(self, discord_id: str) -> Optional[dict]:
-        """Retrieve a student by their Discord ID."""
+        """Return a student by Discord ID."""
         ...
-    
+
+    def read_courses_by_discord(self, discord_id: str) -> List[dict]:
+        """Return all courses a Discord user is registered in."""
+        ...
+
     def remove_student_from_course(self, student_id: str, course_id: str) -> bool:
-        """Deletes a record linking a student to a course in the junction table."""
+        """Remove a student from a course."""
         ...
-    
+
     # ======================================================
     # QUERIES
     # ======================================================
-    def create_query(self,student_id: Optional[str], course_id: str, query_text: str, response_text: Optional[str], summary: Optional[str]) -> str:
-        """Insert a new query + response + summary record."""
+    def create_query(self, student_id: Optional[str], course_id: str, query_text: str, response_text: Optional[str]) -> str:
+        """Create a query + response pair."""
         ...
 
-    def read_query(self, query_id: str) -> Optional[dict]:
-        """Fetch a single query by ID."""
+    def read_query(self, course_id: str, query_id: str) -> Optional[dict]:
+        """Return a single query."""
         ...
 
-    def read_queries_for_student_course(self, student_id: str, course_id: str, limit: int = 5) -> List[dict]:
-        """Fetch recent queries for a student in a specific course."""
+    def read_queries_for_student_course(
+        self,
+        student_id: str,
+        course_id: str,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "asked_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        """Return paginated queries for a specific student in a course."""
         ...
 
-    def read_all_queries_for_course(self, course_id: str, limit: int = 5) -> List[dict]:
-        """Fetch recent queries for a course (all students)."""
+    def read_all_queries_for_course(
+        self,
+        course_id: str,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "asked_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        """Return all queries for a course."""
         ...
 
-    def delete_query(self, query_id: str) -> None:
-        """Delete a query by its ID."""
+    def delete_query(self, course_id: str, query_id: str) -> None:
+        """Delete a query by ID."""
         ...
-    

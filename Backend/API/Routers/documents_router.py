@@ -1,36 +1,18 @@
-from fastapi import APIRouter, UploadFile, File, Query, Depends, status, Path
-from typing import Optional
-from langchain_core.documents import Document
-from API.Service.document_service import DocumentService
-from API.dependencies import authorize_course, get_document_service
-
-from fastapi.responses import StreamingResponse
-from fastapi import HTTPException
 from io import BytesIO
-import mimetypes
+from typing import Optional
 
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Query, Depends, WebSocket, status, Path
+from fastapi.responses import StreamingResponse
 
-import base64
-# import memoryview
-
-def decode_file_data(encoded):
-    if isinstance(encoded, (bytes, bytearray)):
-        return bytes(encoded)
-
-    if isinstance(encoded, memoryview):
-        return encoded.tobytes()
-
-    if isinstance(encoded, str):
-        return base64.b64decode(encoded)
-
-    raise TypeError(f"Unsupported file_data type: {type(encoded)}")
-
-
-
-
+from API.Service.document_service import DocumentService
+from API.dependencies import authorize_course, get_document_service, get_web_socket_manager, validate_course
+from API.Util.web_socket_manager import WebSocketManager
 
 
 router = APIRouter(tags=["Documents"])
+
+
+COURSE_DOCUMENTS_WS_ROUTE = "/courses/{course_id}/documents"
 
 
 @router.post(
@@ -43,7 +25,8 @@ router = APIRouter(tags=["Documents"])
         "**Returns:** JSON containing the created document's ID."
     ),
 )
-async def upload_document(
+def upload_document(
+    background_tasks: BackgroundTasks,
     course_id: str = Path(
         ...,
         description="UUID of the course (e.g., the 'Data Structures' course).",
@@ -54,42 +37,23 @@ async def upload_document(
     ),
     _auth: dict = Depends(authorize_course),
     service: DocumentService = Depends(get_document_service),
+    ws_manager: WebSocketManager = Depends(get_web_socket_manager),
 ):
     """Uploads a new document for a specific course."""
-    content = await file.read()
-    return service.create_document(
-        course_id=course_id,
-        file_name=file.filename,
-        file_bytes=content,
-        mime_type=file.content_type,
+    content = file.file.read()
+    doc = service.create_document(course_id=course_id, file_name=file.filename, file_bytes=content, mime_type=file.content_type)
+
+    background_tasks.add_task(
+        service.vectorize_document,
+        course_id,
+        doc["doc_id"],
+        file.filename,
+        file.content_type,
+        content,
+        lambda payload: ws_manager.publish(COURSE_DOCUMENTS_WS_ROUTE.format(course_id=course_id), payload)
     )
 
-
-@router.get(
-    "/courses/{course_id}/documents/{doc_id}",
-    status_code=status.HTTP_200_OK,
-    summary="Retrieve a document by ID",
-    description=(
-        "**Action:** Fetches a document’s metadata and stored file data by its unique ID.\n\n"
-        "**Returns:** The document record including filename, MIME type, and timestamps."
-    ),
-)
-def get_document(
-    course_id: str = Path(
-        ...,
-        description="UUID of the course that owns the document.",
-        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
-    ),
-    doc_id: str = Path(
-        ...,
-        description="UUID of the document, e.g., the uploaded 'Backend_Knowledge.pdf'.",
-        examples={"example": "3f9aab52-ef01-4a11-9a3d-1115a6ecf83b"},
-    ),
-    _auth: dict = Depends(authorize_course),
-    service: DocumentService = Depends(get_document_service),
-):
-    """Fetch a specific document record by ID (validated against course_id)."""
-    return service.read_document(course_id, doc_id)
+    return doc
 
 
 @router.get(
@@ -108,10 +72,15 @@ def get_all_documents(
         description="UUID of the course.",
         examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
-    file_type: Optional[str] = Query(
+    mime_type: Optional[str] = Query(
         None,
         description="Optional MIME type to filter by (e.g., `application/pdf`, `text/plain`).",
         examples={"example": "application/pdf"},
+    ),
+    file_name: Optional[str] = Query(
+        None,
+        description="Optional substring to filter file names (case-insensitive).",
+        examples={"example": "chapter"},
     ),
     limit: int = Query(
         10,
@@ -142,7 +111,8 @@ def get_all_documents(
     """Retrieve all documents with optional filters and pagination."""
     return service.read_all_documents(
         course_id=course_id,
-        file_type=file_type,
+        mime_type=mime_type,
+        file_name=file_name,
         limit=limit,
         offset=offset,
         order_by=order_by,
@@ -178,57 +148,98 @@ def delete_document(
     return service.delete_document(course_id, doc_id)
 
 
-
 @router.get(
     "/courses/{course_id}/documents/{doc_id}/download",
+    status_code=status.HTTP_200_OK,
     summary="Download a document as a file attachment",
+    description=(
+        "**Action:** Streams the binary file associated with a specific document ID so "
+        "the client can download it directly.\n\n"
+        "**Behavior:** Returns the file as an attachment using the appropriate "
+        "`Content-Disposition` header. Browsers will prompt the user to save the file "
+        "with the original filename and MIME type.\n\n"
+        "**Returns:** A streamed binary file (PDF, DOCX, TXT, etc.) with accurate "
+        "MIME type and filename."
+    ),
 )
 def download_document(
-    course_id: str,
-    doc_id: str,
-    service: DocumentService = Depends(get_document_service),
+    course_id: str = Path(
+        ...,
+        description="UUID of the course that owns the document.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
+    ),
+    doc_id: str = Path(
+        ...,
+        description="UUID of the document to download.",
+        examples={"example": "3f9aab52-ef01-4a11-9a3d-1115a6ecf83b"},
+    ),
     _auth: dict = Depends(authorize_course),
+    service: DocumentService = Depends(get_document_service),
 ):
+    """
+    Streams the binary file associated with a document so it can be downloaded
+    by the client as a file attachment.
+    """
+    # Fetch document metadata + raw bytes
     doc = service.read_document(course_id, doc_id)
-
-    file_bytes = decode_file_data(doc["file_data"])
-    filename = doc["file_name"]
-
     return StreamingResponse(
-        BytesIO(file_bytes),
-        media_type=doc.get("mime_type") or "application/octet-stream",
+        BytesIO(doc["file_data"]),
+        media_type=doc["mime_type"],
         headers={
             # MUST include both for Chrome/Firefox/Safari compatibility
-            "Content-Disposition": f'attachment; filename="{filename}"; filename*=UTF-8\'\'{filename}',
+            "Content-Disposition": f'attachment; filename="{doc["file_name"]}"; filename*=UTF-8\'\'{doc["file_name"]}',
         },
     )
 
 
-
 @router.get(
     "/courses/{course_id}/documents/{doc_id}/preview",
+    status_code=status.HTTP_200_OK,
     summary="Preview a document inline in the browser",
+    description=(
+        "**Action:** Streams the binary document for inline browser preview. "
+        "This is typically used for PDFs, images, and other formats your browser can render.\n\n"
+        "**Behavior:** Sends the file using the `inline` Content-Disposition header, allowing the "
+        "browser to display the document directly in a new tab. If the browser cannot render the "
+        "file type, it may fallback to prompting the user to download.\n\n"
+        "**Returns:** A streamed binary response using the correct MIME type (e.g., "
+        "`application/pdf`, `image/png`, `text/plain`)."
+    ),
 )
 def preview_document(
-    course_id: str,
-    doc_id: str,
-    service: DocumentService = Depends(get_document_service),
+    course_id: str = Path(
+        ...,
+        description="UUID of the course that owns the document.",
+        examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
+    ),
+    doc_id: str = Path(
+        ...,
+        description="UUID of the document to preview.",
+        examples={"example": "3f9aab52-ef01-4a11-9a3d-1115a6ecf83b"},
+    ),
     _auth: dict = Depends(authorize_course),
+    service: DocumentService = Depends(get_document_service),
 ):
-    doc = service.read_document(course_id, doc_id)
-
-    file_bytes = decode_file_data(doc["file_data"])
-
-    extension = doc.get("extension") or ""
-    base_name = doc.get("file_name") or "file"
-    filename = f"{base_name}.{extension}" if extension else base_name
-
-    mime_type = doc.get("mime_type") or "application/octet-stream"
-
+    """
+    Streams the binary file associated with a document so it can be displayed
+    by the browser inline (for example, PDFs or images).
+    """
+    file_name, file_bytes, mime_type = service.preview_document(course_id, doc_id)
     return StreamingResponse(
         BytesIO(file_bytes),
-        media_type=doc.get("mime_type") or "application/pdf",
+        media_type=mime_type,
         headers={
-        "Content-Disposition": f'inline; filename="{doc["file_name"]}"'
-    },
+            "Content-Disposition": f'inline; filename="{file_name}"; filename*=UTF-8\'\'{file_name}'
+        },
     )
+
+@router.websocket(COURSE_DOCUMENTS_WS_ROUTE)
+async def subscribe_to_course_queries(
+    websocket: WebSocket,
+    _course: dict = Depends(validate_course),
+    manager: WebSocketManager = Depends(get_web_socket_manager),
+):
+    """
+    WebSocket endpoint for subscribing to real-time query updates for a course.
+    """
+    await manager.handle_subscription(websocket.url.path, websocket)
