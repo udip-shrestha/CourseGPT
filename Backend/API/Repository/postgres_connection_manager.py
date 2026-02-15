@@ -39,8 +39,8 @@ class PostgresConnectionManager:
             self.pool: ConnectionPool = ConnectionPool(
                 conninfo=db_url,
                 min_size=1,
-                max_size=10,
-                timeout=10,
+                max_size=8,
+                timeout=8,
                 open=True
             )
         else:
