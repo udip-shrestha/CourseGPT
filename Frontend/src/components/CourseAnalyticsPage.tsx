@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect} from "react";
+//import { redirect } from "react-router-dom";
 import {
     Card,
     CardContent,
@@ -65,12 +66,6 @@ const MOCK_TREND: UsageTrendPoint[] = [
     { date: "2024-02-07", queries: 456, uniqueUsers: 68 },
     { date: "2024-02-08", queries: 378, uniqueUsers: 55 },
     { date: "2024-02-09", queries: 423, uniqueUsers: 63 },
-];
-
-const MOCK_TOP_QUESTIONS: TopQuestionsItem[] = [
-    { queryText: "What is the deadline for the assignment?", count: 42 },
-    { queryText: "How do I submit my homework?", count: 38 },
-    { queryText: "What are the grading criteria?", count: 31 },
 ];
 
 export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
@@ -204,36 +199,66 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* Frequently Asked Questions */}
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <HelpCircle className="h-5 w-5" />
-                        Frequently Asked Questions
-                    </CardTitle>
-                    <CardDescription>
-                        Top questions students asked in this course (by count)
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {loading ? (
-                        <p className="text-muted-foreground text-sm">Loading…</p>
-                    ) : topQuestions.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">No questions recorded yet.</p>
-                    ) : (
-                        <ul className="space-y-3">
-                            {topQuestions.map((item, i) => (
-                                <li key={i} className="flex justify-between gap-4 border-b border-border pb-2 last:border-0">
-                                    <span className="text-sm flex-1 min-w-0">{item.queryText}</span>
-                                    <span className="text-sm font-medium text-muted-foreground shrink-0">
-                                        {item.count} {item.count === 1 ? "time" : "times"}
-                                    </span>
-                                </li>
-                            ))}
-                        </ul>
-                    )}
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Frequently Asked Questions */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <HelpCircle className="h-5 w-5" />
+                            Frequently Asked Questions
+                        </CardTitle>
+                        <CardDescription>
+                            Top questions students asked in this course (by count)
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <p className="text-muted-foreground text-sm">Loading…</p>
+                        ) : topQuestions.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">No questions recorded yet.</p>
+                        ) : (
+                            <ul className="space-y-3">
+                                {topQuestions.map((item, i) => (
+                                    <li key={i} className="flex justify-between gap-4 border-b border-border pb-2 last:border-0">
+                                        <span className="text-sm flex-1 min-w-0">{item.queryText}</span>
+                                        <span className="text-sm font-medium text-muted-foreground shrink-0">
+                                            {item.count} {item.count === 1 ? "time" : "times"}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Top Keywords */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Top Keywords</CardTitle>
+                        <CardDescription>
+                            Most common keywords in student questions
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <p className="text-muted-foreground text-sm">Loading…</p>
+                        ) : topKeywords.length === 0 ? (
+                            <p className="text-muted-foreground text-sm">No keywords recorded yet.</p>
+                        ) : (
+                            <ul className="space-y-3">
+                                {topKeywords.map((item, i) => (
+                                    <li key={i} className="flex justify-between gap-4 border-b border-border pb-2 last:border-0">
+                                        <span className="text-sm flex-1 min-w-0">{item.keyword}</span>
+                                        <span className="text-sm font-medium text-muted-foreground shrink-0">
+                                            {item.count} {item.count === 1 ? "time" : "times"}
+                                        </span>
+                                    </li>
+                                ))}
+                            </ul>
+                        )}
+                    </CardContent>
+                </Card>
+            </div>
 
             {/* Chatbot Usage Trend */}
             <Card>
