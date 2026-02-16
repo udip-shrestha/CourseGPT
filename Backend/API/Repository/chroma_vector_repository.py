@@ -51,7 +51,7 @@ class ChromaVectorRepository(IVectorRepository):
 
         collection.add(ids=ids, documents=documents, metadatas=metadatas)
 
-    def query(self, course_id: str, question: str, top_k: Optional[int] = 10) -> List[Tuple[Document, float]]:
+    def query(self, course_id: str, question: str, top_k: Optional[int] = 8) -> List[Tuple[Document, float]]:
         """
         Retrieve top-k similar chunks using a specific embedding function and collection.
         Returns a list of (Document, score) tuples — same format as LangChain's Chroma

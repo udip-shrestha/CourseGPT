@@ -48,7 +48,15 @@ IMPORT_OLD_DATA_SCRIPT=${IMPORT_OLD_DATA_SCRIPT:-}
 # ===========================================
 # Chroma Vector Database Configuration
 # ===========================================
-CHROMA_DATA_PATH=${CHROMA_DATA_PATH:-.chroma_data}
+CHROMA_CLIENT=${CHROMA_CLIENT:-}
+CHROMA_HOST=${CHROMA_HOST:-}
+CHROMA_PORT=${CHROMA_PORT:-}
+
+# ===========================================
+# JWT Secrets
+# ===========================================
+JWT_ALGORITHM=${JWT_ALGORITHM:-}
+JWT_SECRET_KEY=${JWT_SECRET_KEY:-}
 
 # ===========================================
 # Discord Bot Configuration
