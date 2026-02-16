@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
     Card,
     CardContent,
@@ -14,7 +14,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./ui/select";
-import { Users, MessageSquare, TrendingUp, Activity } from "lucide-react";
+import { Users, MessageSquare, TrendingUp, Activity, HelpCircle } from "lucide-react";
 import {
     LineChart,
     Line,
@@ -30,9 +30,13 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
+import { useApiClient } from "../clients/ApiClientContext";
+import type { OverviewSummary, UsageTrendPoint, QueryDistributionItem, TopQuestionsItem, TopKeywordsItem} from "../clients/AnalyticsClient";
+
+const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
 interface CourseAnalyticsPageProps {
-    course: { name: string; id?: string };
+    course: { name: string; id?: string; instructor_id?: string };
 }
 
 interface CourseUsageData {
@@ -46,12 +50,6 @@ interface CourseUsageData {
     satisfaction: number;
 }
 
-interface ChatbotUsageData {
-    date: string;
-    queries: number;
-    uniqueUsers: number;
-}
-
 interface CourseDistributionData {
     name: string;
     value: number;
@@ -59,85 +57,97 @@ interface CourseDistributionData {
     [key: string]: string | number;
 }
 
+const MOCK_TREND: UsageTrendPoint[] = [
+    { date: "2024-02-03", queries: 234, uniqueUsers: 45 },
+    { date: "2024-02-04", queries: 312, uniqueUsers: 52 },
+    { date: "2024-02-05", queries: 289, uniqueUsers: 48 },
+    { date: "2024-02-06", queries: 401, uniqueUsers: 61 },
+    { date: "2024-02-07", queries: 456, uniqueUsers: 68 },
+    { date: "2024-02-08", queries: 378, uniqueUsers: 55 },
+    { date: "2024-02-09", queries: 423, uniqueUsers: 63 },
+];
+
+const MOCK_TOP_QUESTIONS: TopQuestionsItem[] = [
+    { queryText: "What is the deadline for the assignment?", count: 42 },
+    { queryText: "How do I submit my homework?", count: 38 },
+    { queryText: "What are the grading criteria?", count: 31 },
+];
+
 export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
-    const [selectedCourse, setSelectedCourse] = useState("all");
+    const [loading, setLoading] = useState(true);
+    const [overviewSummary, setOverviewSummary] = useState<OverviewSummary | null>(null);
+    const [usageTrend, setUsageTrend] = useState<UsageTrendPoint[]>(MOCK_TREND);
+    const [topQuestions, setTopQuestions] = useState<TopQuestionsItem[]>([]);
+    const [queryDistribution, setQueryDistribution] = useState<QueryDistributionItem[]>([]);
+    const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
 
-    // Mock data - Course usage statistics
+    const { analyticsClient } = useApiClient();
+    const courseId = course.id;
+    const instructorId = course.instructor_id;
+
+    // Mock data for course table and bar chart (when no API or single-course view)
     const courseUsageData: CourseUsageData[] = [
         {
             courseId: "1",
-            courseName: "Introduction to Machine Learning",
-            courseCode: "CS 480",
-            activeUsers: 72,
-            totalUsers: 85,
-            chatbotQueries: 1543,
+            courseName: course.name,
+            courseCode: course.name.slice(0, 8),
+            activeUsers: overviewSummary?.activeUsers ?? 72,
+            totalUsers: overviewSummary?.totalEnrolled ?? 85,
+            chatbotQueries: overviewSummary?.totalQueries ?? 1543,
             averageResponseTime: 1.2,
             satisfaction: 4.6,
         },
-        {
-            courseId: "2",
-            courseName: "Advanced Data Science",
-            courseCode: "CS 580",
-            activeUsers: 58,
-            totalUsers: 62,
-            chatbotQueries: 987,
-            averageResponseTime: 1.5,
-            satisfaction: 4.4,
-        },
-        {
-            courseId: "3",
-            courseName: "Python Programming",
-            courseCode: "CS 101",
-            activeUsers: 98,
-            totalUsers: 120,
-            chatbotQueries: 2341,
-            averageResponseTime: 0.9,
-            satisfaction: 4.8,
-        },
     ];
 
-    // Mock data - Chatbot usage over time
-    const chatbotTrendData: ChatbotUsageData[] = [
-        { date: "2024-02-03", queries: 234, uniqueUsers: 45 },
-        { date: "2024-02-04", queries: 312, uniqueUsers: 52 },
-        { date: "2024-02-05", queries: 289, uniqueUsers: 48 },
-        { date: "2024-02-06", queries: 401, uniqueUsers: 61 },
-        { date: "2024-02-07", queries: 456, uniqueUsers: 68 },
-        { date: "2024-02-08", queries: 378, uniqueUsers: 55 },
-        { date: "2024-02-09", queries: 423, uniqueUsers: 63 },
-    ];
+    useEffect(() => {
+        if (!courseId) {
+            setLoading(false);
+            return;
+        }
+        let cancelled = false;
+        setLoading(true);
+        (async () => {
+            const [overviewSummaryRes, trendRes, topQuestionsRes, distRes, topKeywordsRes] = await Promise.all([
+                analyticsClient.getOverviewSummary(courseId, selectedTimeRange),
+                analyticsClient.getUsageTrend(courseId, selectedTimeRange),
+                analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
+                instructorId
+                    ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange)
+                    : Promise.resolve({ data: undefined, errorStatus: 404 }),
+                analyticsClient.topKeywords(courseId, 10, selectedTimeRange),
+            ]);
+            if (cancelled) return;
+            if (overviewSummaryRes.data) setOverviewSummary(overviewSummaryRes.data);
+            if (trendRes.data && trendRes.data.length > 0) setUsageTrend(trendRes.data);
+            else setUsageTrend([]);
+            if (topQuestionsRes.data) setTopQuestions(topQuestionsRes.data);
+            else setTopQuestions([]);
+            if (distRes.data) setQueryDistribution(distRes.data);
+            else setQueryDistribution([]);
+            if (topKeywordsRes.data) setTopKeywords(topKeywordsRes.data);
+            else setTopKeywords([]);
+            setLoading(false);
+        })();
+    }, [courseId, instructorId, selectedTimeRange, analyticsClient]);
 
-    // Mock data - Course distribution
-    const courseDistribution: CourseDistributionData[] = [
-        { name: "CS 480", value: 1543, color: "#3b82f6" },
-        { name: "CS 580", value: 987, color: "#10b981" },
-        { name: "CS 101", value: 2341, color: "#f59e0b" },
-    ];
+    const totalActiveUsers = overviewSummary?.activeUsers ?? courseUsageData[0]?.activeUsers ?? 0;
+    const totalChatbotQueries = overviewSummary?.totalQueries ?? courseUsageData[0]?.chatbotQueries ?? 0;
+    const averageSatisfaction = "4.6";
+    const totalEnrolledUsers = overviewSummary?.totalEnrolled ?? courseUsageData[0]?.totalUsers ?? 1;
+    const engagementRate =
+        overviewSummary?.engagementRate ?? (totalEnrolledUsers ? Math.round((totalActiveUsers / totalEnrolledUsers) * 100) : 0);
 
-    // Calculate aggregated statistics
-    const totalActiveUsers = courseUsageData.reduce(
-        (sum, c) => sum + c.activeUsers,
-        0
-    );
-    const totalChatbotQueries = courseUsageData.reduce(
-        (sum, c) => sum + c.chatbotQueries,
-        0
-    );
-    const averageSatisfaction = (
-        courseUsageData.reduce((sum, c) => sum + c.satisfaction, 0) /
-        courseUsageData.length
-    ).toFixed(1);
-    const totalEnrolledUsers = courseUsageData.reduce(
-        (sum, c) => sum + c.totalUsers,
-        0
-    );
-
-    // Filter data based on selected course
-    const filteredCourseData =
-        selectedCourse === "all"
-            ? courseUsageData
-            : courseUsageData.filter((c) => c.courseId === selectedCourse);
+    const courseDistribution: CourseDistributionData[] =
+        queryDistribution.length > 0
+            ? queryDistribution.map((d, i) => ({
+                  name: d.courseName,
+                  value: d.count,
+                  color: CHART_COLORS[i % CHART_COLORS.length],
+              }))
+            : [
+                  { name: course.name, value: totalChatbotQueries || 1, color: CHART_COLORS[0] },
+              ];
 
     return (
         <div className="space-y-6">
@@ -151,19 +161,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     </p>
                 </div>
                 <div className="flex flex-wrap gap-4">
-                    <Select value={selectedCourse} onValueChange={setSelectedCourse}>
-                        <SelectTrigger className="w-48">
-                            <SelectValue placeholder="Select course" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="all">All Courses</SelectItem>
-                            {courseUsageData.map((c) => (
-                                <SelectItem key={c.courseId} value={c.courseId}>
-                                    {c.courseCode}
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
                     <Select
                         value={selectedTimeRange}
                         onValueChange={setSelectedTimeRange}
@@ -181,25 +178,62 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* Key Metrics */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                <StatCard value={totalActiveUsers} label="Active Users" icon={Users} />
-                <StatCard
-                    value={totalChatbotQueries.toLocaleString()}
-                    label="Chatbot Queries"
-                    icon={MessageSquare}
-                />
-                <StatCard
-                    value={`${averageSatisfaction}/5.0`}
-                    label="Avg. Satisfaction"
-                    icon={TrendingUp}
-                />
-                <StatCard
-                    value={`${((totalActiveUsers / totalEnrolledUsers) * 100).toFixed(0)}%`}
-                    label="Engagement Rate"
-                    icon={Activity}
-                />
+            {/* Platform Engagement */}
+            <div>
+                <h2 className="text-lg font-semibold mb-3">Platform Engagement</h2>
+                <p className="text-sm text-muted-foreground mb-4">
+                    Key metrics for course engagement and chatbot usage in the selected time range.
+                </p>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <StatCard value={loading ? "—" : totalActiveUsers} label="Active Users" icon={Users} />
+                    <StatCard
+                        value={loading ? "—" : totalChatbotQueries.toLocaleString()}
+                        label="Chatbot Queries"
+                        icon={MessageSquare}
+                    />
+                    <StatCard
+                        value={`${averageSatisfaction}/5.0`}
+                        label="Avg. Satisfaction"
+                        icon={TrendingUp}
+                    />
+                    <StatCard
+                        value={loading ? "—" : `${engagementRate}%`}
+                        label="Engagement Rate"
+                        icon={Activity}
+                    />
+                </div>
             </div>
+
+            {/* Frequently Asked Questions */}
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <HelpCircle className="h-5 w-5" />
+                        Frequently Asked Questions
+                    </CardTitle>
+                    <CardDescription>
+                        Top questions students asked in this course (by count)
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {loading ? (
+                        <p className="text-muted-foreground text-sm">Loading…</p>
+                    ) : topQuestions.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No questions recorded yet.</p>
+                    ) : (
+                        <ul className="space-y-3">
+                            {topQuestions.map((item, i) => (
+                                <li key={i} className="flex justify-between gap-4 border-b border-border pb-2 last:border-0">
+                                    <span className="text-sm flex-1 min-w-0">{item.queryText}</span>
+                                    <span className="text-sm font-medium text-muted-foreground shrink-0">
+                                        {item.count} {item.count === 1 ? "time" : "times"}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    )}
+                </CardContent>
+            </Card>
 
             {/* Chatbot Usage Trend */}
             <Card>
@@ -211,7 +245,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </CardHeader>
                 <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
-                        <LineChart data={chatbotTrendData}>
+                        <LineChart data={usageTrend}>
                             <CartesianGrid
                                 strokeDasharray="3 3"
                                 stroke="hsl(var(--border))"
@@ -261,13 +295,13 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     </CardHeader>
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
-                            <BarChart data={filteredCourseData}>
+                            <BarChart data={courseUsageData}>
                                 <CartesianGrid
                                     strokeDasharray="3 3"
                                     stroke="hsl(var(--border))"
                                 />
                                 <XAxis
-                                    dataKey="courseCode"
+                                    dataKey="courseName"
                                     stroke="hsl(var(--muted-foreground))"
                                     tick={{ fill: "hsl(var(--muted-foreground))" }}
                                 />
@@ -358,7 +392,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredCourseData.map((c) => (
+                                {courseUsageData.map((c) => (
                                     <tr
                                         key={c.courseId}
                                         className="border-b hover:bg-muted/50"
