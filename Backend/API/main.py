@@ -3,11 +3,11 @@ import time
 from contextlib import asynccontextmanager
 from math import exp
 from fastapi.routing import APIRoute
-from prometheus_client import Counter, Histogram, generate_latest, CollectorRegistry
-from fastapi import FastAPI, Request, Response
+from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
 from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router, auth_router, web_socket_router
 from API.dependencies import get_connection_manager
+from prometheus_client import CollectorRegistry, multiprocess, generate_latest, CONTENT_TYPE_LATEST
 from Metrics.metrics import MetricsRoute, metrics_response
 
 logging.basicConfig(
@@ -43,7 +43,10 @@ web_socket_router.router.route_class = MetricsRoute
 # Prometheus metrics endpoint
 @app.get("/metrics")
 async def metrics():
-    return metrics_response()
+    registry = CollectorRegistry()
+    multiprocess.MultiProcessCollector(registry)
+    data = generate_latest(registry)
+    return Response(content=data, media_type=CONTENT_TYPE_LATEST)
 
 
 app.include_router(queries_router.router)
