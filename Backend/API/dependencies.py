@@ -4,9 +4,10 @@ import logging
 from typing import Dict
 from functools import lru_cache
 from dotenv import load_dotenv
-from chromadb import Client, PersistentClient
+from chromadb import Client, PersistentClient, HttpClient
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
+from langchain_openai import ChatOpenAI
 from langchain_core.language_models import BaseChatModel
 from langchain_ollama import ChatOllama
 from langchain_huggingface import HuggingFaceEndpoint, ChatHuggingFace
@@ -57,8 +58,16 @@ def get_connection_manager() -> PostgresConnectionManager:
 @lru_cache()
 def get_chroma_client() -> Client:
     """Create and return a persistent Chroma client."""
-    chroma_dir = os.environ["CHROMA_DATA_PATH"]
-    return PersistentClient(path=chroma_dir)
+    client_type = os.environ["CHROMA_CLIENT"].lower()
+
+    if client_type == "http":
+        return HttpClient(host=os.environ["CHROMA_HOST"], port=int(os.environ["CHROMA_PORT"]))
+
+    elif client_type == "persistent":
+        return PersistentClient(path=["CHROMA_DATA_PATH"])
+
+    else:
+        raise ValueError(f"Invalid CHROMA_CLIENT type: {client_type}. Expected 'persistent' or 'http'.")
 
 
 # ============================================================
@@ -177,8 +186,8 @@ def get_web_socket_manager() -> WebSocketManager:
 def get_splitter() -> TextSplitter:
     """Return a Singleton Splitter instance for document chunking."""
     return RecursiveCharacterTextSplitter(
-        chunk_size=1200,
-        chunk_overlap=200,
+        chunk_size=512,
+        chunk_overlap=128,
         length_function=len,
         separators=[
             "\n\n",    # paragraph
@@ -249,6 +258,13 @@ def get_llm() -> BaseChatModel:
         model_name, base_url = os.environ["LLM_MODEL"], os.environ["LLM_BASE_URL"]
         logger.info(f"[LLM INIT] Initializing Ollama model '{model_name}' at {base_url}")
         return ChatOllama(model=model_name, base_url=base_url, temperature=0)
+
+    if llm_provider == "vllm":
+        model_name = os.environ["LLM_MODEL"]
+        base_url = os.environ["LLM_BASE_URL"]
+        logger.info(f"[LLM INIT] Initializing vLLM model '{model_name}' at {base_url}")
+
+        return ChatOpenAI(model=model_name, base_url=base_url, api_key="EMPTY", temperature=0, max_tokens=512)
 
     raise ValueError(f"Unknown LLM_PROVIDER: {llm_provider}")
 
