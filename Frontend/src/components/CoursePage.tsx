@@ -9,7 +9,6 @@ import { CourseIntegrationsPage } from "./CourseIntegrationsPage.tsx";
 import { CourseChatPage } from "./CourseChatPage.tsx";
 import { CourseAnalyticsPage } from "./CourseAnalyticsPage.tsx";
 import { SettingsPage } from "./CourseSettingsPage.tsx";
-import { NotFoundPage } from "./NotFoundPage.tsx";
 
 export function CoursePage() {
     const { courseId } = useParams();
