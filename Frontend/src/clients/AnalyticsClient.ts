@@ -1,4 +1,4 @@
-import { APIClient } from "../clients/ApiClient.ts";
+import { APIClient } from "./ApiClient.ts";
 
 export class AnalyticsClient {
     private client: APIClient;
