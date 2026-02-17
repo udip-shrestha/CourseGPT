@@ -44,3 +44,8 @@ Backend/DB/old_data_dump.sql
 
 Backend/db-backup.sql
 
+# Ignore Chroma vector database
+Backend/Data/chroma_db/
+Backend/['CHROMA_DATA_PATH']/
+**/chroma.sqlite3
+**/*.pickle
