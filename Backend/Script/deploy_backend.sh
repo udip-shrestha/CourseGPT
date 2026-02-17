@@ -48,8 +48,9 @@ IMPORT_OLD_DATA_SCRIPT=${IMPORT_OLD_DATA_SCRIPT:-}
 # ===========================================
 # Chroma Vector Database Configuration
 # ===========================================
-CHROMA_DATA_PATH=${CHROMA_DATA_PATH:-.chroma_data}
-CHROMA_DATA_PATH=${CHROMA_DATA_PATH:-}
+CHROMA_CLIENT=${CHROMA_CLIENT:-}
+CHROMA_HOST=${CHROMA_HOST:-}
+CHROMA_PORT=${CHROMA_PORT:-}
 
 # ===========================================
 # JWT Secrets

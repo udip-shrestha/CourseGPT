@@ -34,33 +34,6 @@ class IRAGStrategy(Protocol):
 
 class BaseRAGStrategy(ABC, IRAGStrategy):
 
-    def load_past_messages(self, llm: BaseChatModel, sql_repo: ISQLRepository, course_id: str) -> Tuple[str, List[HumanMessage | AIMessage]]:
-        """
-        Return a 3–4 sentence summary of past course messages and the raw messages.
-        """
-
-        rows = sql_repo.read_all_queries_for_course(course_id, 5)["queries"]
-        if not rows:
-            return "", []
-
-        past_messages: List[HumanMessage | AIMessage] = []
-        transcript_parts: List[str] = []
-
-        # Convert each Q/A into LangChain messages + transcript lines
-        for row in reversed(rows):  # oldest → newest
-            q = row["query_text"]
-            a = row.get("response_text")
-
-            # messages for the LLM
-            past_messages.append(HumanMessage(content=q))
-            transcript_parts.append(f"Q: {q}")
-
-            if a and a.strip():
-                past_messages.append(AIMessage(content=a))
-                transcript_parts.append(f"A: {a}")
-
-        return "\n\n".join(transcript_parts), past_messages
-
     def retrieve_chunks(self, vector_repo: IVectorRepository, course_id: str, question: str) -> Tuple[str, List[str]]:
         """
         Return concatenated chunk text (content) and source summary (artifact).
@@ -130,9 +103,6 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         retrieved_content, retrieved_sources = self.retrieve_chunks(vector_repo, course_id, question)
         logger.info(f"[SimpleRAG] Sources found")
 
-        summarized_past_messages, past_messages = self.load_past_messages(llm, sql_repo, course_id)
-        logger.info(f"[SimpleRAG] Loaded past messages")
-
         course_metadata, course_object = self.get_course_details(course)
         logger.info(f"[SimpleRAG] Gotten Course metadata")
 
@@ -162,7 +132,6 @@ class SimpleRAGStrategy(BaseRAGStrategy):
             )),
             SystemMessage(content=f"### CourseGPT Course Profile\n{course_metadata}"),
             SystemMessage(content=f"### Retrieved Course Material\n{retrieved_content}"),
-            *past_messages,
             HumanMessage(content=question)
         ]
 

@@ -35,7 +35,6 @@ def test_simple_rag_strategy_calls_all_internal_steps():
     mock_llm.invoke.return_value = MagicMock(content="Final answer")
 
     with patch.object(strategy, "retrieve_chunks", return_value=("chunks", ["src"])) as m_chunks, \
-        patch.object(strategy, "load_past_messages", return_value=("past", [])) as m_past, \
         patch.object(strategy, "get_course_details", return_value=("meta", {})) as m_meta, \
         patch.object(strategy, "clean_llm_output", return_value="Final answer") as m_clean:
 
@@ -53,7 +52,6 @@ def test_simple_rag_strategy_calls_all_internal_steps():
     assert result["sources"] == ["src"]
 
     m_chunks.assert_called_once()
-    m_past.assert_called_once()
     m_meta.assert_called_once()
     mock_llm.invoke.assert_called_once()
     m_clean.assert_called_once()
@@ -69,7 +67,6 @@ def test_simple_rag_strategy_returns_no_sources_when_insufficient():
     mock_llm = MagicMock()
 
     with patch.object(strategy, "retrieve_chunks", return_value=("none", [])), \
-        patch.object(strategy, "load_past_messages", return_value=("", [])), \
         patch.object(strategy, "get_course_details", return_value=("meta", {})), \
         patch.object(strategy, "clean_llm_output", return_value="I don’t have enough course information to answer that."):
 
