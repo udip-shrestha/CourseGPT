@@ -53,7 +53,7 @@ def test_simple_rag_strategy_calls_all_internal_steps():
 
     m_chunks.assert_called_once()
     m_meta.assert_called_once()
-    mock_llm.invoke.assert_called_once()
+    assert mock_llm.invoke.call_count == 2
     m_clean.assert_called_once()
     mock_sql.create_query.assert_called_once()
 
