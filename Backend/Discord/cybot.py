@@ -226,8 +226,8 @@ async def courses(interaction: discord.Interaction):
 
 
 # Feedback command
-@bot.tree.command(name="feedback", description="Feel free to submit any feedback about coursegpt or our bot design")
-@app_commands.describe(feedback="Your feedback for coursegpt or the bot")
+@bot.tree.command(name="feedback", description="Feel free to submit any feedback about CourseGPT or our bot design")
+@app_commands.describe(input="Your feedback about CourseGPT or the Discord bot")
 async def feedback(interaction: discord.Interaction, feedback: str):
     command_name = "feedback"
     start = time.time()
@@ -330,8 +330,9 @@ async def help_command(interaction: discord.Interaction):
             "Here are the available commands:\n"
             "• `/register` → (Optional) Manually register yourself for this course if not auto-registered.\n"
             "• `/ask [question]` → Ask a course-related question and get an AI-generated answer.\n"
-            "• `/status` → Check your registration status for this course (coming soon).\n"
+            "• `/status` → Check your registration status for this course.\n"
             "• `/courses` → Check which courses you are registered in.\n"
+            "• `/feedback` → Share with us any feedback you have about CourseGPT.\n"
             "• `/help` → Show this menu.\n\n"
             "⚠️ Note: You must be registered for the course before you can use `/ask`."
         )
