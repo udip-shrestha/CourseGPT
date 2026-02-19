@@ -5,6 +5,7 @@ import { DocumentClient } from "./DocumentClient.ts";
 import { CourseClient } from "./CourseClient.ts";
 import { InstructorClient } from "./InstructorClient.ts";
 import { QueryClient } from "./QueryClient.ts";
+import { AnalyticsClient } from "./AnalyticsClient.ts";
 
 interface APIClients {
     apiClient: APIClient
@@ -13,6 +14,7 @@ interface APIClients {
     courseClient: CourseClient;
     instructorClient: InstructorClient;
     queryClient: QueryClient;
+    analyticsClient: AnalyticsClient;
 }
 
 // Create a Context to hold the API client instance
@@ -31,7 +33,8 @@ export const ApiClientProvider: React.FC<{
             documentClient: new DocumentClient(apiClient),
             courseClient: new CourseClient(apiClient),
             instructorClient: new InstructorClient(apiClient),
-            queryClient: new QueryClient(apiClient)
+            queryClient: new QueryClient(apiClient),
+            analyticsClient: new AnalyticsClient(apiClient)
         };
     }, []);
 
