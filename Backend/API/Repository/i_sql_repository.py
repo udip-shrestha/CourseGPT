@@ -217,3 +217,10 @@ class ISQLRepository(Protocol):
     def delete_query(self, course_id: str, query_id: str) -> None:
         """Delete a query by ID."""
         ...
+
+    # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """Insert a feedback record and return its id."""
+        ...

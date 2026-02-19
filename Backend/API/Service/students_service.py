@@ -101,3 +101,15 @@ class StudentService:
             return False
 
         return self.sql_repo.remove_student_from_course(student["id"], course_id)
+
+    # ------------------------------------------------------
+    # Feedback
+    # ------------------------------------------------------
+    @clean_service
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> dict:
+        """
+        Persist a feedback record for a course.
+        Returns a dict containing the new feedback id.
+        """
+        fid = self.sql_repo.create_feedback(course_id=course_id, feedback_text=feedback_text, received_at=received_at)
+        return {"feedback_id": fid}

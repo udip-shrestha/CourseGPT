@@ -101,6 +101,24 @@ async def get_course_id(guild_name: str) -> Optional[str]:
     return None
 
 
+async def submit_feedback(course_id: str, feedback_text: str) -> Tuple[bool, str, Optional[str]]:
+    """Submit feedback for a course to the backend API."""
+    url = f"{API_BASE_URL.rstrip('/')}/students/feedback"
+    params = {"course_id": course_id, "feedback_text": feedback_text}
+    try:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            resp = await client.post(url, params=params)
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                return True, data.get("message", "Feedback received"), data.get("feedback_id")
+            try:
+                return False, resp.json().get("error", resp.text), None
+            except Exception:
+                return False, resp.text, None
+    except httpx.HTTPError as e:
+        return False, f"Feedback submission error: {e}", None
+
+
 async def register_student(discord_id: str, name: str, course_id: str) -> Tuple[bool, str, Optional[str]]:
     """Register a student based on the discord_id and course_id"""
     url = f"{API_BASE_URL.rstrip('/')}/students/register"

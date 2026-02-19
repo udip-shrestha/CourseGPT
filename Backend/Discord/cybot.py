@@ -224,6 +224,50 @@ async def courses(interaction: discord.Interaction):
         except Exception:
             pass
 
+
+# Feedback command
+@bot.tree.command(name="feedback", description="Feel free to submit any feedback about coursegpt or our bot design")
+@app_commands.describe(feedback="Your feedback for coursegpt or the bot")
+async def feedback(interaction: discord.Interaction, feedback: str):
+    command_name = "feedback"
+    start = time.time()
+    outcome = "success"
+    try:
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        guild_name = interaction.guild.name if interaction.guild else ""
+        course_id = await get_course_id(guild_name)
+
+        if not course_id:
+            await interaction.followup.send(
+                "🚫 Course not found. Please ask an instructor to create the course first.",
+                ephemeral=True
+            )
+            return
+
+        # Ensure the user is registered before accepting feedback
+        registered, _ = await is_registered(str(interaction.user.id), course_id)
+        if not registered:
+            await interaction.followup.send(
+                "🚫 You must be registered for this course to submit feedback.",
+                ephemeral=True
+            )
+            return
+
+        # Submit feedback to backend
+        success, message, feedback_id = await submit_feedback(course_id, feedback)
+        emoji = "✅" if success else "🚫"
+        await interaction.followup.send(f"{emoji} {message}")
+    except Exception:
+        outcome = "error"
+        raise
+    finally:
+        duration = time.time() - start
+        try:
+            discord_command_count.labels(command=command_name, outcome=outcome).inc()
+            discord_command_duration.labels(command=command_name, outcome=outcome).observe(duration)
+        except Exception:
+            pass
+
 # Unregister from a course        
 @bot.tree.command(name="unregister", description="Unregister from a course given the course name")
 @app_commands.describe(course_name="Name of the course to unregister from. Note: This is the Discord server name of that course.")
