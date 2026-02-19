@@ -106,6 +106,40 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         course_metadata, course_object = self.get_course_details(course)
         logger.info(f"[SimpleRAG] Gotten Course metadata")
 
+        # ------------------------------
+        # Query Classification
+        # ------------------------------
+        classification_prompt = [
+            SystemMessage(content=(
+                "Classify the student query into one of these categories.\n"
+                "Respond ONLY with valid JSON:\n"
+                "{\n"
+                '  "query_type": "concept_explanation" | '
+                '"homework_help" | '
+                '"study_plan" | '
+                '"exam_preparation" | '
+                '"general_course_info" | '
+                '"other"\n'
+                "}\n"
+            )),
+            HumanMessage(content=question)
+        ]
+
+
+        classification_result = llm.invoke(classification_prompt)
+        classification_text = classification_result if isinstance(classification_result, str) else classification_result.content
+
+        try:
+            import json
+            classification_data = json.loads(classification_text)
+            query_type = classification_data.get("query_type", "concept_explanation")
+        except Exception:
+            query_type = "concept_explanation"
+
+        logger.info(f"[SimpleRAG] Classified as: {query_type}")
+
+
+
         # 3. Build message sequence
         messages = [
             SystemMessage(content=(
@@ -130,6 +164,36 @@ class SimpleRAGStrategy(BaseRAGStrategy):
                 "- NEVER mention \"retrieved materials\" or \"course metadata\".\n"
                 "- ONLY return a clean, natural-language answer.\n"
             )),
+
+            SystemMessage(content=(
+                "ADDITIONAL OUTPUT STRUCTURE RULES:\n"
+                + (
+                    "For homework help:\n"
+                    "1. APPROACH\n"
+                    "2. HINTS\n"
+                    "3. KEY CONCEPTS\n"
+                    "4. PRACTICE PROBLEM\n"
+                    "Do NOT provide final answers.\n\n"
+                    if query_type == "homework_help"
+                    else
+                    "For study plans:\n"
+                    "1. STUDY GOAL\n"
+                    "2. DAILY BREAKDOWN\n"
+                    "3. PRACTICE STRATEGY\n"
+                    "4. MILESTONE CHECK\n\n"
+                    if query_type == "study_plan"
+                    else
+                    "For concept explanations or exam preparation:\n"
+                    "1. DEFINITION\n"
+                    "2. INTUITION\n"
+                    "3. EXAMPLE\n"
+                    "4. PRACTICE\n\n"
+                    if query_type in ["concept_explanation", "exam_preparation"]
+                    else
+                    ""
+                )
+            )),
+   
             SystemMessage(content=f"### CourseGPT Course Profile\n{course_metadata}"),
             SystemMessage(content=f"### Retrieved Course Material\n{retrieved_content}"),
             HumanMessage(content=question)
@@ -137,6 +201,27 @@ class SimpleRAGStrategy(BaseRAGStrategy):
 
         result = llm.invoke(messages)
         answer = self.clean_llm_output(result if isinstance(result, str) else result.content)
+
+        # ------------------------------
+        # Structured Output Validation
+        # ------------------------------
+
+        if query_type in ["concept_explanation", "exam_preparation"]:
+            required_sections = ["DEFINITION", "EXAMPLE"]
+        elif query_type == "homework_help":
+            required_sections = ["APPROACH", "HINTS"]
+        elif query_type == "study_plan":
+            required_sections = ["STUDY GOAL", "DAILY"]
+        else:
+            required_sections = []
+
+        if required_sections and not all(section in answer for section in required_sections):
+            logger.warning(
+                f"[SimpleRAG] Structured format missing sections for type={query_type}"
+            )
+
+
+
         logger.info("[SimpleRAG] LLM call complete")
 
         sql_repo.create_query(student_id, course_id, query_text=question, response_text=answer)
