@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict
 from API.Service.feedback_service import FeedbackService
 from API.dependencies import get_feedback_service
