@@ -712,3 +712,161 @@ class SQLRepository(ISQLRepository):
             RETURNING id;
         """
         return self.cm.insert_one(sql, (course_id, feedback_text))
+
+    # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """
+        Insert a new feedback record for a course and return its id.
+        If `received_at` is not provided, database default NOW() will be used.
+        """
+        if received_at:
+            sql = """
+                INSERT INTO feedback (course_id, feedback_text, received_at)
+                VALUES (%s, %s, %s)
+                RETURNING id;
+            """
+            return self.cm.insert_one(sql, (course_id, feedback_text, received_at))
+
+        sql = """
+            INSERT INTO feedback (course_id, feedback_text, received_at)
+            VALUES (%s, %s, NOW())
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (course_id, feedback_text))
+
+    # ======================================================
+    # ANALYTICS
+    # ======================================================
+
+    def read_course_query_stats(
+        self, course_id: str, days: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+
+        date_filter = ""
+        params: List[Any] = [course_id, course_id, course_id]
+
+        if days:
+            date_filter = "AND q.asked_at >= NOW() - INTERVAL %s"
+            params.append(f"{days} days")
+
+        sql = f"""
+            SELECT
+                -- total queries
+                (SELECT COUNT(*) FROM queries q
+                 WHERE q.course_id = %s {date_filter}) AS total_queries,
+
+                -- active users (distinct students who asked)
+                (SELECT COUNT(DISTINCT q.student_id)
+                 FROM queries q
+                 WHERE q.course_id = %s {date_filter}) AS active_users,
+
+                -- total enrolled students
+                (SELECT COUNT(*)
+                 FROM student_courses sc
+                 WHERE sc.course_id = %s) AS total_enrolled;
+        """
+
+        row = self.cm.select_one(sql, tuple(params))
+        if not row:
+            return None
+
+        active = row["active_users"] or 0
+        total = row["total_enrolled"] or 0
+
+        return {
+            "totalQueries": row["total_queries"] or 0,
+            "activeUsers": active,
+            "totalEnrolled": total,
+            "engagementRate": int((active / total) * 100) if total > 0 else 0,
+        }
+
+    def read_top_questions(
+        self,
+        course_id: str,
+        limit: int,
+        days: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+
+        filters = ["course_id = %s"]
+        params: List[Any] = [course_id]
+
+        if days:
+            filters.append("asked_at >= NOW() - INTERVAL %s")
+            params.append(f"{days} days")
+
+        where_clause = f"WHERE {' AND '.join(filters)}"
+
+        sql = f"""
+            SELECT
+                query_text AS "queryText",
+                COUNT(*) AS count
+            FROM queries
+            {where_clause}
+            GROUP BY query_text
+            ORDER BY count DESC
+            LIMIT %s;
+        """
+
+        params.append(limit)
+        return self.cm.select_all(sql, tuple(params))
+
+    def read_top_keywords(
+        self,
+        course_id: str,
+        limit: int,
+        days: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+
+        filters = ["course_id = %s"]
+        params: List[Any] = [course_id]
+
+        if days:
+            filters.append("asked_at >= NOW() - INTERVAL %s")
+            params.append(f"{days} days")
+
+        where_clause = f"WHERE {' AND '.join(filters)}"
+
+        sql = f"""
+            SELECT
+                LOWER(word) AS keyword,
+                COUNT(*) AS count
+            FROM (
+                SELECT
+                    unnest(regexp_split_to_array(query_text, '\s+')) AS word
+                FROM queries
+                {where_clause}
+            ) t
+            WHERE length(word) > 2
+            GROUP BY LOWER(word)
+            ORDER BY count DESC
+            LIMIT %s;
+        """
+
+        params.append(limit)
+        return self.cm.select_all(sql, tuple(params))
+
+    def read_engagement_stats(self, course_id: str) -> Dict[str, Any]:
+
+        sql = """
+            SELECT
+                COUNT(DISTINCT sc.student_id) AS total_students,
+                COUNT(DISTINCT q.student_id) AS active_students
+            FROM student_courses sc
+            LEFT JOIN queries q
+                ON sc.student_id = q.student_id
+                AND sc.course_id = q.course_id
+            WHERE sc.course_id = %s;
+        """
+
+        row = self.cm.select_one(sql, (course_id,))
+
+        total = row["total_students"] if row else 0
+        active = row["active_students"] if row else 0
+
+        return {
+            "totalStudents": total or 0,
+            "activeStudents": active or 0,
+            "engagementRate": int((active / total) * 100) if total > 0 else 0,
+        }
