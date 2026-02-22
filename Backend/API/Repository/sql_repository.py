@@ -691,6 +691,52 @@ class SQLRepository(ISQLRepository):
         self.cm.execute(sql, (query_id, course_id))
 
     # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """
+        Insert a new feedback record for a course and return its id.
+        If `received_at` is not provided, database default NOW() will be used.
+        """
+        if received_at:
+            sql = """
+                INSERT INTO feedback (course_id, feedback_text, received_at)
+                VALUES (%s, %s, %s)
+                RETURNING id;
+            """
+            return self.cm.insert_one(sql, (course_id, feedback_text, received_at))
+
+        sql = """
+            INSERT INTO feedback (course_id, feedback_text, received_at)
+            VALUES (%s, %s, NOW())
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (course_id, feedback_text))
+
+    # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """
+        Insert a new feedback record for a course and return its id.
+        If `received_at` is not provided, database default NOW() will be used.
+        """
+        if received_at:
+            sql = """
+                INSERT INTO feedback (course_id, feedback_text, received_at)
+                VALUES (%s, %s, %s)
+                RETURNING id;
+            """
+            return self.cm.insert_one(sql, (course_id, feedback_text, received_at))
+
+        sql = """
+            INSERT INTO feedback (course_id, feedback_text, received_at)
+            VALUES (%s, %s, NOW())
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (course_id, feedback_text))
+
+    # ======================================================
     # ANALYTICS
     # ======================================================
 

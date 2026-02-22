@@ -219,6 +219,20 @@ class ISQLRepository(Protocol):
         ...
 
     # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """Insert a feedback record and return its id."""
+        ...
+
+    # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """Insert a feedback record and return its id."""
+        ...
+
+    # ======================================================
     # ANALYTICS
     # ======================================================
         

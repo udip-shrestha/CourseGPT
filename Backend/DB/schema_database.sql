@@ -196,3 +196,14 @@ CREATE TABLE IF NOT EXISTS queries (
     response_text TEXT,
     asked_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- ----------------------------------------------
+-- Feedback table
+-- Stores student-submitted feedback for a course
+-- ----------------------------------------------
+CREATE TABLE IF NOT EXISTS feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    feedback_text TEXT NOT NULL,
+    received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
