@@ -43,13 +43,14 @@ def get_overview(
 def get_top_questions(
     course_id: str = Path(...),
     limit: int = Query(10, ge=1, le=100),
+    days: Optional[int] = Query(None,description="Optional time window in days (e.g., 7, 30, 90).",),
     _course: dict = Depends(validate_course),
     service: AnalyticsService = Depends(get_analytics_service),
 ):
     """
     Returns most repeated or similar questions.
     """
-    return service.get_top_questions(course_id=course_id, limit=limit)
+    return service.get_top_questions(course_id=course_id, limit=limit, days=days)
 
 
 @router.get(
@@ -60,13 +61,14 @@ def get_top_questions(
 def get_top_keywords(
     course_id: str = Path(...),
     limit: int = Query(20, ge=1, le=100),
+    days: Optional[int] = Query(None,description="Optional time window in days (e.g., 7, 30, 90).",),
     _course: dict = Depends(validate_course),
     service: AnalyticsService = Depends(get_analytics_service),
 ):
     """
     Extracts and ranks common keywords from student questions.
     """
-    return service.get_top_keywords(course_id=course_id, limit=limit)
+    return service.get_top_keywords(course_id=course_id, limit=limit, days=days)
 
 
 @router.get(

@@ -36,15 +36,15 @@ class AnalyticsService:
     # Top repeated questions
     # ------------------------------------------------------
     @clean_service
-    def get_top_questions(self, course_id: str, limit: int = 10) -> dict:
-        return self.sql_repo.read_top_questions(course_id, limit)
-
+    def get_top_questions(self, course_id: str, limit: int = 10, days: Optional[int] = None) -> dict:
+        return self.sql_repo.read_top_questions(course_id, limit, days)
+    
     # ------------------------------------------------------
     # Keyword frequency
     # ------------------------------------------------------
     @clean_service
-    def get_top_keywords(self, course_id: str, limit: int = 20) -> dict:
-        return self.sql_repo.read_top_keywords(course_id, limit)
+    def get_top_keywords(self, course_id: str, limit: int = 20, days: Optional[int] = None) -> dict:
+        return self.sql_repo.read_top_keywords(course_id, limit, days)
 
     # ------------------------------------------------------
     # Engagement metrics
