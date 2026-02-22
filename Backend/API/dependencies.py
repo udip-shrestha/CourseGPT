@@ -332,3 +332,14 @@ def get_query_service(
     """Provide a QueryService using the SQL repository and RAGService."""
     return QueryService(sql_repo, rag_service)
 
+def get_feedback_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> FeedbackService:
+    """Provide a FeedbackService using the SQL repository."""
+    return FeedbackService(sql_repo)    
+
+def get_analytics_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> AnalyticsService:
+    """Provide an AnalyticsService using the SQL repository."""
+    return AnalyticsService(sql_repo)
