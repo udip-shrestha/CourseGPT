@@ -131,34 +131,3 @@ def unregister_student(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to unregister student: {e}")
-
-
-class FeedbackResponse(BaseModel):
-    feedback_id: str
-    message: str
-
-
-@router.post(
-    "/feedback",
-    status_code=status.HTTP_201_CREATED,
-    response_model=FeedbackResponse,
-    summary="Submit feedback for a course",
-    description="Allows a student to submit feedback for a given course."
-)
-def submit_feedback(
-    course_id: str = Query(
-        ...,
-        description="Course ID to associate the feedback with.",
-    ),
-    feedback_text: str = Query(
-        ...,
-        description="The feedback text provided by the student.",
-    ),
-    service: StudentService = Depends(get_student_service),
-) -> Dict[str, str]:
-    """Accepts and persists feedback for a course."""
-    try:
-        res = service.create_feedback(course_id=course_id, feedback_text=feedback_text)
-        return {"feedback_id": res.get("feedback_id"), "message": "Feedback received. Thanks for your input!"}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to save feedback: {e}")

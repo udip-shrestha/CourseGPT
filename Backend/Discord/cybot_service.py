@@ -103,11 +103,11 @@ async def get_course_id(guild_name: str) -> Optional[str]:
 
 async def submit_feedback(course_id: str, feedback_text: str) -> Tuple[bool, str, Optional[str]]:
     """Submit feedback for a course to the backend API."""
-    url = f"{API_BASE_URL.rstrip('/')}/students/feedback"
-    params = {"course_id": course_id, "feedback_text": feedback_text}
+    url = f"{API_BASE_URL.rstrip('/')}/feedback/submit"
+    payload = {"course_id": course_id, "feedback_text": feedback_text}
     try:
         async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
-            resp = await client.post(url, params=params)
+            resp = await client.post(url, json=payload)
             if resp.status_code in (200, 201):
                 data = resp.json()
                 return True, data.get("message", "Feedback received"), data.get("feedback_id")
