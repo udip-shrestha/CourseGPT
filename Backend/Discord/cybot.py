@@ -224,6 +224,50 @@ async def courses(interaction: discord.Interaction):
         except Exception:
             pass
 
+
+# Feedback command
+@bot.tree.command(name="feedback", description="Feel free to submit any feedback about CourseGPT or our bot design")
+@app_commands.describe(input="Your feedback about CourseGPT or the Discord bot")
+async def feedback(interaction: discord.Interaction, feedback: str):
+    command_name = "feedback"
+    start = time.time()
+    outcome = "success"
+    try:
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        guild_name = interaction.guild.name if interaction.guild else ""
+        course_id = await get_course_id(guild_name)
+
+        if not course_id:
+            await interaction.followup.send(
+                "🚫 Course not found. Please ask an instructor to create the course first.",
+                ephemeral=True
+            )
+            return
+
+        # Ensure the user is registered before accepting feedback
+        registered, _ = await is_registered(str(interaction.user.id), course_id)
+        if not registered:
+            await interaction.followup.send(
+                "🚫 You must be registered for this course to submit feedback.",
+                ephemeral=True
+            )
+            return
+
+        # Submit feedback to backend
+        success, message, feedback_id = await submit_feedback(course_id, feedback)
+        emoji = "✅" if success else "🚫"
+        await interaction.followup.send(f"{emoji} {message}")
+    except Exception:
+        outcome = "error"
+        raise
+    finally:
+        duration = time.time() - start
+        try:
+            discord_command_count.labels(command=command_name, outcome=outcome).inc()
+            discord_command_duration.labels(command=command_name, outcome=outcome).observe(duration)
+        except Exception:
+            pass
+
 # Unregister from a course        
 @bot.tree.command(name="unregister", description="Unregister from a course given the course name")
 @app_commands.describe(course_name="Name of the course to unregister from. Note: This is the Discord server name of that course.")
@@ -286,8 +330,9 @@ async def help_command(interaction: discord.Interaction):
             "Here are the available commands:\n"
             "• `/register` → (Optional) Manually register yourself for this course if not auto-registered.\n"
             "• `/ask [question]` → Ask a course-related question and get an AI-generated answer.\n"
-            "• `/status` → Check your registration status for this course (coming soon).\n"
+            "• `/status` → Check your registration status for this course.\n"
             "• `/courses` → Check which courses you are registered in.\n"
+            "• `/feedback` → Share with us any feedback you have about CourseGPT.\n"
             "• `/help` → Show this menu.\n\n"
             "⚠️ Note: You must be registered for the course before you can use `/ask`."
         )

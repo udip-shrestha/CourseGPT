@@ -22,6 +22,7 @@ from API.Service.courses_service import CourseService
 from API.Service.instructors_service import InstructorService
 from API.Service.students_service import StudentService
 from API.Service.queries_service import QueryService
+from API.Service.feedback_service import FeedbackService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import LOADER_CLASS_REGISTRY, ILoader, LoaderFactory
@@ -329,4 +330,10 @@ def get_query_service(
 ) -> QueryService:
     """Provide a QueryService using the SQL repository and RAGService."""
     return QueryService(sql_repo, rag_service)
+
+def get_feedback_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> FeedbackService:
+    """Provide a FeedbackService using the SQL repository."""
+    return FeedbackService(sql_repo)    
 
