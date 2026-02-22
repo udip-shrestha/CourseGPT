@@ -217,3 +217,27 @@ class ISQLRepository(Protocol):
     def delete_query(self, course_id: str, query_id: str) -> None:
         """Delete a query by ID."""
         ...
+
+    # ======================================================
+    # ANALYTICS
+    # ======================================================
+        
+    def read_course_query_stats(
+        self, course_id: str, days: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        ...
+
+    def read_top_questions(
+        self, course_id: str, limit: int, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_top_keywords(
+        self, course_id: str, limit: int, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_engagement_stats(
+        self, course_id: str
+    ) -> Dict[str, Any]:
+        ...
