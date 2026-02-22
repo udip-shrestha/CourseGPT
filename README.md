@@ -110,7 +110,12 @@ make db-shell
 **Note:** For local default password for postgres is `postgres`
 
 ### MAC Users To Start Program:
-## cd Backend
+## cd backend
 ## source .venv/bin/activate
 ## make api-run
 ## Use this link: http://127.0.0.1:8000/docs#/
+
+## Frontend To Start Program:
+## cd frontend
+## npm run build
+## npm run dev
