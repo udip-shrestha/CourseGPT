@@ -115,7 +115,7 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
                 <p className="text-xs text-muted-foreground mt-1 ml-4">
                   Discord will ask you to log in (if needed) and then show a
                   selection menu. Choose your server and click "Continue" to
-                  authorize the bot with the necessary permissions.
+                  authorize the bot with all necessary permissions.
                 </p>
               </li>
 
@@ -131,8 +131,24 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
                     the course
                   </p>
                   <p className="text-xs font-mono">
+                    <span className="font-bold">/unregister</span> - Unregister
+                    from the course
+                  </p>
+                  <p className="text-xs font-mono">
+                    <span className="font-bold">/status</span> - Check their
+                    registration status for the course
+                  </p>
+                  <p className="text-xs font-mono">
                     <span className="font-bold">/ask</span> - Ask our LLM model
                     a question about the course materials
+                  </p>
+                  <p className="text-xs font-mono">
+                    <span className="font-bold">/courses</span> - Check which
+                    courses they are registered for
+                  </p>
+                  <p className="text-xs font-mono">
+                    <span className="font-bold">/feedback</span> - Submit their
+                    feedback about CourseGPT or the Discord bot
                   </p>
                   <p className="text-xs font-mono">
                     <span className="font-bold">/help</span> - View available
