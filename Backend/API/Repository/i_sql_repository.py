@@ -224,3 +224,34 @@ class ISQLRepository(Protocol):
     def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
         """Insert a feedback record and return its id."""
         ...
+
+    # ======================================================
+    # FEEDBACK
+    # ======================================================
+    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
+        """Insert a feedback record and return its id."""
+        ...
+
+    # ======================================================
+    # ANALYTICS
+    # ======================================================
+        
+    def read_course_query_stats(
+        self, course_id: str, days: Optional[int] = None
+    ) -> Optional[Dict[str, Any]]:
+        ...
+
+    def read_top_questions(
+        self, course_id: str, limit: int, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_top_keywords(
+        self, course_id: str, limit: int, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_engagement_stats(
+        self, course_id: str
+    ) -> Dict[str, Any]:
+        ...

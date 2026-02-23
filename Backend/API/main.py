@@ -5,7 +5,7 @@ from math import exp
 from fastapi.routing import APIRoute
 from fastapi import FastAPI, Response
 from fastapi.middleware.cors import CORSMiddleware
-from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router, auth_router, web_socket_router, feedback_router
+from .Routers import queries_router, documents_router, instructors_router, courses_router,students_router, auth_router, web_socket_router, feedback_router, analytics_router
 from API.dependencies import get_connection_manager
 from prometheus_client import CollectorRegistry, multiprocess, generate_latest, CONTENT_TYPE_LATEST
 from Metrics.metrics import MetricsRoute
@@ -40,6 +40,7 @@ students_router.router.route_class = MetricsRoute
 auth_router.router.route_class = MetricsRoute
 web_socket_router.router.route_class = MetricsRoute
 feedback_router.router.route_class = MetricsRoute
+analytics_router.router.route_class = MetricsRoute
 
 # Prometheus metrics endpoint
 @app.get("/metrics")
@@ -58,7 +59,7 @@ app.include_router(students_router.router)
 app.include_router(auth_router.router)
 app.include_router(web_socket_router.router)
 app.include_router(feedback_router.router)
-
+app.include_router(analytics_router.router)
 
 # --- THIS MIDDLEWARE CONFIGURATION ---
 # Define the origins allowed to make requests (frontend URL)
