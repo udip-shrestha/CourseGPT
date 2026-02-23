@@ -227,7 +227,7 @@ async def courses(interaction: discord.Interaction):
 
 # Feedback command
 @bot.tree.command(name="feedback", description="Feel free to submit any feedback about CourseGPT or our bot design")
-@app_commands.describe(input="Your feedback about CourseGPT or the Discord bot")
+@app_commands.describe(feedback="Your feedback about CourseGPT or the Discord bot")
 async def feedback(interaction: discord.Interaction, feedback: str):
     command_name = "feedback"
     start = time.time()
