@@ -740,33 +740,37 @@ class SQLRepository(ISQLRepository):
     # ANALYTICS
     # ======================================================
 
-    def read_course_query_stats(
-        self, course_id: str, days: Optional[int] = None
-    ) -> Optional[Dict[str, Any]]:
-
+    def read_course_query_stats(self, course_id: str, days: Optional[int] = None) -> Optional[Dict[str, Any]]:
         date_filter = ""
-        params: List[Any] = [course_id, course_id, course_id]
+        params: List[Any] = []
 
         if days:
-            date_filter = "AND q.asked_at >= NOW() - INTERVAL %s"
-            params.append(f"{days} days")
+            date_filter = f"AND q.asked_at >= NOW() - (%s * INTERVAL '1 day')"
 
         sql = f"""
             SELECT
-                -- total queries
                 (SELECT COUNT(*) FROM queries q
-                 WHERE q.course_id = %s {date_filter}) AS total_queries,
+                WHERE q.course_id = %s {date_filter}) AS total_queries,
 
-                -- active users (distinct students who asked)
                 (SELECT COUNT(DISTINCT q.student_id)
-                 FROM queries q
-                 WHERE q.course_id = %s {date_filter}) AS active_users,
+                FROM queries q
+                WHERE q.course_id = %s {date_filter}) AS active_users,
 
-                -- total enrolled students
                 (SELECT COUNT(*)
-                 FROM student_courses sc
-                 WHERE sc.course_id = %s) AS total_enrolled;
+                FROM student_courses sc
+                WHERE sc.course_id = %s) AS total_enrolled;
         """
+
+        # Correct param order: match placeholders exactly
+        params.append(course_id)
+        if days:
+            params.append(days)
+
+        params.append(course_id)
+        if days:
+            params.append(days)
+
+        params.append(course_id)
 
         row = self.cm.select_one(sql, tuple(params))
         if not row:
@@ -782,19 +786,13 @@ class SQLRepository(ISQLRepository):
             "engagementRate": int((active / total) * 100) if total > 0 else 0,
         }
 
-    def read_top_questions(
-        self,
-        course_id: str,
-        limit: int,
-        days: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
-
+    def read_top_questions(self,course_id: str,limit: int, days: Optional[int] = None) -> List[Dict[str, Any]]:
         filters = ["course_id = %s"]
         params: List[Any] = [course_id]
 
         if days:
-            filters.append("asked_at >= NOW() - INTERVAL %s")
-            params.append(f"{days} days")
+            filters.append("asked_at >= NOW() - (%s * INTERVAL '1 day')")
+            params.append(days)
 
         where_clause = f"WHERE {' AND '.join(filters)}"
 
@@ -812,19 +810,13 @@ class SQLRepository(ISQLRepository):
         params.append(limit)
         return self.cm.select_all(sql, tuple(params))
 
-    def read_top_keywords(
-        self,
-        course_id: str,
-        limit: int,
-        days: Optional[int] = None,
-    ) -> List[Dict[str, Any]]:
-
+    def read_top_keywords(self,course_id: str, limit: int, days: Optional[int] = None) -> List[Dict[str, Any]]:
         filters = ["course_id = %s"]
         params: List[Any] = [course_id]
 
         if days:
-            filters.append("asked_at >= NOW() - INTERVAL %s")
-            params.append(f"{days} days")
+            filters.append("asked_at >= NOW() - (%s * INTERVAL '1 day')")
+            params.append(days)
 
         where_clause = f"WHERE {' AND '.join(filters)}"
 
