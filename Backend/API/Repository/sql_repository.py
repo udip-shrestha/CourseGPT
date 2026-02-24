@@ -745,7 +745,7 @@ class SQLRepository(ISQLRepository):
         params: List[Any] = []
 
         if days:
-            date_filter = f"AND q.asked_at >= NOW() - INTERVAL %s"
+            date_filter = f"AND q.asked_at >= NOW() - (%s * INTERVAL '1 day')"
 
         sql = f"""
             SELECT
@@ -764,11 +764,11 @@ class SQLRepository(ISQLRepository):
         # Correct param order: match placeholders exactly
         params.append(course_id)
         if days:
-            params.append(f"{days} days")
+            params.append(days)
 
         params.append(course_id)
         if days:
-            params.append(f"{days} days")
+            params.append(days)
 
         params.append(course_id)
 
@@ -791,8 +791,8 @@ class SQLRepository(ISQLRepository):
         params: List[Any] = [course_id]
 
         if days:
-            filters.append("asked_at >= NOW() - INTERVAL %s")
-            params.append(f"{days} days")
+            filters.append("asked_at >= NOW() - (%s * INTERVAL '1 day')")
+            params.append(days)
 
         where_clause = f"WHERE {' AND '.join(filters)}"
 
@@ -815,8 +815,8 @@ class SQLRepository(ISQLRepository):
         params: List[Any] = [course_id]
 
         if days:
-            filters.append("asked_at >= NOW() - INTERVAL %s")
-            params.append(f"{days} days")
+            filters.append("asked_at >= NOW() - (%s * INTERVAL '1 day')")
+            params.append(days)
 
         where_clause = f"WHERE {' AND '.join(filters)}"
 
