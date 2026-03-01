@@ -21,7 +21,7 @@ def jwks(service: CanvasService = Depends(get_canvas_service)) -> Dict[str, Any]
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@router.get("/lti/login", summary="LTI OIDC Login")
+@router.post("/lti/login", summary="LTI OIDC Login")
 async def lti_login(request: Request):
     """Canvas calls this first. We must redirect back to Canvas OIDC auth endpoint."""
     params = request.query_params
