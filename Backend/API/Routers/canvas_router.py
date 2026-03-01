@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Form, Request, Header
 from typing import Dict, Any, List
+from urllib.parse import urlencode
 
 from fastapi.responses import RedirectResponse
 from API.dependencies import get_canvas_service
 from API.Service.canvas_service import CanvasService
 from Metrics.metrics import MetricsRoute
 import jwt
+import uuid
 
 router = APIRouter(tags=["Canvas LTI"], route_class=MetricsRoute)
 
@@ -32,31 +34,35 @@ async def lti_login(iss: str = Form(...),
     canvas_region: str = Form(None),
     lti_storage_target: str = Form(None),):
     """Canvas calls this first. We must redirect back to Canvas OIDC auth endpoint."""
-    params = {
-        "iss": iss,
-        "login_hint": login_hint,
-        "target_link_uri": target_link_uri,
+
+    if not all([iss, login_hint, target_link_uri, client_id]):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Missing required OIDC parameters"
+        )
+
+    query_params = {
+        "response_type": "id_token",
         "client_id": client_id,
-        "lti_deployment_id": lti_deployment_id,
-        "lti_message_hint": lti_message_hint,
-        "canvas_environment": canvas_environment,
-        "canvas_region": canvas_region,
-        "lti_storage_target": lti_storage_target
+        "redirect_uri": target_link_uri,
+        "login_hint": login_hint,
+        "response_mode": "form_post",
+        "scope": "openid",
+        "nonce": str(uuid.uuid4()), 
     }
 
-    # Redirect back to Canvas with required params
-    redirect_url = (
-        f"{params['iss']}/api/lti/authorize_redirect?"
-        f"response_type=id_token"
-        f"&client_id={params['client_id']}"
-        f"&redirect_uri={params['target_link_uri']}"
-        f"&login_hint={params['login_hint']}"
-        f"&response_mode=form_post"
-        f"&scope=openid"
-        f"&nonce=coursegptnonce"
-    )
+    # Optional LTI params to include only if present
+    if lti_message_hint:
+        query_params["lti_message_hint"] = lti_message_hint
+    if canvas_environment:
+        query_params["canvas_environment"] = canvas_environment
+    if canvas_region:
+        query_params["canvas_region"] = canvas_region
+    if lti_storage_target:
+        query_params["lti_storage_target"] = lti_storage_target
 
-    return RedirectResponse(url=redirect_url)
+    redirect_url = f"{iss}/api/lti/authorize_redirect?{urlencode(query_params)}"
+    return RedirectResponse(url=redirect_url, status_code=status.HTTP_302_FOUND)
 
 
 @router.post("/lti/launch", name="lti_launch", summary="LTI Launch endpoint")
