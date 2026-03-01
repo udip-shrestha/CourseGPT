@@ -57,6 +57,7 @@ deploy_backend:
   only:
     - main
     - master
+    - 54-canvas-lti
   needs:
     - job: test_backend
       artifacts: false
@@ -72,6 +73,7 @@ deploy_frontend:
   only:
     - main
     - master
+    - 54-canvas-lti
   needs:
     - job: build_frontend
       artifacts: true
