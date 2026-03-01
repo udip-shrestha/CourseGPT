@@ -14,8 +14,7 @@ router = APIRouter(tags=["Canvas LTI"], route_class=MetricsRoute)
 def jwks(service: CanvasService = Depends(get_canvas_service)) -> Dict[str, Any]:
     """Return a JSON Web Key Set containing the public RSA key."""
     try:
-        jwk = service.public_jwk()
-        return {"keys": [jwk]}
+        return service.public_jwk()
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Public key not found for JWKS")
     except Exception as e:
