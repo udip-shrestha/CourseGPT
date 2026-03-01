@@ -49,6 +49,7 @@ async def lti_login(iss: str = Form(...),
         "response_mode": "form_post",
         "scope": "openid",
         "nonce": str(uuid.uuid4()), 
+        "prompt": "none",
     }
 
     # Optional LTI params to include only if present
