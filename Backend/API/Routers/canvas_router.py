@@ -66,30 +66,14 @@ async def lti_login(iss: str = Form(...),
 
 
 @router.post("/lti/launch", name="lti_launch", summary="LTI Launch endpoint")
-async def lti_launch(
-    id_token: str = Form(...),
-    service: CanvasService = Depends(get_canvas_service),
-) -> Dict[str, Any]:
-    """Accept an LTI launch (form POST) and return a signed token for the consumer."""
-    try:
-        decoded = jwt.decode(id_token, options={"verify_signature": False})
+async def lti_launch(request: Request):
+    body = await request.body()
+    print("RAW BODY:", body)
 
-        user_id = decoded.get("sub")
+    form = await request.form()
+    print("FORM DATA:", dict(form))
 
-        context = decoded.get("https://purl.imsglobal.org/spec/lti/claim/context", {})
-        course_id = context.get("id")
-
-        roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
-
-        return {
-            "user_id": user_id,
-            "course_id": course_id,
-            "roles": roles,
-            "message": "LTI launch successful (signature not yet verified)"
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=f"LTI launch failed: {e}")
+    return {"message": "debug"}
 
 @router.get("/canvas/files", summary="List Canvas files (ingestion helper)")
 def canvas_files(
