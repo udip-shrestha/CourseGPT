@@ -22,14 +22,27 @@ def jwks(service: CanvasService = Depends(get_canvas_service)) -> Dict[str, Any]
 
 
 @router.post("/lti/login", summary="LTI OIDC Login")
-async def lti_login(request: Request):
+async def lti_login(iss: str = Form(...),
+    login_hint: str = Form(...),
+    target_link_uri: str = Form(...),
+    client_id: str = Form(...),
+    lti_deployment_id: str = Form(...),
+    lti_message_hint: str = Form(None),
+    canvas_environment: str = Form(None),
+    canvas_region: str = Form(None),
+    lti_storage_target: str = Form(None),):
     """Canvas calls this first. We must redirect back to Canvas OIDC auth endpoint."""
-    params = request.query_params
-
-    required = ["iss", "login_hint", "client_id", "target_link_uri"]
-    for r in required:
-        if r not in params:
-            raise HTTPException(status_code=400, detail=f"Missing OIDC param: {r}")
+    params = {
+        "iss": iss,
+        "login_hint": login_hint,
+        "target_link_uri": target_link_uri,
+        "client_id": client_id,
+        "lti_deployment_id": lti_deployment_id,
+        "lti_message_hint": lti_message_hint,
+        "canvas_environment": canvas_environment,
+        "canvas_region": canvas_region,
+        "lti_storage_target": lti_storage_target
+    }
 
     # Redirect back to Canvas with required params
     redirect_url = (
