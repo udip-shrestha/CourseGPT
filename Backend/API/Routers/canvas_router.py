@@ -7,7 +7,7 @@ from API.Service.canvas_service import CanvasService
 from Metrics.metrics import MetricsRoute
 import jwt
 
-router = APIRouter(route_class=MetricsRoute)
+router = APIRouter(tags=["Canvas LTI"], route_class=MetricsRoute)
 
 
 @router.get("/.well-known/jwks.json", summary="Publish JWKs for Canvas LTI")

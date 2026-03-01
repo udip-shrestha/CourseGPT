@@ -14,27 +14,17 @@ class CanvasService:
     - Provides a placeholder file ingestion helper
     """
 
-    def __init__(self, private_key_path: str = None, public_key_path: str = None, kid: str = "1"):
-        backend_root = Path(__file__).resolve().parents[2]
-        self.private_key_path = os.getenv("CANVAS_PRIVATE_KEY_PATH") or str(backend_root / "private.key")
-        self.public_key_path = os.getenv("CANVAS_PUBLIC_KEY_PATH") or str(backend_root / "public.key")
+    def __init__(self):
+        self.private_key_b64 = os.getenv("CANVAS_PRIVATE_KEY_B64")
+        self.public_key_b64 = os.getenv("CANVAS_PUBLIC_KEY_B64")
         self.kid = os.getenv("CANVAS_KEY_ID", "coursegpt-key-1")
-
-        # Load keys lazily
-        self._private_key_pem = None
-        self._public_key_pem = None
-
-    def _load_private_key(self) -> str:
-        if self._private_key_pem is None:
-            with open(self.private_key_path, "rb") as fh:
-                self._private_key_pem = serialization.load_pem_private_key(fh.read())
-        return self._private_key_pem
+        
+        if not self.public_key_b64:
+            raise RuntimeError("CANVAS_PUBLIC_KEY_B64 not set")
 
     def _load_public_key(self) -> str:
-        if self._public_key_pem is None:
-            with open(self.public_key_path, "rb") as fh:
-                self._public_key_pem = serialization.load_pem_public_key(fh.read())
-        return self._public_key_pem
+        decoded = base64.b64decode(self.public_key_b64)
+        return serialization.load_pem_public_key(decoded)
 
     def _b64u(self, b: bytes) -> str:
         return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii") # Convert to Base64 URL safe string without padding
