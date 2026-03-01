@@ -48,8 +48,9 @@ async def lti_login(iss: str = Form(...),
         "login_hint": login_hint,
         "response_mode": "form_post",
         "scope": "openid",
-        "nonce": str(uuid.uuid4()), 
-        "prompt": "none",
+        "nonce": str(uuid.uuid4()),
+        "state": str(uuid.uuid4()),
+        "prompt": "none", 
     }
 
     # Optional LTI params to include only if present
@@ -67,14 +68,31 @@ async def lti_login(iss: str = Form(...),
 
 
 @router.post("/lti/launch", name="lti_launch", summary="LTI Launch endpoint")
-async def lti_launch(request: Request):
-    body = await request.body()
-    print("RAW BODY:", body)
+async def lti_launch(
+    id_token: str = Form(...),
+    service: CanvasService = Depends(get_canvas_service),
+) -> Dict[str, Any]:
+    """Accept an LTI launch (form POST) and return a signed token for the consumer."""
+    try:
+        print("Received LTI launch with id_token:", id_token[:30] + "...")
+        decoded = jwt.decode(id_token, options={"verify_signature": False})
 
-    form = await request.form()
-    print("FORM DATA:", dict(form))
+        user_id = decoded.get("sub")
 
-    return {"message": "debug"}
+        context = decoded.get("https://purl.imsglobal.org/spec/lti/claim/context", {})
+        course_id = context.get("id")
+
+        roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
+
+        return {
+            "user_id": user_id,
+            "course_id": course_id,
+            "roles": roles,
+            "message": "LTI launch successful (signature not yet verified)"
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"LTI launch failed: {e}")
 
 @router.get("/canvas/files", summary="List Canvas files (ingestion helper)")
 def canvas_files(
