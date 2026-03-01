@@ -70,7 +70,15 @@ LLM_PROVIDER=${LLM_PROVIDER:-}
 LLM_BASE_URL=${LLM_BASE_URL:-}
 LLM_MODEL=${LLM_MODEL:-}
 HUGGINGFACEHUB_API_TOKEN=${HUGGINGFACEHUB_API_TOKEN:-}
+
+# ===========================================
+# Canvas LTI Configuration
+# ===========================================
+CANVAS_PUBLIC_KEY_B64=${CANVAS_PUBLIC_KEY_B64:-}
+CANVAS_PRIVATE_KEY_B64=${CANVAS_PRIVATE_KEY_B64:-}
+CANVAS_KEY_ID=${CANVAS_KEY_ID:-}
 EOF
+
 
 chmod 600 "$DISCORD_ENV"
 chown gitlab-runner:gitlab-runner "$DISCORD_ENV"
