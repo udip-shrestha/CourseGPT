@@ -24,6 +24,7 @@ from API.Service.students_service import StudentService
 from API.Service.queries_service import QueryService
 from API.Service.feedback_service import FeedbackService
 from API.Service.analytics_service import AnalyticsService
+from API.Service.canvas_service import CanvasService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import LOADER_CLASS_REGISTRY, ILoader, LoaderFactory
@@ -343,3 +344,9 @@ def get_analytics_service(
 ) -> AnalyticsService:
     """Provide an AnalyticsService using the SQL repository."""
     return AnalyticsService(sql_repo)
+
+
+def get_canvas_service(
+    ) -> CanvasService:
+    """Provide a CanvasService instance."""
+    return CanvasService()   # might allow future injection of key paths via env or args
