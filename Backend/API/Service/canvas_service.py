@@ -3,6 +3,8 @@ import jwt
 import base64
 from typing import Dict, List
 from pathlib import Path
+from fastapi.responses import RedirectResponse
+from Backend.Discord.cybot import status
 from cryptography.hazmat.primitives import serialization
 
 
@@ -29,6 +31,9 @@ class CanvasService:
     def _b64u(self, b: bytes) -> str:
         return base64.urlsafe_b64encode(b).rstrip(b"=").decode("ascii") # Convert to Base64 URL safe string without padding
 
+    def redirect_to(base_url, path: str) -> RedirectResponse:
+            return RedirectResponse(url=f"{base_url}{path}", status_code=status.HTTP_302_FOUND)
+    
     def public_jwk(self) -> Dict:
         """Return a JWK (RSA) derived from the configured public key PEM."""
         pub_key = self._load_public_key()

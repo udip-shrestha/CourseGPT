@@ -345,7 +345,6 @@ def get_analytics_service(
     """Provide an AnalyticsService using the SQL repository."""
     return AnalyticsService(sql_repo)
 
-
 def get_canvas_service(
     ) -> CanvasService:
     """Provide a CanvasService instance."""

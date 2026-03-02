@@ -21,6 +21,9 @@ import { Sheet, SheetContent, SheetTrigger } from "./ui/sheet";
 
 export function Header() {
     const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const roleParam = searchParams.get("role");
+    const isStudentRole = roleParam === "student";
     const navigate = useNavigate();
     const { apiClient } = useApiClient();
 
@@ -142,32 +145,37 @@ export function Header() {
                   Chat
                 </Button>
       
-                <Button
-                  variant={path.includes(`/courses/${courseId}/integrations`) ? "default" : "ghost"}
-                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
-                  onClick={() => navigate(`/courses/${courseId}/integrations`)}
-                >
-                  <Plug className="h-4 w-4" />
-                  Integrations
-                </Button>
-      
-                <Button
-                  variant={path.includes(`/courses/${courseId}/settings`) ? "default" : "ghost"}
-                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
-                  onClick={() => navigate(`/courses/${courseId}/settings`)}
-                >
-                  <Settings className="h-4 w-4" />
-                  Settings
-                </Button>
-      
-                <Button
-                  variant={path.includes(`/courses/${courseId}/analytics`) ? "default" : "ghost"}
-                  className="flex items-center gap-2 w-full sm:w-auto justify-center"
-                  onClick={() => navigate(`/courses/${courseId}/analytics`)}
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  Analytics
-                </Button>
+                {/* additional links hidden for students coming via LTI */}
+                {!isStudentRole && (
+                  <>
+                    <Button
+                      variant={path.includes(`/courses/${courseId}/integrations`) ? "default" : "ghost"}
+                      className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                      onClick={() => navigate(`/courses/${courseId}/integrations`)}
+                    >
+                      <Plug className="h-4 w-4" />
+                      Integrations
+                    </Button>
+          
+                    <Button
+                      variant={path.includes(`/courses/${courseId}/settings`) ? "default" : "ghost"}
+                      className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                      onClick={() => navigate(`/courses/${courseId}/settings`)}
+                    >
+                      <Settings className="h-4 w-4" />
+                      Settings
+                    </Button>
+          
+                    <Button
+                      variant={path.includes(`/courses/${courseId}/analytics`) ? "default" : "ghost"}
+                      className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                      onClick={() => navigate(`/courses/${courseId}/analytics`)}
+                    >
+                      <LayoutDashboard className="h-4 w-4" />
+                      Analytics
+                    </Button>
+                  </>
+                )}
               </>
             )}
       

@@ -7,6 +7,7 @@ import { InstructorProfile } from "./components/InstructorProfile";
 import { InstructorCourses } from "./components/InstructorCourses";
 import { NotFoundPage } from "./components/NotFoundPage";
 import { CoursePage } from "./components/CoursePage";
+import { CanvasLinkPage } from "./components/CanvasLinkPage";
 
 /**
  * The main Layout component.
@@ -41,6 +42,7 @@ export default function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
+                <Route path="/register-course" element={<CanvasLinkPage />} />
 
                 {/* Instructor Routes */}
                 <Route

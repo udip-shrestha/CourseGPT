@@ -12,6 +12,9 @@ import { useApiClient } from "../clients/ApiClientContext";
 
 export function LoginPage() {
     const navigate = useNavigate();
+    // read optional redirect target (e.g. ?next=/register-course?canvas_course_id=...)
+    const params = new URLSearchParams(window.location.search);
+    const redirectTo = params.get("next");
     // --- 3. INITIALIZE THE API CLIENT ---
     const { authClient } = useApiClient();
 
@@ -52,8 +55,12 @@ export function LoginPage() {
             const instructorId = data.instructor_id;
             console.log("Login successful for instructor:", instructorId);
 
-            // Navigate to the instructor's profile page
-            navigate(`/instructors/${instructorId}/profile`);
+            // Navigate according to next param if provided, else instructor profile
+            if (redirectTo) {
+                navigate(redirectTo);
+            } else {
+                navigate(`/instructors/${instructorId}/profile`);
+            }
 
         } catch (err: any) {
             console.error("Login failed:", err);

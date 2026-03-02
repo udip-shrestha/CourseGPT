@@ -209,3 +209,31 @@ def get_course_id_by_name(
 ):
     """Retrieve a course's ID based on its name."""
     return service.get_course_id_by_name(course_name)
+
+# ======================================================
+# Canvas Intergation Endpoints
+# ======================================================
+
+@router.post(
+    "/courses/link-canvas",
+    status_code=status.HTTP_200_OK,
+    summary="Link a course with a Canvas course ID",
+    description=(
+        "Associate an existing CourseGPT course (identified by name) with the "
+        "corresponding Canvas course identifier. Returns the internal course ID."
+    ),
+)
+def link_canvas_course(
+    course_name: str = Query(
+        ...,
+        description="Exact name of the CourseGPT course to link.",
+        examples={"example": "Data Structures"},
+    ),
+    canvas_course_id: str = Query(
+        ...,
+        description="Canvas course ID provided by LTI launch.",
+        examples={"example": "280716395fd5023da5ffee970b39589b601b7807"},
+    ),
+    service: CourseService = Depends(get_course_service),
+):
+    return service.link_canvas_course(course_name, canvas_course_id)

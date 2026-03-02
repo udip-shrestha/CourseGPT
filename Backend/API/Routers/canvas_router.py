@@ -3,9 +3,12 @@ from typing import Dict, Any, List
 from urllib.parse import urlencode
 
 from fastapi.responses import RedirectResponse
-from API.dependencies import get_canvas_service
+from API.dependencies import get_canvas_service, get_course_service, get_student_service
 from API.Service.canvas_service import CanvasService
+from API.Service.courses_service import CourseService
+from API.Service.students_service import StudentService
 from Metrics.metrics import MetricsRoute
+import os
 import jwt
 import uuid
 
@@ -70,26 +73,54 @@ async def lti_login(iss: str = Form(...),
 @router.post("/lti/launch", name="lti_launch", summary="LTI Launch endpoint")
 async def lti_launch(
     id_token: str = Form(...),
-    service: CanvasService = Depends(get_canvas_service),
-) -> Dict[str, Any]:
-    """Accept an LTI launch (form POST) and return a signed token for the consumer."""
+    canvas_service: CanvasService = Depends(get_canvas_service),
+    course_service: CourseService = Depends(get_course_service),
+    student_service: StudentService = Depends(get_student_service),
+) -> RedirectResponse:
+    """Handle an LTI launch and redirect the user appropriately.
+
+    Uses Canvas and application services to determine whether the user is a
+    student or instructor and whether corresponding records already exist.  The
+    frontend base URL is read from `FRONTEND_BASE_URL` env var (defaults to
+    static).  Redirects include query parameters indicating role or registration
+    requirements.
+    """
     try:
-        print("Received LTI launch with id_token:", id_token[:30] + "...")
         decoded = jwt.decode(id_token, options={"verify_signature": False})
 
-        user_id = decoded.get("sub")
-
+        canvas_user_id = decoded.get("sub")
         context = decoded.get("https://purl.imsglobal.org/spec/lti/claim/context", {})
-        course_id = context.get("id")
-
+        canvas_course_id = context.get("id")
         roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
 
-        return {
-            "user_id": user_id,
-            "course_id": course_id,
-            "roles": roles,
-            "message": "LTI launch successful (signature not yet verified)"
-        }
+        base_url = os.getenv("FRONTEND_BASE_URL", "http://sdmay26-37.ece.iastate.edu:8000")
+
+        # resolve internal course if linked
+        try:
+            course = course_service.get_course_by_canvas_id(canvas_course_id)
+            internal_id = course.get("id")
+        except HTTPException:
+            internal_id = None
+
+        is_instructor = any("Instructor" in r for r in roles)
+
+        if is_instructor:
+            if internal_id:
+                return canvas_service.redirect_to(base_url, f"/courses/{internal_id}")
+            else:
+                return canvas_service.redirect_to(base_url, f"/register-course?canvas_course_id={canvas_course_id}")
+
+        # student flows
+        if not internal_id:
+            return canvas_service.redirect_to(base_url, f"/?error=course_not_linked")
+
+        student_rec = student_service.find_student_in_course_by_canvas(canvas_user_id, internal_id)
+        if student_rec:
+            return canvas_service.redirect_to(base_url, f"/courses/{internal_id}/chats?role=student")
+        else:
+            return canvas_service.redirect_to(base_url,
+                f"/courses/{internal_id}/chats?role=student&needs_registration=1&canvas_user_id={canvas_user_id}"
+            )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"LTI launch failed: {e}")

@@ -30,7 +30,7 @@ def client(student_service: StudentService) -> TestClient:
     app.dependency_overrides[get_student_service] = lambda: student_service
     return TestClient(app)
 
-def test_is_registered_true(
+def test_is_registered_discord_true(
     client: TestClient,
     mock_sql_repo: ISQLRepository,
 ):
@@ -41,7 +41,7 @@ def test_is_registered_true(
     ]
 
     response = client.get(
-        "/students/is_registered",
+        "/students/is_registered_discord",
         params={"discord_id": "discord_123", "course_id": "course-1"},
     )
 
@@ -50,7 +50,7 @@ def test_is_registered_true(
     mock_sql_repo.read_all_students.assert_called_once_with(course_id="course-1")
 
 
-def test_is_registered_false(
+def test_is_registered_discord_false(
     client: TestClient,
     mock_sql_repo: ISQLRepository,
 ):
@@ -60,13 +60,44 @@ def test_is_registered_false(
     ]
 
     response = client.get(
-        "/students/is_registered",
+        "/students/is_registered_discord",
         params={"discord_id": "discord_123", "course_id": "course-1"},
     )
 
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"registered": False, "student_id": None}
     mock_sql_repo.read_all_students.assert_called_once_with(course_id="course-1")
+
+
+def test_is_registered_canvas_true(
+    client: TestClient,
+    mock_sql_repo: ISQLRepository,
+):
+    mock_sql_repo.read_student_by_canvas.return_value = {"id": "s1"}
+    mock_sql_repo.read_all_students.return_value = [{"id": "s1"}]
+
+    response = client.get(
+        "/students/is_registered_canvas",
+        params={"canvas_user_id": "can123", "course_id": "course-1"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"registered": True, "student_id": "s1"}
+
+
+def test_is_registered_canvas_false(
+    client: TestClient,
+    mock_sql_repo: ISQLRepository,
+):
+    mock_sql_repo.read_student_by_canvas.return_value = None
+
+    response = client.get(
+        "/students/is_registered_canvas",
+        params={"canvas_user_id": "can123", "course_id": "course-1"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"registered": False, "student_id": None}
 
 def test_get_registered_courses_success(
     client: TestClient,
@@ -92,6 +123,23 @@ def test_get_registered_courses_success(
     assert response.json() == {"courses": mock_courses}
     mock_sql_repo.read_courses_by_discord.assert_called_once_with("discord_123")
 
+def test_register_student_with_canvas_id(client: TestClient, mock_sql_repo: ISQLRepository):
+    mock_sql_repo.create_student.return_value = "s3"
+    response = client.post(
+        "/students/register",
+        params={
+            "name": "Eve",
+            "course_id": "c1",
+            "canvas_user_id": "can-5",
+        },
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    mock_sql_repo.create_student.assert_called_once_with(
+        name="Eve",
+        discord_id=None,
+        course_id="c1",
+        canvas_user_id="can-5",
+    )
 
 def test_get_registered_courses_not_found(
     client: TestClient,

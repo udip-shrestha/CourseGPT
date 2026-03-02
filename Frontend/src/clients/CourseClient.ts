@@ -1,38 +1,98 @@
 import type { APIClient } from "./ApiClient";
 
 export class CourseClient {
-    private baseClient: APIClient;
-    constructor(baseClient: APIClient) {
-        this.baseClient = baseClient
-    }
-    async listInstructorCourses(instructorId: string, options?: { institution?: string; limit?: number; offset?: number; order_by?: string; order_dir?: "asc" | "desc" }) {
-        const query = Object.fromEntries(Object.entries(options || {}).filter(([_, v]) => v !== undefined));
-        return this.baseClient.request("GET", `/instructors/${instructorId}/courses`, { query, operationId: `instructor-courses-${instructorId}` });
-    }
-    
-    async getCourse(courseId: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.baseClient.request("GET", `/courses/${courseId}`, { operationId: `course-get-${courseId}` });
-    }
+  private baseClient: APIClient;
+  constructor(baseClient: APIClient) {
+    this.baseClient = baseClient;
+  }
+  async listInstructorCourses(
+    instructorId: string,
+    options?: {
+      institution?: string;
+      limit?: number;
+      offset?: number;
+      order_by?: string;
+      order_dir?: "asc" | "desc";
+    },
+  ) {
+    const query = Object.fromEntries(
+      Object.entries(options || {}).filter(([_, v]) => v !== undefined),
+    );
+    return this.baseClient.request(
+      "GET",
+      `/instructors/${instructorId}/courses`,
+      { query, operationId: `instructor-courses-${instructorId}` },
+    );
+  }
 
-    async deleteCourse(courseId: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.baseClient.request("DELETE", `/courses/${courseId}`, { operationId: `course-delete-${courseId}` });
-    }
+  async getCourse(courseId: string) {
+    if (!courseId) return { errorMessage: "Course ID is required." };
+    return this.baseClient.request("GET", `/courses/${courseId}`, {
+      operationId: `course-get-${courseId}`,
+    });
+  }
 
-    async createCourse(instructorId: string, params: { name: string; institution: string; semester_id: number; year: number }) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
-        return this.baseClient.request("POST", `/instructors/${instructorId}/courses`, {
-            query: params,
-            isJson: false,
-            operationId: `course-create-${instructorId}`,
-        });
-    }
+  async deleteCourse(courseId: string) {
+    if (!courseId) return { errorMessage: "Course ID is required." };
+    return this.baseClient.request("DELETE", `/courses/${courseId}`, {
+      operationId: `course-delete-${courseId}`,
+    });
+  }
 
-    async updateCourse(courseId: string, params: { name?: string; institution?: string; semester_id?: number; year?: number }) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        const query = Object.fromEntries(Object.entries(params || {}).filter(([_, v]) => v !== undefined));
-        return this.baseClient.request("PUT", `/courses/${courseId}`, { query, isJson: false, operationId: `course-update-${courseId}` });
-    }
+  async createCourse(
+    instructorId: string,
+    params: {
+      name: string;
+      institution: string;
+      semester_id: number;
+      year: number;
+    },
+  ) {
+    if (!instructorId) return { errorMessage: "Instructor ID is required." };
+    return this.baseClient.request(
+      "POST",
+      `/instructors/${instructorId}/courses`,
+      {
+        query: params,
+        isJson: false,
+        operationId: `course-create-${instructorId}`,
+      },
+    );
+  }
 
+  async updateCourse(
+    courseId: string,
+    params: {
+      name?: string;
+      institution?: string;
+      semester_id?: number;
+      year?: number;
+    },
+  ) {
+    if (!courseId) return { errorMessage: "Course ID is required." };
+    const query = Object.fromEntries(
+      Object.entries(params || {}).filter(([_, v]) => v !== undefined),
+    );
+    return this.baseClient.request("PUT", `/courses/${courseId}`, {
+      query,
+      isJson: false,
+      operationId: `course-update-${courseId}`,
+    });
+  }
+
+  /**
+   * Associate an existing CourseGPT course (by name) with a Canvas course identifier.
+   * Used when an instructor comes from Canvas and the two systems need to be linked.
+   */
+  async linkCanvas(courseName: string, canvasCourseId: string) {
+    if (!courseName) return { errorMessage: "Course name is required." };
+    if (!canvasCourseId)
+      return { errorMessage: "Canvas course ID is required." };
+    const query = { course_name: courseName, canvas_course_id: canvasCourseId };
+    return this.baseClient.request("POST", `/courses/link-canvas`, {
+      query,
+      isJson: false,
+      operationId: `course-link-canvas-${canvasCourseId}`,
+    });
+  }
 }
