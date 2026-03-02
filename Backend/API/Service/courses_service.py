@@ -180,3 +180,30 @@ class CourseService:
 
         updated_course = self.sql_repo.update_course(course_id, updates)
         return updated_course
+
+    # ------------------------------------------------------
+    # Canvas integration helpers
+    # ------------------------------------------------------
+    @clean_service
+    def get_course_by_canvas_id(self, canvas_course_id: str) -> dict:
+        """Lookup internal course using a Canvas course identifier."""
+        course = self.sql_repo.read_course_by_canvas_id(canvas_course_id)
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"No course linked to Canvas course id={canvas_course_id}."
+            )
+        return course
+
+    @clean_service
+    def link_canvas_course(self, course_name: str, canvas_course_id: str) -> dict:
+        """Associate an existing course (by name) with a Canvas course id."""
+        course = self.sql_repo.get_course_by_name(course_name)
+        if not course:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Course with name='{course_name}' not found."
+            )
+        # update record
+        updated = self.sql_repo.update_course(course["id"], {"canvas_course_id": canvas_course_id})
+        return {"course_id": course["id"]}

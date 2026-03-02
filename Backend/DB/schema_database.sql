@@ -74,7 +74,9 @@ CREATE TABLE IF NOT EXISTS courses (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     instructor_id UUID NOT NULL REFERENCES instructors(id) ON DELETE CASCADE,
     semester_id INTEGER NOT NULL REFERENCES semesters(id) ON DELETE RESTRICT,
-    rag_strategy_id INT REFERENCES rag_strategies(id) ON DELETE SET NULL
+    rag_strategy_id INT REFERENCES rag_strategies(id) ON DELETE SET NULL,
+    -- Canvas integration
+    canvas_course_id VARCHAR(100) UNIQUE
 );
 
 -- -----------------------------
@@ -172,7 +174,9 @@ CREATE TABLE IF NOT EXISTS students (
     discord_id VARCHAR(50) UNIQUE CHECK (discord_id IS NULL OR trim(discord_id) <> ''),
     name VARCHAR(100) NOT NULL CHECK (trim(name) <> ''),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    -- Canvas integration
+    canvas_user_id VARCHAR(100) UNIQUE
 );
 
 -- -----------------------------

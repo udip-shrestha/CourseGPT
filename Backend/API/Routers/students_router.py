@@ -30,30 +30,65 @@ def register_student(
         description="Full name of the student.",
         examples={"example": "Mike Fury Tyson"},
     ),
-    discord_id: str = Query(
-        ...,
-        description="Discord user ID of the student.",
-        examples={"example": "discord_12345"},
-    ),
     course_id: str = Query(
         ...,
         description="Course ID to register the student in.",
         examples={"example": "uuid-course-123"},
     ),
+    discord_id: str | None = Query(
+        None,
+        description="Discord user ID of the student (if available).",
+        examples={"example": "discord_12345"},
+    ),
+    canvas_user_id: str | None = Query(
+        None,
+        description="Canvas user ID for LTI-based registrations.",
+        examples={"example": "canvas-uid-678"},
+    ),
     service: StudentService = Depends(get_student_service),
 ) -> Dict[str, str]:
     """Registers a new student for a given course."""
-    student = service.create_student(name=name, discord_id=discord_id, course_id=course_id)
+    student = service.create_student(
+        name=name,
+        discord_id=discord_id,
+        course_id=course_id,
+        canvas_user_id=canvas_user_id,
+    )
     return {"message": "Student registered successfully", "student_id": student["student_id"]}
 
 
 @router.get(
-    "/is_registered",
+    "/is_registered_canvas",
+    response_model=StudentRegistrationStatus,
+    summary="Check if a Canvas user is registered in a specific course",
+    description="Returns whether a canvas user ID corresponds to a student enrolled in the given course."
+)
+def is_registered_canvas(
+    canvas_user_id: str = Query(
+        ...,
+        description="Canvas user ID of the student.",
+        examples={"example": "canvas-123"},
+    ),
+    course_id: str = Query(
+        ...,
+        description="Course ID to check enrollment for.",
+        examples={"example": "uuid-course-123"},
+    ),
+    service: StudentService = Depends(get_student_service),
+) -> Dict[str, Optional[str]]:
+    student = service.find_student_in_course_by_canvas(canvas_user_id, course_id)
+    if student:
+        return {"registered": True, "student_id": student.get("id")}
+    return {"registered": False}
+
+
+@router.get(
+    "/is_registered_discord",
     response_model=StudentRegistrationStatus,
     summary="Check if a student is registered in a specific course",
     description="Verifies whether a student (via Discord ID) is enrolled in a given course.",
 )
-def is_registered(
+def is_registered_discord(
     discord_id: str = Query(
         ...,
         description="Discord ID of the student.",

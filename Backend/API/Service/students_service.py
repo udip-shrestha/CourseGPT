@@ -21,26 +21,60 @@ class StudentService:
     def create_student(
         self,
         name: str,
-        discord_id: str,
+        discord_id: str | None,
         course_id: str,
+        canvas_user_id: str | None = None,
     ) -> dict:
         """
-        Create a new student record in the database.
+        Create or update a student record in the database.
+
+        Either discord_id or canvas_user_id should be provided (or both). The repository
+        handles merging duplicates and linking to the course.
         """
-        # Optional: check if a student with the same Discord ID already exists for this course
-        # existing_students = self.sql_repo.read_all_students(course_id=course_id)
-        # if any(s["discord_id"] == discord_id for s in existing_students):
-        #     raise HTTPException(
-        #         status_code=status.HTTP_400_BAD_REQUEST,
-        #         detail=f"Student with discord_id={discord_id} already exists in this course."
-        #     )
 
         student_id = self.sql_repo.create_student(
             name=name,
             discord_id=discord_id,
-            course_id=course_id
+            course_id=course_id,
+            canvas_user_id=canvas_user_id,
         )
 
+        return {"student_id": student_id}
+
+    # ------------------------------------------------------
+    # Canvas helpers
+    # ------------------------------------------------------
+    @clean_service
+    def find_student_in_course_by_canvas(
+        self,
+        canvas_user_id: str,
+        course_id: str,
+    ) -> dict | None:
+        """Return student record if user exists and is enrolled in the course."""
+        student = self.sql_repo.read_student_by_canvas(canvas_user_id)
+        if not student:
+            return None
+        # verify enrollment
+        students = self.sql_repo.read_all_students(course_id=course_id)
+        for s in students:
+            if s.get("id") == student.get("id"):
+                return student
+        return None
+
+    @clean_service
+    def register_canvas_student(
+        self,
+        name: str,
+        canvas_user_id: str,
+        course_id: str,
+    ) -> dict:
+        """Create a student using their Canvas user id and link to the course."""
+        student_id = self.sql_repo.create_student(
+            name=name,
+            discord_id=None,
+            course_id=course_id,
+            canvas_user_id=canvas_user_id,
+        )
         return {"student_id": student_id}
 
     # ------------------------------------------------------

@@ -65,7 +65,7 @@ async def ask(interaction: discord.Interaction, question: str):
             return
 
         # Check if student is registered
-        registered, student_id = await is_registered(str(interaction.user.id), course_id)
+        registered, student_id = await is_registered_discord(str(interaction.user.id), course_id)
         if not registered:
             await interaction.response.send_message(
                 f"🚫 You are not registered for this course. Please try registering using the /register command first.",
@@ -125,7 +125,7 @@ async def register(interaction: discord.Interaction):
             return
         
         # Check if student is already registered
-        registered, _ = await is_registered(str(interaction.user.id), course_id)
+        registered, _ = await is_registered_discord(str(interaction.user.id), course_id)
         if registered:
             await interaction.followup.send(
                 "🚫 You are already registered for this course."
@@ -172,7 +172,7 @@ async def status(interaction: discord.Interaction):
             return
         
         # Check if student is registered
-        registered, _ = await is_registered(str(interaction.user.id), course_id)
+        registered, _ = await is_registered_discord(str(interaction.user.id), course_id)
         if registered:
             await interaction.followup.send("✅ You are registered for this course.")
         else:
@@ -245,7 +245,7 @@ async def feedback(interaction: discord.Interaction, feedback: str):
             return
 
         # Ensure the user is registered before accepting feedback
-        registered, _ = await is_registered(str(interaction.user.id), course_id)
+        registered, _ = await is_registered_discord(str(interaction.user.id), course_id)
         if not registered:
             await interaction.followup.send(
                 "🚫 You must be registered for this course to submit feedback.",
@@ -286,7 +286,7 @@ async def unregister(interaction: discord.Interaction, course_name: str):
             return
         
         # Check if student is already not registered
-        registered, _ = await is_registered(str(interaction.user.id), course_id)
+        registered, _ = await is_registered_discord(str(interaction.user.id), course_id)
         if not registered:
             await interaction.followup.send(
                 "🚫 You are currently not registered for this course."
