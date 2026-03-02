@@ -40,22 +40,22 @@ class ChromaVectorRepository(IVectorRepository):
 
 
     def create_index(self, course_id: str, docs: List[Document]) -> None:
-        """
-        Ensures collection exists, then inserts chunks safely.
-        """
+        collection = self.client.get_collection(name=course_id)
 
-        from chromadb.errors import NotFoundError
+        documents = []
+        metadatas = []
+        ids = []
 
-        try:
-            collection = self.client.get_collection(name=course_id)
-        except NotFoundError:
-            collection = self.client.create_collection(name=course_id)
+        for i, doc in enumerate(docs):
+            metadata = doc.metadata.copy()
 
-        documents = [doc.page_content for doc in docs]
-        metadatas = [doc.metadata for doc in docs]
+            # Build id using doc_id
+            doc_id = metadata.get("doc_id", "doc")
+            chunk_id = f"{doc_id}_{i}"
 
-        # Use stable chunk_id as vector ID
-        ids = [m["chunk_id"] for m in metadatas]
+            documents.append(doc.page_content)
+            metadatas.append(metadata)   # ← DO NOT inject chunk_id
+            ids.append(chunk_id)
 
         collection.add(
             ids=ids,

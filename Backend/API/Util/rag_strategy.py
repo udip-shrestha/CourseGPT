@@ -40,30 +40,36 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
     # -----------------------------
     def retrieve_chunks(
         self,
-        vector_repo: IVectorRepository,
+        vector_repo,
         course_id: str,
         question: str,
-        k: int = 12,
-    ) -> List[dict]:
+        k: int = 8,
+    ):
 
-        retrieved = vector_repo.query(course_id, question, k)
+        results = vector_repo.query(course_id, question, k)
 
-        if not retrieved:
-            return []
+        if not results:
+            return "", []
 
         chunks = []
+        sources = []
 
-        for doc, score in retrieved:
-            chunks.append({
-                "id": doc.metadata.get("chunk_id") or hash(doc.page_content),
-                "content": doc.page_content,
-                "source_type": doc.metadata.get("source_type", "Unknown"),
-                "title": doc.metadata.get("title") or doc.metadata.get("file_name"),
-                "date": doc.metadata.get("date"),
-            })
+        for doc, score in results:
+            chunks.append(doc.page_content)
 
-        return chunks
-    
+            title = (
+                doc.metadata.get("title")
+                or doc.metadata.get("file_name")
+                or "Unknown"
+            )
+
+            if title not in sources:
+                sources.append(title)
+
+        content = "\n\n".join(chunks)
+
+        return content, sources
+        
 
     # -----------------------------
     # Multi-Query Expansion
@@ -263,78 +269,28 @@ class SimpleRAGStrategy(BaseRAGStrategy):
                 "answer": "Hello! I'm CourseGPT. Ask me anything about this course.",
                 "sources": []
         }
-        
+
+
         # ---------------------------------------------------
-        #  Multi-Query + Retrieval
+        # Retrieval
         # ---------------------------------------------------
-        expanded = self.expand_query(llm, question)
-        all_queries = [question] + expanded
 
-        retrieved_chunks = []
+        retrieved_content, retrieved_sources = self.retrieve_chunks(
+            vector_repo, course_id, question
+        )
 
-        for q in all_queries:
-            results = vector_repo.query(course_id, q, 4)
-
-        for doc, score in results:
-            retrieved_chunks.append({
-                "id": doc.metadata.get("chunk_id"),
-                "content": doc.page_content,
-                "title": doc.metadata.get("title"),
-                "source_type": doc.metadata.get("source_type"),
-                "date": doc.metadata.get("date"),
-                "score": score,
-            })
-
-
-        # -----------------------------------
-        # SOURCE FILTERING
-        # -----------------------------------
-
-        # If nothing retrieved, return early
-        if not retrieved_chunks:
+        if not retrieved_content:
+            answer = "I don’t have enough course information to answer that."
+            sql_repo.create_query(
+                student_id,
+                course_id,
+                query_text=question,
+                response_text=answer
+            )
             return {
-                "answer": "I don't have enough course information to answer that.",
+                "answer": answer,
                 "sources": []
             }
-
-        # Sort by similarity (lower distance = better)
-        retrieved_chunks.sort(key=lambda x: x["score"])
-
-        # Keep only top 2 most relevant chunks
-        top_chunks = retrieved_chunks[:2]
-
-        # Extract unique document titles
-        filtered_sources = list({chunk["title"] for chunk in top_chunks})
-
-        # Remove duplicate
-        unique = {chunk["id"]: chunk for chunk in retrieved_chunks}
-        retrieved_chunks = list(unique.values())
-
-        # ------------------------------
-        # Empty Retrieval Guard
-        # ------------------------------
-        if not retrieved_chunks:
-            logger.info("[SimpleRAG] No relevant chunks found. Returning failure state.")
-            return {
-                "answer": "I don’t have enough course information to answer that.",
-                "sources": []
-            }
-
-
-        # ---------------------------------------------------
-        # Rerank
-        # ---------------------------------------------------
-        retrieved_chunks = self.rerank_chunks(llm, question, retrieved_chunks)
-
-        # Keep only top 2 most relevant AFTER reranking
-        retrieved_chunks = retrieved_chunks[:2]
-
-        retrieved_content = self.format_chunks(retrieved_chunks)
-
-        retrieved_sources = sorted({
-            chunk.get("title", "Unknown")
-            for chunk in retrieved_chunks
-        })
 
         # ---------------------------------------------------
         # Metadata + Date Injection
