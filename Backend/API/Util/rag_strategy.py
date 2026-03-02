@@ -2,6 +2,8 @@ from abc import ABC, abstractmethod
 import re
 import logging
 from typing import Any, List, Dict, Optional, Protocol, Tuple, runtime_checkable
+from datetime import datetime
+import json
 
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
@@ -10,7 +12,6 @@ from langchain_core.tools import tool
 
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.i_sql_repository import ISQLRepository
-
 
 logger = logging.getLogger(__name__)
 
@@ -34,25 +35,113 @@ class IRAGStrategy(Protocol):
 
 class BaseRAGStrategy(ABC, IRAGStrategy):
 
-    def retrieve_chunks(self, vector_repo: IVectorRepository, course_id: str, question: str) -> Tuple[str, List[str]]:
-        """
-        Return concatenated chunk text (content) and source summary (artifact).
-        """
+    # -----------------------------
+    # Retrieval
+    # -----------------------------
+    def retrieve_chunks(
+        self,
+        vector_repo,
+        course_id: str,
+        question: str,
+        k: int = 8,
+    ):
 
-        retrieved = vector_repo.query(course_id, question, 10)
-        if not retrieved:
-            return "No content retrieved.", []
+        results = vector_repo.query(course_id, question, k)
 
-        content = "\n\n-----\n\n".join(f"[Chunk {i+1}]\n{doc.page_content}" for i, (doc, _) in enumerate(retrieved))
+        if not results:
+            return "", []
 
-        unique_sources = {
-            f"{doc.metadata.get('source') or doc.metadata.get('file_name') or 'Unknown'}"
-            + (f" (page {doc.metadata.get('page')})" if doc.metadata.get("page") else "")
-            for doc, _ in retrieved
-        }
+        chunks = []
+        sources = []
 
-        return content, sorted(unique_sources)
+        for doc, score in results:
+            chunks.append(doc.page_content)
 
+            title = (
+                doc.metadata.get("title")
+                or doc.metadata.get("file_name")
+                or "Unknown"
+            )
+
+            if title not in sources:
+                sources.append(title)
+
+        content = "\n\n".join(chunks)
+
+        return content, sources
+        
+
+    # -----------------------------
+    # Multi-Query Expansion
+    # -----------------------------
+    def expand_query(self, llm: BaseChatModel, question: str) -> List[str]:
+        prompt = [
+            SystemMessage(content=(
+                "You are a query expansion assistant for a college course search engine.\n"
+                "Generate 3 alternative search queries for the student question.\n"
+                "Focus on academic keywords like policy, rubric, deadline, requirement, concept.\n"
+                "Return ONLY the 3 queries, one per line."
+            )),
+            HumanMessage(content=question)
+        ]
+
+        result = llm.invoke(prompt)
+        text = result if isinstance(result, str) else result.content
+
+        return [q.strip() for q in text.split("\n") if q.strip()]
+    
+    # -----------------------------
+    # Reranking
+    # -----------------------------
+    def rerank_chunks(
+        self,
+        llm: BaseChatModel,
+        question: str,
+        chunks: List[dict],
+        top_k: int = 4
+    ) -> List[dict]:
+
+        if not chunks:
+            return []
+
+        scored = []
+
+        for chunk in chunks:
+            prompt = [
+                SystemMessage(content="Score relevance from 1-10. Return ONLY a number."),
+                HumanMessage(content=f"Question: {question}\n\nChunk:\n{chunk['content']}")
+            ]
+
+            result = llm.invoke(prompt)
+            score_text = result if isinstance(result, str) else result.content
+
+            try:
+                score = float(score_text.strip())
+            except:
+                score = 5.0
+
+            scored.append((score, chunk))
+
+        scored.sort(key=lambda x: x[0], reverse=True)
+        return [chunk for score, chunk in scored[:top_k]]
+
+    # -----------------------------
+    # Formatting
+    # -----------------------------
+    def format_chunks(self, chunks: List[dict]) -> str:
+        formatted = ""
+        for chunk in chunks:
+            formatted += (
+                f"Source: {chunk.get('source_type', 'Unknown')} | "
+                f"Title: {chunk.get('title', 'Untitled')} | "
+                f"Date: {chunk.get('date', 'Unknown')}\n"
+                f"{chunk['content']}\n\n"
+            )
+        return formatted
+    
+    # -----------------------------
+    # Metadata
+    # -----------------------------
     def get_course_details(self, course: dict) -> Tuple[str, dict]:
         """
         Return:
@@ -61,15 +150,19 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
         """
         return "\n".join(f"{k}: {v}" for k, v in course.items() if not k.endswith("_id")), course
     
+    # -----------------------------
+    # Cleaning
+    # -----------------------------
     def clean_llm_output(self, text: str) -> str:
-        """
-        """
-        cleaned = text
-
-        # Remove <think>...</think> reasoning blocks
-        cleaned = re.sub(r"<think>.*?</think>", "", cleaned, flags=re.DOTALL | re.IGNORECASE)
-        
+        cleaned = re.sub(
+            r"<think>.*?</think>",
+            "",
+            text,
+            flags=re.DOTALL | re.IGNORECASE
+        )
         return cleaned.strip()
+    
+    
 
     @abstractmethod
     def run(
@@ -87,6 +180,7 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
 
 
 class SimpleRAGStrategy(BaseRAGStrategy):
+
     def run(
         self,
         vector_repo,
@@ -100,11 +194,11 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         
         logger.info(f"[SimpleRAG] ---- START question={question!r} ----")
 
-        retrieved_content, retrieved_sources = self.retrieve_chunks(vector_repo, course_id, question)
-        logger.info(f"[SimpleRAG] Sources found")
+        # retrieved_content, retrieved_sources = self.retrieve_chunks(vector_repo, course_id, question)
+        # logger.info(f"[SimpleRAG] Sources found")
 
-        course_metadata, course_object = self.get_course_details(course)
-        logger.info(f"[SimpleRAG] Gotten Course metadata")
+        # course_metadata, course_object = self.get_course_details(course)
+        # logger.info(f"[SimpleRAG] Gotten Course metadata")
 
         # ------------------------------
         # Query Classification
@@ -114,86 +208,173 @@ class SimpleRAGStrategy(BaseRAGStrategy):
                 "Classify the student query into one of these categories.\n"
                 "Respond ONLY with valid JSON:\n"
                 "{\n"
-                '  "query_type": "concept_explanation" | '
+                '  "query_type": '
+                '"concept_explanation" | '
                 '"homework_help" | '
                 '"study_plan" | '
                 '"exam_preparation" | '
-                '"general_course_info" | '
+                '"logistics" | '
+                '"policy_query" | '
+                '"technical_support" | '
+                '"contact_info" | '
+                '"general_chat" | '
                 '"other"\n'
-                "}\n"
+                "}\n\n"
+
+                "Category Definitions:\n"
+                "- logistics: deadlines, due dates, submission methods, assignment timing.\n"
+                "- policy_query: grading policy, attendance rules, late penalties.\n"
+                "- technical_support: lab errors, setup issues, coding problems.\n"
+                "- contact_info: instructor email, office hours, TA availability.\n"
+                "- general_chat: greetings or casual conversation.\n"
             )),
             HumanMessage(content=question)
         ]
 
 
-        classification_result = llm.invoke(classification_prompt)
-        classification_text = classification_result if isinstance(classification_result, str) else classification_result.content
+        result = llm.invoke(classification_prompt)
+        text = result if isinstance(result, str) else result.content
 
         try:
-            import json
-            classification_data = json.loads(classification_text)
+            classification_data = json.loads(text)
             query_type = classification_data.get("query_type", "concept_explanation")
         except Exception:
             query_type = "concept_explanation"
 
+        # Guard against unexpected category names
+        valid_types = {
+            "concept_explanation",
+            "homework_help",
+            "study_plan",
+            "exam_preparation",
+            "logistics",
+            "policy_query",
+            "technical_support",
+            "contact_info",
+            "general_chat",
+            "other"
+        }
+
+        if query_type not in valid_types:
+            logger.warning(f"[SimpleRAG] Invalid query_type returned: {query_type}")
+            query_type = "concept_explanation"
+
         logger.info(f"[SimpleRAG] Classified as: {query_type}")
+
+        # ------------------------------
+        # 2. EARLY EXIT FOR GENERAL CHAT
+        # ------------------------------
+        if query_type == "general_chat":
+            return {
+                "answer": "Hello! I'm CourseGPT. Ask me anything about this course.",
+                "sources": []
+        }
+
+
+        # ---------------------------------------------------
+        # Retrieval
+        # ---------------------------------------------------
+
+        retrieved_content, retrieved_sources = self.retrieve_chunks(
+            vector_repo, course_id, question
+        )
+
+        if not retrieved_content:
+            answer = "I don’t have enough course information to answer that."
+            sql_repo.create_query(
+                student_id,
+                course_id,
+                query_text=question,
+                response_text=answer
+            )
+            return {
+                "answer": answer,
+                "sources": []
+            }
+
+        # ---------------------------------------------------
+        # Metadata + Date Injection
+        # ---------------------------------------------------
+        course_metadata, _ = self.get_course_details(course)
+        current_date = datetime.now().strftime("%A, %B %d, %Y")
 
 
 
         # 3. Build message sequence
         messages = [
             SystemMessage(content=(
-                "You are CourseGPT, an AI assistant for a specific college course.\n"
-                "Answer using only the following:\n"
-                "• retrieved course materials\n"
-                "• provided course metadata\n"
-                "• past conversation\n\n"
+                "You are CourseGPT, a knowledgeable, professional and encouraging AI Teaching Assistant. "
+                "Your goal is to provide high-quality support using ONLY the provided course materials.\n\n"
 
-                "If the retrieved course material does not contain relevant information,\n"
-                "you MUST reply exactly with:\n"
-                "\"I don’t have enough course information to answer that.\"\n\n"
+                "### CONSTRAINTS (Strictly Enforced)\n"
+                "1. GROUNDING: Use only retrieved course materials, metadata, and conversation history. Do not use external knowledge or your own training data.\n"
+                "2. UNCERTAINTY: If information is missing, reply EXACTLY with: 'I don’t have enough course information to answer that.'\n"
+                "3. PARTIAL INFO: If you have some info but lack specifics (e.g., a room number), provide what you know and state: 'The specific [detail] is not mentioned in the materials.'\n"
+                "4. NO INFERENCE: Answer only the exact question asked. Do not guess, speculate, or infer beyond the text.\n\n"
 
-                "Do NOT use outside knowledge.\n"
-                "Do NOT infer.\n"
-                "Be accurate, concise, and avoid hallucination.\n\n"
+                "### COMMUNICATION STYLE\n"
+                "- TONE: Natural, human-like, and direct. Avoid being overly robotic.\n"
+                "- CLEAN OUTPUT: NEVER mention file names, page numbers, 'chunks', 'metadata', or 'retrieved materials'.\n"
+                "- ANONYMITY: Do not say 'According to the document...' or 'Based on my search...'. Simply state the facts.\n"
+                "- RELEVANCE: For general greetings or questions about the instructor, answer naturally without citing the lack of 'retrieved materials'.\n\n"
 
-                "STRICT OUTPUT RULES:\n"
-                "- NEVER mention chunk numbers or headers (e.g., \"[Chunk 1]\").\n"
-                "- NEVER mention file names, sources, or page numbers.\n"
-                "- NEVER say where you got the information from.\n"
-                "- NEVER mention \"retrieved materials\" or \"course metadata\".\n"
-                "- ONLY return a clean, natural-language answer.\n"
+                "### INTERNAL VERIFICATION\n"
+                "Before outputting, verify: Is every claim supported by the context? Are there any source references or chunk IDs? If yes, remove them and rewrite to be clean and natural."
             )),
 
             SystemMessage(content=(
-                "ADDITIONAL OUTPUT STRUCTURE RULES:\n"
-                + (
-                    "For homework help:\n"
-                    "1. APPROACH\n"
-                    "2. HINTS\n"
-                    "3. KEY CONCEPTS\n"
-                    "4. PRACTICE PROBLEM\n"
-                    "Do NOT provide final answers.\n\n"
+                "### SPECIALIZED OUTPUT STRUCTURES\n" + (
+                    "For HOMEWORK HELP:\n"
+                    "1. CONCEPT: Identify the underlying principle.\n"
+                    "2. PRINCIPLE: Explain that principle clearly.\n"
+                    "3. GUIDANCE: Provide a guiding hint to help them progress.\n"
+                    "4. LIMIT: Do NOT provide the final solution or numerical answer.\n"
                     if query_type == "homework_help"
                     else
-                    "For study plans:\n"
+                    "For STUDY PLANS:\n"
                     "1. STUDY GOAL\n"
                     "2. DAILY BREAKDOWN\n"
                     "3. PRACTICE STRATEGY\n"
-                    "4. MILESTONE CHECK\n\n"
+                    "4. MILESTONE CHECK\n"
                     if query_type == "study_plan"
                     else
-                    "For concept explanations or exam preparation:\n"
-                    "1. DEFINITION\n"
-                    "2. INTUITION\n"
-                    "3. EXAMPLE\n"
-                    "4. PRACTICE\n\n"
+                    "For CONCEPT/EXAM PREP:\n"
+                    "1. DEFINITION (What is it?)\n"
+                    "2. INTUITION (Why does it work?)\n"
+                    "3. EXAMPLE (Applied context)\n"
+                    "4. PRACTICE (A quick self-check question)\n"
                     if query_type in ["concept_explanation", "exam_preparation"]
                     else
-                    ""
+                    "For LOGISTICS/DEADLINES:\n"
+                    "1. KEY DATES: List the relevant deadlines.\n"
+                    "2. SUBMISSION METHOD: Explain how to turn it in.\n"
+                    "3. LATE POLICY: State the penalty for missing the date.\n"
+                    if query_type == "logistics"
+                    else
+
+                    "For SYLLABUS/POLICIES:\n"
+                    "1. POLICY SUMMARY: State the rule clearly.\n"
+                    "2. GRADING IMPACT: Explain how this affects the student's grade.\n"
+                    "3. EXCEPTIONS: Mention any documented 'if/then' scenarios.\n"
+                    if query_type == "policy_query"
+                    else
+
+                    "For TECHNICAL/LAB SUPPORT:\n"
+                    "1. TROUBLESHOOTING: Provide a step-by-step checklist.\n"
+                    "2. COMMON ERRORS: Mention known issues from the course notes.\n"
+                    "3. SUPPORT: Tell them where to post if the issue persists.\n"
+                    if query_type == "technical_support"
+                    else
+
+                    "For OFFICE HOURS/CONTACT:\n"
+                    "1. PERSONNEL: List who is available (Professor/TA).\n"
+                    "2. SCHEDULE: Days and times.\n"
+                    "3. LOCATION: Physical room or meeting link.\n"
+                    if query_type == "contact_info"
+                    else ""
                 )
             )),
-   
+            SystemMessage(content=f"Current Date: {current_date}"),
             SystemMessage(content=f"### CourseGPT Course Profile\n{course_metadata}"),
             SystemMessage(content=f"### Retrieved Course Material\n{retrieved_content}"),
             HumanMessage(content=question)
@@ -209,7 +390,7 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         if query_type in ["concept_explanation", "exam_preparation"]:
             required_sections = ["DEFINITION", "EXAMPLE"]
         elif query_type == "homework_help":
-            required_sections = ["APPROACH", "HINTS"]
+            required_sections = ["CONCEPT", "GUIDANCE"]
         elif query_type == "study_plan":
             required_sections = ["STUDY GOAL", "DAILY"]
         else:
