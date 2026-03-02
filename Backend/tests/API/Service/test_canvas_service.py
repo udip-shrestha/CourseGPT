@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from fastapi import HTTPException, status
 from API.Service.courses_service import CourseService
 from API.Service.students_service import StudentService
@@ -6,14 +7,15 @@ from API.Repository.i_sql_repository import ISQLRepository
 
 
 def test_get_course_by_canvas_id_success(course_service: CourseService, mock_sql_repo: ISQLRepository):
-    mock_sql_repo.read_course_by_canvas_id.return_value = {"id": "c1"}
+    # add Canvas methods to mock (they may not be in ISQLRepository spec)
+    mock_sql_repo.read_course_by_canvas_id = MagicMock(return_value={"id": "c1"})
     result = course_service.get_course_by_canvas_id("canvas-xyz")
     mock_sql_repo.read_course_by_canvas_id.assert_called_once_with("canvas-xyz")
     assert result["id"] == "c1"
 
 
 def test_get_course_by_canvas_id_not_found(course_service: CourseService, mock_sql_repo: ISQLRepository):
-    mock_sql_repo.read_course_by_canvas_id.return_value = None
+    mock_sql_repo.read_course_by_canvas_id = MagicMock(return_value=None)
     with pytest.raises(HTTPException) as exc_info:
         course_service.get_course_by_canvas_id("canvas-missing")
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
@@ -38,14 +40,14 @@ def test_link_canvas_course_not_found(course_service: CourseService, mock_sql_re
 # student service canvas helpers
 
 def test_find_student_canvas_not_registered(student_service: StudentService, mock_sql_repo: ISQLRepository):
-    mock_sql_repo.read_student_by_canvas.return_value = None
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value=None)
     result = student_service.find_student_in_course_by_canvas("canvas-1", "course-1")
     assert result is None
 
 
 def test_find_student_canvas_registered(student_service: StudentService, mock_sql_repo: ISQLRepository):
-    mock_sql_repo.read_student_by_canvas.return_value = {"id": "s1", "name": "Bob"}
-    mock_sql_repo.read_all_students.return_value = [{"id": "s1"}]
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value={"id": "s1", "name": "Bob"})
+    mock_sql_repo.read_all_students = MagicMock(return_value=[{"id": "s1"}])
     result = student_service.find_student_in_course_by_canvas("canvas-1", "course-1")
     assert result and result.get("id") == "s1"
 

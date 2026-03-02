@@ -73,8 +73,9 @@ def test_is_registered_canvas_true(
     client: TestClient,
     mock_sql_repo: ISQLRepository,
 ):
-    mock_sql_repo.read_student_by_canvas.return_value = {"id": "s1"}
-    mock_sql_repo.read_all_students.return_value = [{"id": "s1"}]
+    student_uuid = str(uuid4())
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value={"id": student_uuid})
+    mock_sql_repo.read_all_students = MagicMock(return_value=[{"id": student_uuid}])
 
     response = client.get(
         "/students/is_registered_canvas",
@@ -82,14 +83,14 @@ def test_is_registered_canvas_true(
     )
 
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"registered": True, "student_id": "s1"}
+    assert response.json() == {"registered": True, "student_id": student_uuid}
 
 
 def test_is_registered_canvas_false(
     client: TestClient,
     mock_sql_repo: ISQLRepository,
 ):
-    mock_sql_repo.read_student_by_canvas.return_value = None
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value=None)
 
     response = client.get(
         "/students/is_registered_canvas",

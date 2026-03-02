@@ -2,7 +2,7 @@ import os
 import json
 import base64
 import pytest
-from fastapi import FastAPI, status
+from fastapi import FastAPI, status, HTTPException
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock
 
@@ -14,7 +14,11 @@ from API.Service.students_service import StudentService
 
 @pytest.fixture
 def mock_canvas_service() -> CanvasService:
-    return MagicMock(spec=CanvasService)
+    service = MagicMock(spec=CanvasService)
+    # Add redirect_to method to mock
+    from fastapi.responses import RedirectResponse
+    service.redirect_to = MagicMock(side_effect=lambda base_url, path: RedirectResponse(url=f"{base_url}{path}", status_code=302))
+    return service
 
 
 @pytest.fixture
@@ -45,7 +49,7 @@ def client(
     app.dependency_overrides[get_canvas_service] = lambda: mock_canvas_service
     app.dependency_overrides[get_course_service] = lambda: mock_course_service
     app.dependency_overrides[get_student_service] = lambda: mock_student_service
-    return TestClient(app)
+    return TestClient(app, follow_redirects=False)
 
 
 # helper to craft a token without signature verification
@@ -62,16 +66,16 @@ def make_id_token(payload: dict) -> str:
 
 def test_lti_login_redirect():
     """Should redirect to Canvas OIDC endpoint with proper params."""
-    client = TestClient(FastAPI())
     app = FastAPI()
     app.include_router(canvas_router.router)
-    client = TestClient(app)
+    client = TestClient(app, follow_redirects=False)
 
     form = {
         "iss": "https://canvas.example.com",
         "login_hint": "hint123",
         "target_link_uri": "https://frontend.example.com/lti/launch",
         "client_id": "cid",
+        "lti_deployment_id": "deploy123",
     }
     response = client.post("/lti/login", data=form)
     assert response.status_code == status.HTTP_302_FOUND
@@ -117,8 +121,10 @@ def test_lti_launch_instructor_course_not_linked(
         "https://purl.imsglobal.org/spec/lti/claim/roles": ["Instructor"],
     }
     token = make_id_token(payload)
-    # simulate not found
-    mock_course_service.get_course_by_canvas_id.side_effect = pytest.raises(Exception).value
+    # simulate not found by raising HTTPException
+    mock_course_service.get_course_by_canvas_id.side_effect = HTTPException(
+        status_code=404, detail="Course not linked"
+    )
 
     response = client.post("/lti/launch", data={"id_token": token})
     assert response.status_code == status.HTTP_302_FOUND
@@ -136,7 +142,10 @@ def test_lti_launch_student_not_linked_course(
         "https://purl.imsglobal.org/spec/lti/claim/roles": ["Learner"],
     }
     token = make_id_token(payload)
-    mock_course_service.get_course_by_canvas_id.side_effect = pytest.raises(Exception).value
+    # simulate course not found by raising HTTPException
+    mock_course_service.get_course_by_canvas_id.side_effect = HTTPException(
+        status_code=404, detail="Course not linked"
+    )
 
     response = client.post("/lti/launch", data={"id_token": token})
     assert response.status_code == status.HTTP_302_FOUND

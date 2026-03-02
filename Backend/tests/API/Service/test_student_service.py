@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from fastapi import HTTPException, status
 from API.Service.students_service import StudentService
 from API.Repository.i_sql_repository import ISQLRepository
@@ -81,15 +82,15 @@ def test_delete_student_not_found(student_service: StudentService, mock_sql_repo
 # -------------------------
 def test_find_student_canvas_not_registered(student_service: StudentService, mock_sql_repo: ISQLRepository):
     """Should return None when canvas user not linked or not enrolled."""
-    mock_sql_repo.read_student_by_canvas.return_value = None
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value=None)
     result = student_service.find_student_in_course_by_canvas("canvas-1", "course-1")
     assert result is None
 
 
 def test_find_student_canvas_registered(student_service: StudentService, mock_sql_repo: ISQLRepository):
     """Should return student record if canvas user exists and enrolled."""
-    mock_sql_repo.read_student_by_canvas.return_value = {"id": "s1", "name": "Bob"}
-    mock_sql_repo.read_all_students.return_value = [{"id": "s1"}]
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value={"id": "s1", "name": "Bob"})
+    mock_sql_repo.read_all_students = MagicMock(return_value=[{"id": "s1"}])
     result = student_service.find_student_in_course_by_canvas("canvas-1", "course-1")
     assert result and result.get("id") == "s1"
 
