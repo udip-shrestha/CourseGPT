@@ -113,8 +113,8 @@ export function CoursePage() {
   };
 
   const registrationDialog = showStudentReg ? (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="bg-white p-6 rounded shadow max-w-sm w-full">
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-70">
+      <div className="bg-white dark:bg-black p-6 rounded shadow max-w-sm w-full">
         <h2 className="text-lg font-semibold mb-4">Student Registration</h2>
         <p className="text-sm mb-2">
           This course requires registration to proceed. Please provide your name
