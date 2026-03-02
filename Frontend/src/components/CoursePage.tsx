@@ -103,7 +103,7 @@ export function CoursePage() {
       );
       if (errorMessage) throw new Error(errorMessage);
       // registration succeeded, close dialog and navigate to clean url
-      setShowStudentReg(false);
+      if (data) setShowStudentReg(false);
       navigate(`/courses/${courseId}/chats?role=student`);
     } catch (err: any) {
       setStudentError(err.message || "Registration failed");
