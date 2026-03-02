@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 router = APIRouter(prefix="/feedback", tags=["Feedbacks"], route_class=MetricsRoute)
 
-# We keep the Request model for the POST body as it's standard for validation
+
 class FeedbackRequest(BaseModel):
     course_id: str
     feedback_text: str
