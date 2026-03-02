@@ -4,7 +4,7 @@ import base64
 from typing import Dict, List
 from pathlib import Path
 from fastapi.responses import RedirectResponse
-from Backend.Discord.cybot import status
+from fastapi import status
 from cryptography.hazmat.primitives import serialization
 
 
