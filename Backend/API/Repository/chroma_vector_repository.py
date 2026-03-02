@@ -40,16 +40,28 @@ class ChromaVectorRepository(IVectorRepository):
 
 
     def create_index(self, course_id: str, docs: List[Document]) -> None:
-        """
-        Dynamically embed and store the provided documents in a specific Chroma collection.
-        """
         collection = self.client.get_collection(name=course_id)
-        
-        documents = [doc.page_content for doc in docs]
-        metadatas = [doc.metadata for doc in docs]
-        ids = [f"{m['doc_id']}_{i}" for i, m in enumerate(metadatas)]
 
-        collection.add(ids=ids, documents=documents, metadatas=metadatas)
+        documents = []
+        metadatas = []
+        ids = []
+
+        for i, doc in enumerate(docs):
+            metadata = doc.metadata.copy()
+
+            # Build id using doc_id
+            doc_id = metadata.get("doc_id", "doc")
+            chunk_id = f"{doc_id}_{i}"
+
+            documents.append(doc.page_content)
+            metadatas.append(metadata)   # ← DO NOT inject chunk_id
+            ids.append(chunk_id)
+
+        collection.add(
+            ids=ids,
+            documents=documents,
+            metadatas=metadatas
+        )
 
     def query(self, course_id: str, question: str, top_k: Optional[int] = 8) -> List[Tuple[Document, float]]:
         """
@@ -69,8 +81,15 @@ class ChromaVectorRepository(IVectorRepository):
 
     def delete_index(self, course_id: str, document_id: str) -> None:
         """
-        Delete all vectors that belong to a document from a specific Chroma collection.
+        Deletes vectors belonging to a document.
+        Safe even if collection does not exist.
         """
-        collection = self.client.get_collection(name=course_id)
-        collection.delete(where={"doc_id": document_id})
 
+        from chromadb.errors import NotFoundError
+
+        try:
+            collection = self.client.get_collection(name=course_id)
+            collection.delete(where={"doc_id": document_id})
+        except NotFoundError:
+            # Collection does not exist → nothing to delete
+            pass
