@@ -68,7 +68,7 @@ async def auto_register_member(member):
         print(f"⚠️ Course not found for course {guild_name}")
         return
     
-    registered, _ = await is_registered(str(member.id), course_id)
+    registered, _ = await is_registered_discord(str(member.id), course_id)
     if registered:
         # print(f"Member {member.display_name} is already registered for course {guild_name}")
         return
@@ -139,9 +139,9 @@ async def register_student(discord_id: str, name: str, course_id: str) -> Tuple[
 
 
 
-async def is_registered(discord_id: str, course_id: str) -> Tuple[bool, Optional[str]]:
+async def is_registered_discord(discord_id: str, course_id: str) -> Tuple[bool, Optional[str]]:
     """Check if a student is registered for a course using the API"""
-    url = f"{API_BASE_URL.rstrip('/')}/students/is_registered"
+    url = f"{API_BASE_URL.rstrip('/')}/students/is_registered_discord"
     params = {"discord_id": discord_id, "course_id": course_id}
     try:
         async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:

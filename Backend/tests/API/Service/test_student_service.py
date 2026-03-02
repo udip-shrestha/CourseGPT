@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import MagicMock
 from fastapi import HTTPException, status
 from API.Service.students_service import StudentService
 from API.Repository.i_sql_repository import ISQLRepository
@@ -15,7 +16,8 @@ def test_create_student_success(student_service: StudentService, mock_sql_repo: 
     mock_sql_repo.create_student.assert_called_once_with(
        name="Alice", 
        discord_id="discord-123", 
-       course_id="course-1"
+       course_id="course-1",
+       canvas_user_id=None,
     )
     assert result == {"student_id": "student-1"}
 
@@ -30,7 +32,8 @@ def test_create_student_already_registered(student_service: StudentService, mock
     mock_sql_repo.create_student.assert_called_once_with(
         name="Alice",
         discord_id="discord-123", 
-        course_id="course-1"
+        course_id="course-1",
+        canvas_user_id=None,
     )
     assert result == {"student_id": "student-1"}
 
@@ -73,3 +76,33 @@ def test_delete_student_not_found(student_service: StudentService, mock_sql_repo
         student_service.delete_student("fake-id")
 
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
+
+# -------------------------
+# Canvas Integration tests
+# -------------------------
+def test_find_student_canvas_not_registered(student_service: StudentService, mock_sql_repo: ISQLRepository):
+    """Should return None when canvas user not linked or not enrolled."""
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value=None)
+    result = student_service.find_student_in_course_by_canvas("canvas-1", "course-1")
+    assert result is None
+
+
+def test_find_student_canvas_registered(student_service: StudentService, mock_sql_repo: ISQLRepository):
+    """Should return student record if canvas user exists and enrolled."""
+    mock_sql_repo.read_student_by_canvas = MagicMock(return_value={"id": "s1", "name": "Bob"})
+    mock_sql_repo.read_all_students = MagicMock(return_value=[{"id": "s1"}])
+    result = student_service.find_student_in_course_by_canvas("canvas-1", "course-1")
+    assert result and result.get("id") == "s1"
+
+
+def test_register_canvas_student(student_service: StudentService, mock_sql_repo: ISQLRepository):
+    """Creating by canvas id should call repo accordingly."""
+    mock_sql_repo.create_student.return_value = "s2"
+    result = student_service.register_canvas_student("Carol", "canvas-2", "course-1")
+    mock_sql_repo.create_student.assert_called_once_with(
+        name="Carol",
+        discord_id=None,
+        course_id="course-1",
+        canvas_user_id="canvas-2",
+    )
+    assert result == {"student_id": "s2"}
