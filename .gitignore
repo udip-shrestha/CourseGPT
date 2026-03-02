@@ -1,51 +1,83 @@
-#ignore all .idea
+# IDE / Editor
 **/.idea/
-
-#ignore all .vscode
 **/.vscode/
+*.code-workspace
 
-# ignore macOS Finder settings file
+
+# OS Files
 **/.DS_Store
+Thumbs.db
+
 
 # Environment Variables
+.env
 **/.env
+.env.*
 
-# Ignore all virtual environments
+# Python
 **/.venv/
-
-# Ignore all pycaches
+venv/
+env/
+__pycache__/
 **/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
 
-# Ignore all pycaches
+# Testing / Coverage
+.pytest_cache/
 **/.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.cache/
 
-# Ignore chroma data
+# Logs
+*.log
+logs/
+
+# Node / Frontend
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+build/
+
+# Chroma / Vector DB
+Data/chroma_db/
+Backend/Data/chroma_db/
+**/chroma.sqlite3
+**/*.pickle
 **/.chroma_data
 **/.chroma_db
 
-# Ignore npm modules
-**/node_modules
+# SQLite
+*.sqlite
+*.sqlite3
 
-# Ignore vite build dir dist
-**/dist
+# Postgres Dumps / Backups
+*.sql
+*.dump
+db-backup.sql
+old_data_dump.sql
 
-# Coverage and testing artifacts
-**/.coverage
-**/coverage.xml
-**/htmlcov/
-**/.cache/
-
-# Ignore binary files
+# Binary / Temp
 *.bin
 /bin/
+tmp/
+temp/
 
-# Ignore dump database files
-Backend/DB/old_data_dump.sql
+# Local LLM / Ollama
+ollama_models/
+models/
 
-Backend/db-backup.sql
-
-# Ignore Chroma vector database
-Backend/Data/chroma_db/
-Backend/['CHROMA_DATA_PATH']/
-**/chroma.sqlite3
-**/*.pickle
+# Misc
+*.swp
+*.swo
+*.bak
+*.tmp
