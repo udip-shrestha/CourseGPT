@@ -218,18 +218,32 @@ class ISQLRepository(Protocol):
         """Delete a query by ID."""
         ...
 
-    # ======================================================
+   # ======================================================
     # FEEDBACK
     # ======================================================
     def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
         """Insert a feedback record and return its id."""
         ...
 
-    # ======================================================
-    # FEEDBACK
-    # ======================================================
-    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
-        """Insert a feedback record and return its id."""
+    def read_all_feedback(
+        self,
+        limit: int = 50,
+        offset: int = 0,
+        order_by: str = "received_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        """Return all feedback in the system with pagination."""
+        ...
+
+    def read_all_feedback_for_course(
+        self,
+        course_id: str,
+        limit: int = 50,
+        offset: int = 0,
+        order_by: str = "received_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        """Return all feedback for a specific course with pagination."""
         ...
 
     # ======================================================

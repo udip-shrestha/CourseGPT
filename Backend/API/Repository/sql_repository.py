@@ -764,6 +764,41 @@ class SQLRepository(ISQLRepository):
             RETURNING id;
         """
         return self.cm.insert_one(sql, (course_id, feedback_text))
+    
+    def read_all_feedback(self, limit: int = 50, offset: int = 0, order_by: str = "received_at", order_dir: str = "desc") -> dict:
+        # Standardize sorting
+        sort_dir = "ASC" if order_dir.lower() == "asc" else "DESC"
+        
+        count_sql = "SELECT COUNT(*) AS total FROM feedback;"
+        total_row = self.cm.select_one(count_sql)
+        total = total_row["total"] if total_row else 0
+
+        data_sql = f"""
+            SELECT f.id, f.course_id, c.name as course_name, f.feedback_text, f.received_at
+            FROM feedback f
+            JOIN courses c ON f.course_id = c.id
+            ORDER BY f.{order_by} {sort_dir}
+            LIMIT %s OFFSET %s;
+        """
+        results = self.cm.select_all(data_sql, (limit, offset))
+        return {"total": total, "feedback": results}
+
+    def read_all_feedback_for_course(self, course_id: str, limit: int = 50, offset: int = 0, order_by: str = "received_at", order_dir: str = "desc") -> dict:
+        sort_dir = "ASC" if order_dir.lower() == "asc" else "DESC"
+
+        count_sql = "SELECT COUNT(*) AS total FROM feedback WHERE course_id = %s;"
+        total_row = self.cm.select_one(count_sql, (course_id,))
+        total = total_row["total"] if total_row else 0
+
+        data_sql = f"""
+            SELECT id, course_id, feedback_text, received_at
+            FROM feedback
+            WHERE course_id = %s
+            ORDER BY {order_by} {sort_dir}
+            LIMIT %s OFFSET %s;
+        """
+        results = self.cm.select_all(data_sql, (course_id, limit, offset))
+        return {"total": total, "feedback": results}
 
     # ======================================================
     # ANALYTICS
