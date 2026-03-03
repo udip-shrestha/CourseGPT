@@ -24,3 +24,13 @@ class FeedbackService:
         """
         fid = self.sql_repo.create_feedback(course_id=course_id, feedback_text=feedback_text, received_at=received_at)
         return {"feedback_id": fid}
+    
+    @clean_service
+    def get_all_feedback(self, limit: int = 50, offset: int = 0) -> dict:
+        """Retrieve all feedback from all courses."""
+        return self.sql_repo.read_all_feedback(limit=limit, offset=offset)
+
+    @clean_service
+    def get_course_feedback(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
+        """Retrieve feedback specifically for one course."""
+        return self.sql_repo.read_all_feedback_for_course(course_id=course_id, limit=limit, offset=offset)
