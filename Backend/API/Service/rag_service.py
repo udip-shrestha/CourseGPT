@@ -9,6 +9,9 @@ from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.i_sql_repository import ISQLRepository
 from API.Util.decorators import clean_service
 
+from uuid import uuid4
+from datetime import datetime
+
 
 class RAGService:
     """
@@ -57,9 +60,19 @@ class RAGService:
         # 2. Split
         chunks = self.splitter.split_documents(docs)
         for chunk in chunks:
-            chunk.metadata["doc_id"] = doc_id
+            chunk.metadata.update({
+                "chunk_id": str(uuid4()),        # Unique per chunk
+                "doc_id": str(doc_id),           # Already there but normalize
+                "course_id": str(course_id),     # Helpful for filtering
+                "title": file_name,              # REQUIRED FOR SOURCES
+                "source_type": mime_type,        # Optional but recommended
+                "date": datetime.utcnow().isoformat()
+            })
 
-        # 3. Store
+        # 3. Delete old vectors for this document (if any)
+        self.vector_repo.delete_index(course_id, str(doc_id))
+
+        # 4. Store new vectors
         self.vector_repo.create_index(course_id, chunks)
 
         return chunks

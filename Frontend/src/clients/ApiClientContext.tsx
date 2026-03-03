@@ -6,15 +6,17 @@ import { CourseClient } from "./CourseClient.ts";
 import { InstructorClient } from "./InstructorClient.ts";
 import { QueryClient } from "./QueryClient.ts";
 import { AnalyticsClient } from "./AnalyticsClient.ts";
+import { CanvasStudentClient } from "./CanvasStudentClient.ts";
 
 interface APIClients {
-    apiClient: APIClient
-    authClient: AuthClient;
-    documentClient: DocumentClient;
-    courseClient: CourseClient;
-    instructorClient: InstructorClient;
-    queryClient: QueryClient;
-    analyticsClient: AnalyticsClient;
+  apiClient: APIClient;
+  authClient: AuthClient;
+  documentClient: DocumentClient;
+  courseClient: CourseClient;
+  instructorClient: InstructorClient;
+  queryClient: QueryClient;
+  analyticsClient: AnalyticsClient;
+  canvasStudentClient: CanvasStudentClient;
 }
 
 // Create a Context to hold the API client instance
@@ -22,36 +24,37 @@ const ApiClientContext = createContext<APIClients | null>(null);
 
 // Provider component
 export const ApiClientProvider: React.FC<{
-    children: React.ReactNode;
+  children: React.ReactNode;
 }> = ({ children }) => {
-    const client: APIClients = useMemo(() => {
-        apiClient.loadToken();
+  const client: APIClients = useMemo(() => {
+    apiClient.loadToken();
 
-        return {
-            apiClient: apiClient,
-            authClient: new AuthClient(apiClient),
-            documentClient: new DocumentClient(apiClient),
-            courseClient: new CourseClient(apiClient),
-            instructorClient: new InstructorClient(apiClient),
-            queryClient: new QueryClient(apiClient),
-            analyticsClient: new AnalyticsClient(apiClient)
-        };
-    }, []);
+    return {
+      apiClient: apiClient,
+      authClient: new AuthClient(apiClient),
+      documentClient: new DocumentClient(apiClient),
+      courseClient: new CourseClient(apiClient),
+      instructorClient: new InstructorClient(apiClient),
+      queryClient: new QueryClient(apiClient),
+      analyticsClient: new AnalyticsClient(apiClient),
+      canvasStudentClient: new CanvasStudentClient(apiClient),
+    };
+  }, []);
 
-    return (
-        <ApiClientContext.Provider value={client}>
-            {children}
-        </ApiClientContext.Provider>
-    );
+  return (
+    <ApiClientContext.Provider value={client}>
+      {children}
+    </ApiClientContext.Provider>
+  );
 };
 
 // 4Custom hook for convenient access
 export const useApiClient = () => {
-    const ctx = useContext(ApiClientContext);
+  const ctx = useContext(ApiClientContext);
 
-    if (!ctx) {
-        throw new Error("useApiClient must be used inside ApiClientProvider");
-    }
+  if (!ctx) {
+    throw new Error("useApiClient must be used inside ApiClientProvider");
+  }
 
-    return ctx;
+  return ctx;
 };

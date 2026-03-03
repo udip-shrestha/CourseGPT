@@ -49,3 +49,4 @@ Backend/Data/chroma_db/
 Backend/['CHROMA_DATA_PATH']/
 **/chroma.sqlite3
 **/*.pickle
+

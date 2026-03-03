@@ -416,6 +416,16 @@ class SQLRepository(ISQLRepository):
             LIMIT 1;
         """
         return self.cm.select_one(sql, (course_name,))
+
+    def read_course_by_canvas_id(self, canvas_course_id: str) -> Optional[dict]:
+        """Find a course by its linked Canvas course identifier."""
+        sql = "SELECT * FROM courses WHERE canvas_course_id = %s LIMIT 1;"
+        return self.cm.select_one(sql, (canvas_course_id,))
+
+    def read_student_by_canvas(self, canvas_user_id: str) -> Optional[dict]:
+        """Retrieve a student record by their Canvas user id."""
+        sql = "SELECT id, name, discord_id, canvas_user_id FROM students WHERE canvas_user_id = %s LIMIT 1;"
+        return self.cm.select_one(sql, (canvas_user_id,))
     
     def update_course(self, course_id: str, updates: dict) -> dict:
         set_clause = ", ".join([f"{key} = %s" for key in updates.keys()])
@@ -433,13 +443,33 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     # STUDENTS
     # ======================================================
-    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
-        # Step 1: Check if the student already exists by Discord ID
-        existing_sql = "SELECT id FROM students WHERE discord_id = %s;"
-        existing = self.cm.select_one(existing_sql, (discord_id,))
+    def create_student(
+        self,
+        name: str,
+        discord_id: str | None,
+        course_id: str,
+        canvas_user_id: str | None = None,
+    ) -> str:
+        # Step 1: See if a student already exists by discord or canvas id
+        existing_sql = "SELECT id, discord_id, canvas_user_id FROM students WHERE " \
+                       "(discord_id IS NOT NULL AND discord_id = %s) OR " \
+                       "(canvas_user_id IS NOT NULL AND canvas_user_id = %s);"
+        existing = self.cm.select_one(existing_sql, (discord_id, canvas_user_id))
 
         if existing:
             student_id = existing["id"]
+
+            # Update missing identifiers if provided
+            if canvas_user_id and not existing.get("canvas_user_id"):
+                self.cm.execute(
+                    "UPDATE students SET canvas_user_id=%s WHERE id=%s;",
+                    (canvas_user_id, student_id),
+                )
+            if discord_id and not existing.get("discord_id"):
+                self.cm.execute(
+                    "UPDATE students SET discord_id=%s WHERE id=%s;",
+                    (discord_id, student_id),
+                )
 
             # Step 2: Check if already registered for this course
             link_sql = "SELECT 1 FROM student_courses WHERE student_id = %s AND course_id = %s;"
@@ -451,16 +481,15 @@ class SQLRepository(ISQLRepository):
                     "INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
                     (student_id, course_id),
                 )
-            # Either way, return the same ID (no error)
             return str(student_id)
 
-        # Step 3: Student doesn’t exist yet → create and link
+        # Student doesn’t exist yet → create and link
         sql_insert_student = """
-            INSERT INTO students (name, discord_id)
-            VALUES (%s, %s)
+            INSERT INTO students (name, discord_id, canvas_user_id)
+            VALUES (%s, %s, %s)
             RETURNING id;
         """
-        student_id = self.cm.insert_one(sql_insert_student, (name, discord_id))
+        student_id = self.cm.insert_one(sql_insert_student, (name, discord_id, canvas_user_id))
         self.cm.execute("INSERT INTO student_courses (student_id, course_id) VALUES (%s, %s);",
                         (student_id, course_id))
         return str(student_id)
