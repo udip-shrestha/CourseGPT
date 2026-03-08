@@ -95,7 +95,7 @@ def test_lti_launch_instructor_course_linked(
     client: TestClient,
     mock_course_service: CourseService,
 ):
-    os.environ["API_BASE_URL"] = "http://frontend.test"
+    os.environ["FRONTEND_BASE_URL"] = "http://frontend.test"
     payload = {
         "sub": "user1",
         "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "canvas-course"},
