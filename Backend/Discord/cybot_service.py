@@ -3,7 +3,7 @@ import re
 from typing import Optional, Tuple, List
 import httpx
 
-API_BASE_URL = os.getenv("API_BASE_URL", "http://127.0.0.1:8000")
+API_BASE_URL = os.getenv("API_BASE_URL")
 DEFAULT_TIMEOUT = 15.0
 LLM_TIMEOUT = 60.0
 
