@@ -32,6 +32,11 @@ echo "Writing environment variables to $DISCORD_ENV"
 mkdir -p "$(dirname "$DISCORD_ENV")"
 cat > "$DISCORD_ENV" <<EOF
 # ===========================================
+# FastAPI Server Configuration
+# ===========================================
+API_BASE_URL=${API_BASE_URL:-}
+
+# ===========================================
 # PostgreSQL Database Configuration
 # ===========================================
 DB_NAME=${DB_NAME:-}
@@ -77,7 +82,6 @@ HUGGINGFACEHUB_API_TOKEN=${HUGGINGFACEHUB_API_TOKEN:-}
 CANVAS_PUBLIC_KEY_B64=${CANVAS_PUBLIC_KEY_B64:-}
 CANVAS_PRIVATE_KEY_B64=${CANVAS_PRIVATE_KEY_B64:-}
 CANVAS_KEY_ID=${CANVAS_KEY_ID:-}
-FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-}
 EOF
 
 

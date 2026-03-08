@@ -81,7 +81,7 @@ async def lti_launch(
 
     Uses Canvas and application services to determine whether the user is a
     student or instructor and whether corresponding records already exist.  The
-    frontend base URL is read from `FRONTEND_BASE_URL` env var (defaults to
+    frontend base URL is read from `API_BASE_URL` env var (defaults to
     static).  Redirects include query parameters indicating role or registration
     requirements.
     """
@@ -93,7 +93,7 @@ async def lti_launch(
         canvas_course_id = context.get("id")
         roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
 
-        base_url = os.getenv("FRONTEND_BASE_URL", "http://sdmay26-37.ece.iastate.edu:8000")
+        base_url = os.getenv("API_BASE_URL", "http://sdmay26-37.ece.iastate.edu:8000")
 
         # resolve internal course if linked
         try:
