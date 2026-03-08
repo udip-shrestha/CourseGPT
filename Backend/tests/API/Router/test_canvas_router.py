@@ -114,7 +114,7 @@ def test_lti_launch_instructor_course_not_linked(
     client: TestClient,
     mock_course_service: CourseService,
 ):
-    os.environ["API_BASE_URL"] = "http://frontend.test"
+    os.environ["FRONTEND_BASE_URL"] = "http://frontend.test"
     payload = {
         "sub": "user2",
         "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "uncourse"},
@@ -135,7 +135,7 @@ def test_lti_launch_student_not_linked_course(
     client: TestClient,
     mock_course_service: CourseService,
 ):
-    os.environ["API_BASE_URL"] = "http://frontend.test"
+    os.environ["FRONTEND_BASE_URL"] = "http://frontend.test"
     payload = {
         "sub": "student1",
         "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "unknown-course"},
@@ -157,7 +157,7 @@ def test_lti_launch_student_requires_registration(
     mock_course_service: CourseService,
     mock_student_service: StudentService,
 ):
-    os.environ["API_BASE_URL"] = "http://frontend.test"
+    os.environ["FRONTEND_BASE_URL"] = "http://frontend.test"
     payload = {
         "sub": "stu2",
         "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "c-course"},
@@ -180,7 +180,7 @@ def test_lti_launch_student_already_registered(
     mock_course_service: CourseService,
     mock_student_service: StudentService,
 ):
-    os.environ["API_BASE_URL"] = "http://frontend.test"
+    os.environ["FRONTEND_BASE_URL"] = "http://frontend.test"
     payload = {
         "sub": "stu3",
         "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "c-course2"},
