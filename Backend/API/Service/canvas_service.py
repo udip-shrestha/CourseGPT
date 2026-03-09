@@ -1,6 +1,7 @@
 import os
 import jwt
 import base64
+import httpx
 from typing import Dict, List
 from pathlib import Path
 from fastapi.responses import RedirectResponse
@@ -61,3 +62,19 @@ class CanvasService:
         Implementers can expand this to call Canvas REST API and ingest files.
         """
         return []
+    
+    async def get_canvas_modules(self, canvas_course_id: str, canvas_token: str):
+
+        url = f"https://canvas.iastate.edu/api/v1/courses/{canvas_course_id}/modules"
+
+        params = { "include[]": "items"}
+
+        headers = { "Authorization": f"Bearer {canvas_token}"}
+
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, headers=headers, params=params)
+
+        if response.status_code != 200:
+            raise RuntimeError(f"Canvas API error: {response.text}")
+
+        return response.json()
