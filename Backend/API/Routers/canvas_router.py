@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Form, Request, Header
+from fastapi import APIRouter, Depends, HTTPException, status, Form, Request, Header, Path
 from typing import Dict, Any, List
 from urllib.parse import urlencode
 
@@ -145,4 +145,27 @@ def canvas_files(
         return files
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+    
+@router.get(
+    "/courses/{course_id}/canvas/modules",
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve Canvas modules for a course",
+)
+async def get_canvas_modules(
+    course_id: str = Path(..., description="CourseGPT course ID"),
+    course_service: CourseService = Depends(get_course_service),
+    service: CanvasService = Depends(get_canvas_service),
+):
+    course = course_service.read_course(course_id)
+    canvas_course_id = course.get("canvas_course_id")
+
+    if not canvas_course_id:
+        raise HTTPException(
+            status_code=400,
+            detail="Course is not linked to Canvas"
+        )
+
+    canvas_token = os.getenv("CANVAS_API")
+
+    return await service.get_canvas_modules(canvas_course_id, canvas_token)
 
