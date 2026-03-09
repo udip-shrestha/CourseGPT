@@ -93,7 +93,7 @@ async def lti_launch(
         canvas_course_id = context.get("id")
         roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
 
-        base_url = os.getenv("FRONTEND_BASE_URL", "http://sdmay26-37.ece.iastate.edu:8000")
+        base_url = os.getenv("FRONTEND_BASE_URL")
 
         # resolve internal course if linked
         try:
