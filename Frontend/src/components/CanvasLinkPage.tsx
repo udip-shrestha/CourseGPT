@@ -7,9 +7,7 @@ import { useApiClient } from "../clients/ApiClientContext";
 
 /**
  * Page shown when an instructor arrives from Canvas but the course isn't
- * linked yet.  The Canvas redirect attaches a `canvas_course_id` query
- * parameter; this page asks the user to enter the internal course name to
- * associate and then submits the link request.
+ * linked yet.
  */
 export function CanvasLinkPage() {
   const navigate = useNavigate();
@@ -25,7 +23,6 @@ export function CanvasLinkPage() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // if there is no canvas id, redirect to home
     if (!canvasId) navigate("/");
   }, [canvasId, navigate]);
 
@@ -44,12 +41,11 @@ export function CanvasLinkPage() {
     setLoading(true);
     try {
       const { data, errorMessage } = await courseClient.linkCanvas(
-        courseName,
-        canvasId,
+          courseName,
+          canvasId,
       );
       if (errorMessage) throw new Error(errorMessage);
       setSuccess("Course linked successfully. Redirecting...");
-      // data.course_id should contain the internal id
       const id = data?.course_id;
       if (id) {
         setTimeout(() => navigate(`/courses/${id}`), 1500);
@@ -62,47 +58,67 @@ export function CanvasLinkPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto py-12">
-      <h1 className="text-2xl font-semibold mb-4">Link Canvas Course</h1>
-      <p className="mb-4">
-        We received a Canvas course identifier{" "}
-        <code className="font-mono bg-muted px-1 py-0.5 rounded">
-          {canvasId}
-        </code>
-        . Please specify the corresponding CourseGPT course name below. If you
-        haven't created the course yet, you can do so from your instructor
-        dashboard and then revisit this page.
-      </p>
-      {error && <p className="text-destructive mb-2">{error}</p>}
-      {success && <p className="text-green-600 mb-2">{success}</p>}
-      {apiClient.isAuthenticated() ? (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-2">
-            <Label htmlFor="courseName">Course Name</Label>
-            <Input
-              id="courseName"
-              value={courseName}
-              onChange={(e) => setCourseName(e.target.value)}
-              placeholder="Exact course name (case‑sensitive)"
-              required
-            />
+      <div className="max-w-md mx-auto py-20 px-4">
+        <div className="space-y-6">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight mb-4">Connect Canvas Course</h1>
+            <div className="space-y-3 text-muted-foreground text-sm leading-relaxed">
+              <p>
+                Please specify the corresponding CourseGPT course name below.
+              </p>
+              <p>
+                If you haven't created the course yet, you can do so from your instructor dashboard and then revisit this page.
+              </p>
+            </div>
           </div>
-          <Button type="submit" disabled={loading}>
-            {loading ? "Linking..." : "Link Course"}
-          </Button>
-        </form>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          You need to{" "}
-          <a
-            className="text-blue-600 underline"
-            href={`/login?next=/register-course?canvas_course_id=${canvasId}`}
-          >
-            log in
-          </a>{" "}
-          as an instructor before linking courses.
-        </p>
-      )}
-    </div>
+
+          {error && (
+              <div className="p-3 text-sm bg-destructive/10 text-destructive rounded-md border border-destructive/20">
+                {error}
+              </div>
+          )}
+
+          {success && (
+              <div className="p-3 text-sm bg-green-500/10 text-green-600 rounded-md border border-green-500/20">
+                {success}
+              </div>
+          )}
+
+          {apiClient.isAuthenticated() ? (
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="courseName" className="text-sm font-medium">
+                    Course Name
+                  </Label>
+                  <Input
+                      id="courseName"
+                      className="h-11"
+                      value={courseName}
+                      onChange={(e) => setCourseName(e.target.value)}
+                      placeholder=" course name (case-sensitive)"
+                      required
+                  />
+                  <p className="text-[11px] text-muted-foreground italic">
+                    Note: This must exactly match the course name on your dashboard.
+                  </p>
+                </div>
+                <Button type="submit" size="lg" className="w-full" disabled={loading}>
+                  {loading ? "Linking Systems..." : "Link Course"}
+                </Button>
+              </form>
+          ) : (
+              <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4 text-sm text-yellow-700">
+                You need to{" "}
+                <a
+                    className="font-semibold underline underline-offset-4"
+                    href={`/login?next=/register-course?canvas_course_id=${canvasId}`}
+                >
+                  log in
+                </a>{" "}
+                as an instructor before linking courses.
+              </div>
+          )}
+        </div>
+      </div>
   );
 }
