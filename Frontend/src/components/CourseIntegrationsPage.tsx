@@ -212,7 +212,7 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
                   <Alert className="mt-2 ml-4 bg-blue-50 border-blue-200 dark:bg-slate-100 dark:text-slate-800 dark:border-slate-700">
                     <AlertCircle className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-xs text-blue-800 italic">
-                      Note: The name must match exactly with your CourseGPT dashboard name.
+                      Note: The name must match exactly with your CourseGPT dashboard course name.
                     </AlertDescription>
                   </Alert>
                 </li>
