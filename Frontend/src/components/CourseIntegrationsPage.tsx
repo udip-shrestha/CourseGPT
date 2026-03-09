@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Alert, AlertDescription } from "./ui/alert";
-import { AlertCircle, ExternalLink } from "lucide-react";
+import { AlertCircle, ExternalLink, Info } from "lucide-react";
 
 export function CourseIntegrationsPage({ course }: { course: any }) {
   const DISCORD_BOT_INVITE_URL =
@@ -180,6 +180,16 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
+              {/* Production Disclaimer */}
+              <Alert className="bg-slate-50 border-slate-200 dark:bg-slate-900 dark:border-slate-800">
+                <Info className="h-4 w-4 text-slate-600 dark:text-slate-400" />
+                <AlertDescription className="text-xs text-slate-600 dark:text-slate-400">
+                  CourseGPT is currently not in the production instance for Iowa State University.
+                  We tested these steps on a development instance. Thus, CourseGPT cannot be used
+                  on Canvas yet. However, we hope the integration happens soon.
+                </AlertDescription>
+              </Alert>
+
               <p className="text-sm text-muted-foreground">
                 Follow these steps to link your Canvas course with CourseGPT:
               </p>
@@ -211,9 +221,9 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
                   </div>
                   <Alert className="mt-2 ml-4 bg-blue-50 border-blue-200 dark:bg-slate-100 dark:text-slate-800 dark:border-slate-700">
                     <AlertCircle className="h-4 w-4 text-blue-600" />
-                    <AlertDescription className="text-xs text-blue-800 italic">
+                    <AlertDescription className="text-xs text-blue-800 italic leading-relaxed">
                       Note: The name must match exactly with your CourseGPT dashboard course name.
-                      However, if you already have a Canvas course for your students, you can change the name of your CourseGPT course under Settings to match your Canvas course.
+                      However, if you already have a Canvas course for your students, you can change the name of your CourseGPT course under **Settings** to match your Canvas course.
                     </AlertDescription>
                   </Alert>
                 </li>
