@@ -99,7 +99,7 @@ export function CanvasLinkPage() {
                       required
                   />
                   <p className="text-[11px] text-muted-foreground italic">
-                    Note: This must exactly match the course name on your dashboard.
+                    Note: This must exactly match the course name on your CourseGPT dashboard.
                   </p>
                 </div>
                 <Button type="submit" size="lg" className="w-full" disabled={loading}>

@@ -213,6 +213,7 @@ export function CourseIntegrationsPage({ course }: { course: any }) {
                     <AlertCircle className="h-4 w-4 text-blue-600" />
                     <AlertDescription className="text-xs text-blue-800 italic">
                       Note: The name must match exactly with your CourseGPT dashboard course name.
+                      However, if you already have a Canvas course for your students, you can change the name of your CourseGPT course under Settings to match your Canvas course.
                     </AlertDescription>
                   </Alert>
                 </li>
