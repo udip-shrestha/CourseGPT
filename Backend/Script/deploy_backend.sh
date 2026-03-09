@@ -32,6 +32,11 @@ echo "Writing environment variables to $DISCORD_ENV"
 mkdir -p "$(dirname "$DISCORD_ENV")"
 cat > "$DISCORD_ENV" <<EOF
 # ===========================================
+# FastAPI Server Configuration
+# ===========================================
+API_BASE_URL=${API_BASE_URL:-}
+
+# ===========================================
 # PostgreSQL Database Configuration
 # ===========================================
 DB_NAME=${DB_NAME:-}
