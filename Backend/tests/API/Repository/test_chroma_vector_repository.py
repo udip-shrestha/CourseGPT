@@ -86,9 +86,15 @@ def test_create_index(repo, mock_collection, mock_client):
 
 def test_query(repo, mock_collection, mock_client):
     mock_collection.query.return_value = {
+        "ids": [["a_0", "b_1"]],
         "documents": [["chunk-1", "chunk-2"]],
         "metadatas": [[{"doc_id": "a"}, {"doc_id": "b"}]],
         "distances": [[0.12, 0.55]],
+    }
+    mock_collection.get.return_value = {
+        "ids": [],
+        "documents": [],
+        "metadatas": [],
     }
 
     results = repo.query("course-1", "what is ai?", top_k=2)
@@ -99,24 +105,28 @@ def test_query(repo, mock_collection, mock_client):
         query_texts=["what is ai?"],
         n_results=2
     )
+    mock_collection.get.assert_called_once_with(
+        ids=["a_-1", "a_1", "b_0", "b_2"],
+        include=["documents", "metadatas"]
+    )
 
     # validate output format
     assert len(results) == 2
 
-    doc1, score1 = results[0]
-    doc2, score2 = results[1]
+    chunk_id1, doc1 = results[0]
+    chunk_id2, doc2 = results[1]
 
     # First result
+    assert chunk_id1 == "a_0"
     assert isinstance(doc1, Document)
     assert doc1.page_content == "chunk-1"
     assert doc1.metadata == {"doc_id": "a"}
-    assert score1 == 0.12
 
     # Second result
+    assert chunk_id2 == "b_1"
     assert isinstance(doc2, Document)
     assert doc2.page_content == "chunk-2"
     assert doc2.metadata == {"doc_id": "b"}
-    assert score2 == 0.55
 
 
 def test_delete_index(repo, mock_collection, mock_client):

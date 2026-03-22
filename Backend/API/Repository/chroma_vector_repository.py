@@ -54,30 +54,57 @@ class ChromaVectorRepository(IVectorRepository):
             chunk_id = f"{doc_id}_{i}"
 
             documents.append(doc.page_content)
-            metadatas.append(metadata)   # ← DO NOT inject chunk_id
+            metadatas.append(metadata)   
             ids.append(chunk_id)
 
-        collection.add(
-            ids=ids,
-            documents=documents,
-            metadatas=metadatas
-        )
+        collection.add(ids=ids, documents=documents, metadatas=metadatas)
 
-    def query(self, course_id: str, question: str, top_k: Optional[int] = 8) -> List[Tuple[Document, float]]:
+    def _query_neighbors(self, collection, hits: List[Tuple[str, Document]]) -> List[Tuple[str, Document]]:
+        seen_ids = {chunk_id for chunk_id, _ in hits}
+
+        def get_neighbor_ids(chunk_id: str) -> List[str]:
+            parts = chunk_id.rsplit("_", 1)
+            if len(parts) != 2 or not parts[1].isdigit():
+                return []
+            doc_id, idx = parts[0], int(parts[1])
+            return [f"{doc_id}_{neighbor_idx}" for neighbor_idx in (idx - 1, idx + 1)]
+
+        neighbor_ids = [
+            neighbor_id
+            for chunk_id, _ in hits
+            for neighbor_id in get_neighbor_ids(chunk_id)
+            if neighbor_id not in seen_ids and not seen_ids.add(neighbor_id)
+        ]
+
+        neighbor_results = collection.get(ids=neighbor_ids, include=["documents", "metadatas"])
+        return [
+            (chunk_id, Document(page_content=doc_text, metadata=meta or {}))
+            for chunk_id, doc_text, meta in zip(neighbor_results["ids"], neighbor_results["documents"], neighbor_results["metadatas"],)
+        ]
+
+    def query(self, course_id: str, question: str, top_k: Optional[int] = 8, distance_cutoff: Optional[float] = 1.5) -> List[Tuple[str, Document]]:
         """
         Retrieve top-k similar chunks using a specific embedding function and collection.
         Returns a list of (Document, score) tuples — same format as LangChain's Chroma
         """
-
-        
         collection = self.client.get_collection(name=course_id)
         results = collection.query(query_texts=[question], n_results=top_k)
 
         # Convert Chroma QueryResult → LangChain-style format
-        return [
-            (Document(page_content=doc, metadata=meta or {}), dist)
-            for doc, meta, dist in zip(results["documents"][0], results["metadatas"][0], results["distances"][0])
+        hits = [
+            (chunk_id, Document(page_content=doc, metadata=meta or {}))
+            for chunk_id, doc, meta, dist in zip(results["ids"][0], results["documents"][0], results["metadatas"][0], results["distances"][0])
+            if dist < distance_cutoff
         ]
+
+
+        hits.extend(self._query_neighbors(collection,  hits))
+        hits.sort(key=lambda item: (
+            item[0].rsplit("_", 1)[0],                                         # doc_id
+            int(item[0].rsplit("_", 1)[1]) if item[0].rsplit("_", 1)[1].isdigit() else 0  # chunk index
+        ))
+
+        return hits
 
     def delete_index(self, course_id: str, document_id: str) -> None:
         """

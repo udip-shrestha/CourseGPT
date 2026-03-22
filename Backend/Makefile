@@ -127,7 +127,7 @@ endif
 # API Make Commands
 # ===========================================
 
-.PHONY: api-run api-test api-coverage
+.PHONY: api-run api-run-8 api-test api-coverage
 
 # -------------------------------------------
 # Run FastAPI backend
@@ -144,6 +144,23 @@ api-run: ensure-activate
 	@echo "Launching FastAPI on http://$(API_HOST):$(API_PORT)"
 	@bash -c "source $(VENV_DIR)/bin/activate && \
 		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --reload --reload-dir $(API_RELOAD_DIR)"
+endif
+
+# -------------------------------------------
+# Run FastAPI backend with 8 workers
+# -------------------------------------------
+ifeq ($(OS),Windows_NT)
+api-run-8: ensure-activate
+	@echo "Launching FastAPI with 8 workers on http://$(API_HOST):$(API_PORT)"
+	@cmd /C "( \
+		call $(VENV_DIR)\Scripts\activate && \
+		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --workers 8 \
+	)"
+else
+api-run-8: ensure-activate
+	@echo "Launching FastAPI with 8 workers on http://$(API_HOST):$(API_PORT)"
+	@bash -c "source $(VENV_DIR)/bin/activate && \
+		$(PYTHON) -m uvicorn API.main:app --host $(API_HOST) --port $(API_PORT) --workers 8"
 endif
 
 # -------------------------------------------

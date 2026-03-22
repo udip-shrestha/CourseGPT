@@ -267,7 +267,7 @@ def get_llm() -> BaseChatModel:
         base_url = os.environ["LLM_BASE_URL"]
         logger.info(f"[LLM INIT] Initializing vLLM model '{model_name}' at {base_url}")
 
-        return ChatOpenAI(model=model_name, base_url=base_url, api_key="EMPTY", temperature=0, max_tokens=512)
+        return ChatOpenAI(model=model_name, base_url=base_url, api_key="EMPTY", temperature=0, max_tokens=1024)
 
     raise ValueError(f"Unknown LLM_PROVIDER: {llm_provider}")
 

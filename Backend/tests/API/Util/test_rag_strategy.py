@@ -1,7 +1,8 @@
 import pytest
 from unittest.mock import patch, MagicMock
 
-from API.Util.rag_strategy import RAGStrategyFactory, SimpleRAGStrategy, AgenticRAGStrategy
+from API.Util.rag_strategy import RAGStrategyFactory, SimpleRAGStrategy, AgenticRAGStrategy, NO_ANSWER_RESPONSE
+from langchain_core.messages import AIMessage
 
 
 @pytest.fixture
@@ -44,8 +45,8 @@ def test_simple_rag_strategy_calls_all_internal_steps():
             mock_llm,
             "course1",
             {"title": "Course"},
-            "student1",
             "What is X?",
+            student_id="student1",
         )
 
     assert result["answer"] == "Final answer"
@@ -53,22 +54,26 @@ def test_simple_rag_strategy_calls_all_internal_steps():
 
     m_chunks.assert_called_once()
     m_meta.assert_called_once()
-    assert mock_llm.invoke.call_count == 2
+    mock_llm.invoke.assert_called_once()
     m_clean.assert_called_once()
-    mock_sql.create_query.assert_called_once()
+    mock_sql.create_query.assert_called_once_with(
+        "student1",
+        "course1",
+        query_text="What is X?",
+        response_text="Final answer",
+    )
 
 
 def test_simple_rag_strategy_returns_no_sources_when_insufficient():
-    """Ensure SimpleRAGStrategy returns empty source list when insufficient info."""
     strategy = SimpleRAGStrategy()
 
     mock_vector = MagicMock()
     mock_sql = MagicMock()
     mock_llm = MagicMock()
 
-    with patch.object(strategy, "retrieve_chunks", return_value=("none", [])), \
-        patch.object(strategy, "get_course_details", return_value=("meta", {})), \
-        patch.object(strategy, "clean_llm_output", return_value="I don’t have enough course information to answer that."):
+    with patch.object(strategy, "retrieve_chunks", return_value=("", [])), \
+        patch.object(strategy, "get_course_details") as m_meta, \
+        patch.object(strategy, "clean_llm_output") as m_clean:
 
         result = strategy.run(
             mock_vector,
@@ -76,12 +81,21 @@ def test_simple_rag_strategy_returns_no_sources_when_insufficient():
             mock_llm,
             "course1",
             {"title": "Course"},
-            "student1",
             "What is X?",
+            student_id="student1",
         )
 
     assert result["sources"] == []
-    mock_sql.create_query.assert_called_once()
+    assert result["answer"] == NO_ANSWER_RESPONSE
+    m_meta.assert_not_called()
+    m_clean.assert_not_called()
+    mock_llm.invoke.assert_not_called()
+    mock_sql.create_query.assert_called_once_with(
+        "student1",
+        "course1",
+        query_text="What is X?",
+        response_text=NO_ANSWER_RESPONSE,
+    )
 
 
 def test_agentic_rag_strategy_uses_create_agent_and_saves_query():
@@ -93,7 +107,7 @@ def test_agentic_rag_strategy_uses_create_agent_and_saves_query():
     mock_llm = MagicMock()
 
     fake_stream = [
-        {"model": {"messages": [MagicMock(content="Final answer")]}},
+        {"model": {"messages": [AIMessage(content="Final answer")]}},
     ]
 
     with patch("API.Util.rag_strategy.create_agent") as m_agent, \
@@ -107,14 +121,19 @@ def test_agentic_rag_strategy_uses_create_agent_and_saves_query():
             mock_llm,
             "course1",
             {"title": "Course"},
-            "student1",
             "What is recursion?",
+            student_id="student1",
         )
 
     assert result["answer"] == "Final answer"
     m_agent.assert_called_once()
     m_clean.assert_called()
-    mock_sql.create_query.assert_called_once()
+    mock_sql.create_query.assert_called_once_with(
+        "student1",
+        "course1",
+        query_text="What is recursion?",
+        response_text="Final answer",
+    )
 
 
 def test_agentic_rag_strategy_no_sources_when_insufficient():
@@ -126,11 +145,11 @@ def test_agentic_rag_strategy_no_sources_when_insufficient():
     mock_llm = MagicMock()
 
     fake_stream = [
-        {"model": {"messages": [MagicMock(content="I don’t have enough course information to answer that.")]}}
+        {"model": {"messages": [AIMessage(content=NO_ANSWER_RESPONSE)]}},
     ]
 
     with patch("API.Util.rag_strategy.create_agent") as m_agent, \
-         patch.object(strategy, "clean_llm_output", return_value="I don’t have enough course information to answer that."):
+         patch.object(strategy, "clean_llm_output", return_value=NO_ANSWER_RESPONSE):
 
         m_agent.return_value.stream.return_value = fake_stream
 
@@ -140,9 +159,14 @@ def test_agentic_rag_strategy_no_sources_when_insufficient():
             mock_llm,
             "course1",
             {"title": "Course"},
-            "student1",
             "What is recursion?",
+            student_id="student1",
         )
 
     assert result["sources"] == []
-    mock_sql.create_query.assert_called_once()
+    mock_sql.create_query.assert_called_once_with(
+        "student1",
+        "course1",
+        query_text="What is recursion?",
+        response_text=NO_ANSWER_RESPONSE,
+    )

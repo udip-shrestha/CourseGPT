@@ -39,6 +39,10 @@ def ask_question(
         description="Optional student UUID (used for author attribution and analytics).",
         examples={"example": "c3e82b9d-f24d-4b1e-9e5c-0affd12e90b3"},
     ),
+    validate: bool = Query(
+        False, 
+        description="When true, include retrieval data for evaluation."
+    ),
     course: dict = Depends(validate_course),
     service: QueryService = Depends(get_query_service),
     web_socket_manager: WebSocketManager = Depends(get_web_socket_manager),
@@ -46,7 +50,7 @@ def ask_question(
     """Run the full RAG answer-generation pipeline for a single question."""
 
     # Step 1: run RAG + save in DB
-    result = service.ask_question(course_id=course_id, course=course, student_id=student_id, question=question)
+    result = service.ask_question(course_id=course_id, course=course, question=question, validate=validate, student_id=student_id)
 
     # Step 2: broadcast event to websocket subscribers
     web_socket_manager.publish(COURSE_QUERIES_WS_ROUTE.format(course_id=course_id), {

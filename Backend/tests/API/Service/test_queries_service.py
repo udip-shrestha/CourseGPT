@@ -23,8 +23,9 @@ def test_ask_question_success(query_service: QueryService, mock_rag_service: RAG
     mock_rag_service.query.assert_called_once_with(
         course_id="c1",
         course={"id": "c1", "rag_strategy_id": 1},
-        student_id="stu1",
-        question="Hello?"
+        question="Hello?",
+        validate=False,
+        student_id="stu1"
     )
 
     assert result == {"answer": "Hi", "sources": ["s1"]}
