@@ -80,7 +80,6 @@ LLM_PROVIDER=
 LLM_MODEL=
 HUGGINGFACEHUB_API_TOKEN=
 LLM_BASE_URL=
-
 # ===========================================
 # Canvas LTI Configuration
 # ===========================================

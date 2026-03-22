@@ -55,6 +55,9 @@ help:
 	@echo "make db-seed    -> Populate database with sample data"
 	@echo "make db-shell   -> Open interactive PostgreSQL shell"
 	@echo "make db-deploy  -> Create database if missing, preserve data"
+	@echo ""
+	@echo "make mail-setup -> Install Mailhog"
+	@echo "make mail-run   -> launches local SMTP server"
 	@echo "-------------------------------------------"
 	@echo ""
 
@@ -315,4 +318,43 @@ db-migrate:
 	@echo "=============================================="
 	@echo " Migration completed successfully!"
 	@echo "=============================================="
+
+
+
+
+
+# ===========================================
+# Mail (Local SMTP Catcher)
+# ===========================================
+
+.PHONY: mail-setup mail-run
+
+# -----------------------------------
+# Install mailhog
+# -----------------------------------
+mail-setup:
+ifeq ($(UNAME_S),Windows)
+	@echo "Checking MailHog installation..."
+	@powershell -ExecutionPolicy Bypass -File Script/install_mailhog_windows.ps1
+	@echo "mail-init complete. Please restart PowerShell if Scoop was just installed."
+else ifneq ($(CODESPACES),)
+	@echo "Detected GitHub Codespace environment..."
+	@bash Script/install_mailhog_codespace.sh
+	@echo "mail-init complete (Codespaces)."
+else ifeq ($(UNAME_S),Darwin)
+	@echo "Checking MailHog installation..."
+	@bash Script/install_mailhog_mac.sh
+	@echo "mail-init complete (macOS)."
+else
+	@echo "Checking MailHog installation..."
+	@bash Script/install_mailhog_linux.sh
+	@echo "mail-init complete (Linux)."
+endif
+
+# -------------------------------------------
+# Run local smtp mail server
+# -------------------------------------------
+mail-run:
+	@echo "Starting MailHog..."
+	@mailhog
 
