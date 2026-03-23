@@ -65,17 +65,45 @@ def test_ask_question_success(client: TestClient, mock_query_service: QueryServi
     mock_query_service.ask_question.assert_called_once_with(
         course_id="c1",
         course={"id": "c1", "rag_strategy_id": 1},
+        question="Hello?",
+        validate=False,
         student_id="stu1",
-        question="Hello?"
+    )
+
+
+def test_ask_question_with_validate_true(client: TestClient, mock_query_service: QueryService):
+    mock_query_service.ask_question.return_value = {
+        "answer": "Hello!",
+        "sources": ["s1"],
+        "chunks": ["c1"],
+    }
+
+    response = client.post(
+        "/courses/c1/queries",
+        params={"question": "Hello?", "student_id": "stu1", "validate": "true"},
+    )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {
+        "answer": "Hello!",
+        "sources": ["s1"],
+        "chunks": ["c1"],
+    }
+
+    mock_query_service.ask_question.assert_called_once_with(
+        course_id="c1",
+        course={"id": "c1", "rag_strategy_id": 1},
+        question="Hello?",
+        validate=True,
+        student_id="stu1",
     )
 
 
 def test_ask_question_publishes_websocket_event(
-    client: TestClient, 
+    client: TestClient,
     mock_query_service: QueryService,
     mock_ws_manager
 ):
-    # Service output
     mock_query_service.ask_question.return_value = {
         "answer": "Hello!",
         "sources": ["s1"]
@@ -86,19 +114,17 @@ def test_ask_question_publishes_websocket_event(
         params={"question": "Hello?", "student_id": "stu1"},
     )
 
-    # API response correct
     assert response.status_code == 200
     assert response.json() == {"answer": "Hello!", "sources": ["s1"]}
 
-    # Validate service call
     mock_query_service.ask_question.assert_called_once_with(
         course_id="c1",
         course={"id": "c1", "rag_strategy_id": 1},
-        student_id="stu1",
         question="Hello?",
+        validate=False,
+        student_id="stu1",
     )
 
-    # Ensure websocket publish happened
     mock_ws_manager.publish.assert_called_once_with(
         "/courses/c1/queries",
         {

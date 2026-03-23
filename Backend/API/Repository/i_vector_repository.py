@@ -81,7 +81,8 @@ class IVectorRepository(Protocol):
         course_id: str,
         question: str,
         top_k: Optional[int],
-    ) -> List[Tuple[Document, float]]:
+        distance_cutoff: Optional[float],
+    ) -> List[Tuple[str, Document]]:
         """
         Retrieve top-k matching Documents with their similarity distance.
 

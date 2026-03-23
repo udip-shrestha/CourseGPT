@@ -91,11 +91,11 @@ class RAGService:
     # RETRIEVAL
     # ======================================================
     @clean_service
-    def query(self, course_id: str, course: dict, student_id: Optional[int], question: str) -> Dict[str, str]:
+    def query(self, course_id: str, course: dict, question: str, validate: bool = False, student_id: Optional[str] = None) -> Dict[str, str]:
         rag_strategy_id = course["rag_strategy_id"]
 
         rag_strategy = self.rag_strategy_factory.get(str(rag_strategy_id))
-        result = rag_strategy.run(self.vector_repo, self.sql_repo, self.llm, course_id, course, student_id, question)
+        result = rag_strategy.run(self.vector_repo, self.sql_repo, self.llm, course_id, course, question, validate, student_id)
 
         if not result:
             raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No relevant information found for this course.")

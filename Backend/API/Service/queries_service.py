@@ -30,8 +30,9 @@ class QueryService:
         self,
         course_id: str,
         course: dict,
-        student_id: Optional[str],
-        question: str
+        question: str,
+        validate: bool = False,
+        student_id: Optional[str] = None
     ) -> dict:
         """
         Executes the RAG pipeline:
@@ -44,7 +45,7 @@ class QueryService:
             return {"answer": "Question cannot be empty.", "sources": ""}
 
         # --- Run RAG strategy (automatically logs query in DB) ---
-        return self.rag_service.query(course_id=course_id, course=course, student_id=student_id, question=question)
+        return self.rag_service.query(course_id=course_id, course=course, question=question, validate=validate,student_id=student_id)
 
     @clean_service
     def get_student_queries(
