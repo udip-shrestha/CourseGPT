@@ -2,6 +2,9 @@ import os
 import re
 from typing import Optional, Tuple, List
 import httpx
+from dotenv import load_dotenv
+
+load_dotenv()
 
 API_BASE_URL = os.getenv("API_BASE_URL")
 DEFAULT_TIMEOUT = 15.0
