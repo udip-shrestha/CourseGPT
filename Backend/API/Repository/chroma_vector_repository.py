@@ -76,6 +76,9 @@ class ChromaVectorRepository(IVectorRepository):
             if neighbor_id not in seen_ids and not seen_ids.add(neighbor_id)
         ]
 
+        if not neighbor_ids:
+            return []
+        
         neighbor_results = collection.get(ids=neighbor_ids, include=["documents", "metadatas"])
         return [
             (chunk_id, Document(page_content=doc_text, metadata=meta or {}))
