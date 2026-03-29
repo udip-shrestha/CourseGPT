@@ -9,7 +9,7 @@ scrape_configs:
         labels:
           app: "coursegpt"
     metrics_path: "/metrics"
-    scheme: "http"
+    scheme: "https"
 
   - job_name: "discord-bot"
     static_configs:
