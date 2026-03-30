@@ -25,7 +25,7 @@ export function CanvasLinkModal({
           </button>
           <button
             onClick={onConfirm}
-            className="px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/40"
+            className="px-4 py-2 rounded border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 bg-white dark:bg-transparent hover:bg-slate-50 dark:hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary/30"
           >
             Link Course to Canvas
           </button>
