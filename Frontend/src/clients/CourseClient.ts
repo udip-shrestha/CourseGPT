@@ -84,9 +84,14 @@ export class CourseClient {
    * Link an existing CourseGPT course (by internal ID) with a Canvas course identifier.
    * Used when an instructor selects a CourseGPT course to link from the Canvas flow.
    */
-  async linkCanvas(courseId: string, canvasContextId: string | null, canvasCourseId: string) {
+  async linkCanvas(
+    courseId: string,
+    canvasContextId: string | null,
+    canvasCourseId: string,
+  ) {
     if (!courseId) return { errorMessage: "Course ID is required." };
-    if (!canvasCourseId) return { errorMessage: "Canvas course ID is required." };
+    if (!canvasCourseId)
+      return { errorMessage: "Canvas course ID is required." };
     const query = {
       course_id: courseId,
       canvas_context_id: canvasContextId || undefined,
