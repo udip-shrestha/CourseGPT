@@ -156,7 +156,7 @@ def canvas_files(
     status_code=status.HTTP_200_OK,
     summary="Retrieve Canvas modules for a course",
 )
-async def get_canvas_modules(
+async def get_canvas_files(
     course_id: str = Path(..., description="CourseGPT course ID"),
     course_service: CourseService = Depends(get_course_service),
     service: CanvasService = Depends(get_canvas_service),

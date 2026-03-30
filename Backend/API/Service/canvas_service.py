@@ -56,8 +56,8 @@ class CanvasService:
         }
         return jwk
     
-    async def get_canvas_modules(self, canvas_course_id: str, canvas_token: str):
-        url = f"https://iastate-studentdev.instructure.com/api/v1/courses/{canvas_course_id}/modules"
+    async def get_canvas_files(self, canvas_course_id: str, canvas_token: str):
+        url = f"https://iastate-studentdev.instructure.com/api/v1/courses/{canvas_course_id}/files"
 
         params = { "include[]": "items"}
 
