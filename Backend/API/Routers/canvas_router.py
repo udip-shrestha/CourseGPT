@@ -129,32 +129,11 @@ async def lti_launch(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"LTI launch failed: {e}")
-
-@router.get("/canvas/files", summary="List Canvas files (ingestion helper)")
-def canvas_files(
-    authorization: str | None = Header(default=None),
-    service: CanvasService = Depends(get_canvas_service),
-) -> List[Dict[str, Any]]:
-    """Return a list of files fetched from Canvas or placeholder result.
-
-    If an Authorization header is present, it will be passed (not validated) to the fetch helper.
-    """
-    try:
-        token = None
-        if authorization:
-            if authorization.lower().startswith("bearer "):
-                token = authorization.split(" ", 1)[1]
-            else:
-                token = authorization
-        files = service.fetch_canvas_files(canvas_token=token)
-        return files
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     
 @router.get(
-    "/courses/{course_id}/canvas/modules",
+    "/courses/{course_id}/canvas/files",
     status_code=status.HTTP_200_OK,
-    summary="Retrieve Canvas modules for a course",
+    summary="Retrieve Canvas files for a course",
 )
 async def get_canvas_files(
     course_id: str = Path(..., description="CourseGPT course ID"),
@@ -172,5 +151,5 @@ async def get_canvas_files(
 
     canvas_token = os.getenv("CANVAS_API")
 
-    return await service.get_canvas_modules(canvas_course_id, canvas_token)
+    return await service.get_canvas_files(canvas_course_id, canvas_token)
 
