@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useApiClient } from "../clients/ApiClientContext";
 import { CanvasLinkModal } from "./CanvasLinkModal";
 
-export default function CanvasLinkPage() {
+export function CanvasLinkPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { courseClient, apiClient } = useApiClient();
