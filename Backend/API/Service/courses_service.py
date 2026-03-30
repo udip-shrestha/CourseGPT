@@ -196,14 +196,14 @@ class CourseService:
         return course
 
     @clean_service
-    def link_canvas_course(self, course_name: str, canvas_course_id: str) -> dict:
-        """Associate an existing course (by name) with a Canvas course id."""
-        course = self.sql_repo.get_course_by_name(course_name)
+    def link_canvas_course(self, course_id: str, canvas_context_id: str, canvas_course_id: str) -> dict:
+        """Associate an existing course (by ID) with a Canvas context and course id."""
+        course = self.sql_repo.read_course(course_id)
         if not course:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Course with name='{course_name}' not found."
+                detail=f"Course with id={course_id} not found."
             )
         # update record
-        updated = self.sql_repo.update_course(course["id"], {"canvas_course_id": canvas_course_id})
+        updated = self.sql_repo.update_course(course["id"], {"canvas_course_id": canvas_course_id, "canvas_context_id": canvas_context_id})
         return {"course_id": course["id"]}

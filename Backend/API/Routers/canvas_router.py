@@ -93,10 +93,10 @@ async def lti_launch(
 
         canvas_user_id = decoded.get("sub")
         context = decoded.get("https://purl.imsglobal.org/spec/lti/claim/context", {})
-        canvas_course_id = context.get("id")
+        canvas_context_id = context.get("id")
         roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
         custom = decoded.get("https://purl.imsglobal.org/spec/lti/claim/custom", {})
-        print(custom)
+        canvas_course_id = custom.get("canvas_course_id")
 
         base_url = os.getenv("FRONTEND_BASE_URL")
 
@@ -113,7 +113,7 @@ async def lti_launch(
             if internal_id:
                 return canvas_service.redirect_to(base_url, f"/courses/{internal_id}")
             else:
-                return canvas_service.redirect_to(base_url, f"/register-course?canvas_course_id={canvas_course_id}")
+                return canvas_service.redirect_to(base_url, f"/register-course?canvas_context_id={canvas_context_id}&canvas_course_id={canvas_course_id}")
 
         # student flows
         if not internal_id:
