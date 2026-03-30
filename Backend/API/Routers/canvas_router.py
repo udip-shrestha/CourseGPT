@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status, Form, Request, Header, Path
 from typing import Dict, Any, List
 from urllib.parse import urlencode
@@ -11,6 +12,8 @@ from Metrics.metrics import MetricsRoute
 import os
 import jwt
 import uuid
+
+load_dotenv()
 
 router = APIRouter(tags=["Canvas LTI"], route_class=MetricsRoute)
 

@@ -55,13 +55,6 @@ class CanvasService:
             "e": self._b64u(e_bytes),
         }
         return jwk
-
-    def fetch_canvas_files(self, canvas_token: str = None) -> List[Dict]:
-        """Placeholder: return an empty list or later call Canvas API using `canvas_token`.
-
-        Implementers can expand this to call Canvas REST API and ingest files.
-        """
-        return []
     
     async def get_canvas_modules(self, canvas_course_id: str, canvas_token: str):
 
