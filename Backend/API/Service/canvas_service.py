@@ -57,9 +57,7 @@ class CanvasService:
         return jwk
     
     async def get_canvas_modules(self, canvas_course_id: str, canvas_token: str):
-        numeric_id = await self.get_canvas_numeric_id(canvas_course_id, canvas_token)
-
-        url = f"https://iastate-studentdev.instructure.com/api/v1/courses/{numeric_id}/modules"
+        url = f"https://iastate-studentdev.instructure.com/api/v1/courses/{canvas_course_id}/modules"
 
         params = { "include[]": "items"}
 
@@ -72,18 +70,3 @@ class CanvasService:
             raise RuntimeError(f"Canvas API error: {response.text}")
 
         return response.json()
-    
-    async def get_canvas_numeric_id(self, canvas_course_id: str, canvas_token: str) -> int:
-        url = f"https://iastate-studentdev.instructure.com:{canvas_course_id}"
-
-        headers = { "Authorization": f"Bearer {canvas_token}"}
-
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url, headers=headers)
-
-        if response.status_code != 200:
-            raise RuntimeError(f"Canvas API error: {response.text}")
-
-        data = response.json()
-        return data.get("id")
-
