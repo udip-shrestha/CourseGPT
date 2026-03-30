@@ -95,6 +95,8 @@ async def lti_launch(
         context = decoded.get("https://purl.imsglobal.org/spec/lti/claim/context", {})
         canvas_course_id = context.get("id")
         roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
+        custom = decoded.get("https://purl.imsglobal.org/spec/lti/claim/custom", {})
+        raise Exception(f"custom claim: {custom}")
 
         base_url = os.getenv("FRONTEND_BASE_URL")
 
