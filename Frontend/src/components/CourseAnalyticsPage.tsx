@@ -86,11 +86,11 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             courseId: "1",
             courseName: course.name,
             courseCode: course.name.slice(0, 8),
-            activeUsers: overviewSummary?.activeUsers ?? 72,
-            totalUsers: overviewSummary?.totalEnrolled ?? 85,
-            chatbotQueries: overviewSummary?.totalQueries ?? 1543,
-            averageResponseTime: 1.2,
-            satisfaction: 4.6,
+            activeUsers: overviewSummary?.activeUsers ?? 0,
+            totalUsers: overviewSummary?.totalEnrolled ?? 0,
+            chatbotQueries: overviewSummary?.totalQueries ?? 0,
+            averageResponseTime: 0,
+            satisfaction: 0,
         },
     ];
 
@@ -109,7 +109,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 instructorId
                     ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange)
                     : Promise.resolve({ data: undefined, errorStatus: 404 }),
-                analyticsClient.topKeywords(courseId, 10, selectedTimeRange),
+                analyticsClient.topKeywords(courseId, 5, selectedTimeRange),
             ]);
             if (cancelled) return;
             if (overviewSummaryRes.data) setOverviewSummary(overviewSummaryRes.data);
@@ -128,7 +128,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const totalActiveUsers = overviewSummary?.activeUsers ?? courseUsageData[0]?.activeUsers ?? 0;
     const totalChatbotQueries = overviewSummary?.totalQueries ?? courseUsageData[0]?.chatbotQueries ?? 0;
     const averageSatisfaction = "4.6";
-    const totalEnrolledUsers = overviewSummary?.totalEnrolled ?? courseUsageData[0]?.totalUsers ?? 1;
+    const totalEnrolledUsers = overviewSummary?.totalEnrolled ?? courseUsageData[0]?.totalUsers ?? 0;
     const engagementRate =
         overviewSummary?.engagementRate ?? (totalEnrolledUsers ? Math.round((totalActiveUsers / totalEnrolledUsers) * 100) : 0);
 
@@ -179,19 +179,41 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     Key metrics for course engagement and chatbot usage in the selected time range.
                 </p>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <StatCard value={loading ? "—" : totalActiveUsers} label="Active Users" icon={Users} />
                     <StatCard
-                        value={loading ? "—" : totalChatbotQueries.toLocaleString()}
+                        value={
+                            loading
+                                ? "—"
+                                : overviewSummary?.activeUsers != null
+                                ? totalActiveUsers
+                                : "N/A"
+                        }
+                        label="Enrolled Users"
+                        icon={Users}
+                    />
+                    <StatCard
+                        value={
+                            loading
+                                ? "—"
+                                : overviewSummary?.totalQueries != null
+                                ? totalChatbotQueries.toLocaleString()
+                                : "N/A"
+                        }
                         label="Chatbot Queries"
                         icon={MessageSquare}
                     />
                     <StatCard
-                        value={`${averageSatisfaction}/5.0`}
+                        value={overviewSummary ? `${averageSatisfaction}/5.0` : "N/A"}
                         label="Avg. Satisfaction"
                         icon={TrendingUp}
                     />
                     <StatCard
-                        value={loading ? "—" : `${engagementRate}%`}
+                        value={
+                            loading
+                                ? "—"
+                                : overviewSummary?.engagementRate != null
+                                ? `${engagementRate}%`
+                                : "N/A"
+                        }
                         label="Engagement Rate"
                         icon={Activity}
                     />
@@ -218,11 +240,16 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         ) : (
                             <ul className="space-y-3">
                                 {topQuestions.map((item, i) => (
-                                    <li key={i} className="flex justify-between gap-4 border-b border-border pb-2 last:border-0">
-                                        <span className="text-sm flex-1 min-w-0">{item.queryText}</span>
-                                        <span className="text-sm font-medium text-muted-foreground shrink-0">
+                                    <li key={i} className="border-b border-border pb-2 last:border-0 space-y-1">
+                                        <div className="flex justify-between gap-4">
+                                        <span className="text-sm font-medium flex-1 min-w-0">{item.queryText}</span>
+                                        <span className="text-sm text-muted-foreground shrink-0">
                                             {item.count} {item.count === 1 ? "time" : "times"}
                                         </span>
+                                        </div>
+                                        {item.answer && (
+                                            <p className="text-sm text-muted-foreground">{item.answer}</p>
+                                        )}
                                     </li>
                                 ))}
                             </ul>
@@ -326,12 +353,12 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                 />
                                 <XAxis
                                     dataKey="courseName"
-                                    stroke="hsl(var(--muted-foreground))"
-                                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                                    stroke="#008000" // green color
+                                    tick={{ fill: "#008000" }}
                                 />
                                 <YAxis
-                                    stroke="hsl(var(--muted-foreground))"
-                                    tick={{ fill: "hsl(var(--muted-foreground))" }}
+                                    stroke="#008000" // green color
+                                    tick={{ fill: "#008000" }}
                                 />
                                 <Tooltip
                                     contentStyle={{
@@ -431,23 +458,37 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="p-4">{c.activeUsers}</td>
-                                        <td className="p-4">{c.totalUsers}</td>
                                         <td className="p-4">
-                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-primary">
-                                                {((c.activeUsers / c.totalUsers) * 100).toFixed(0)}%
-                                            </span>
+                                            {overviewSummary?.activeUsers != null ? c.activeUsers : "N/A"}
                                         </td>
                                         <td className="p-4">
-                                            {c.chatbotQueries.toLocaleString()}
+                                            {overviewSummary?.totalEnrolled != null ? c.totalUsers : "N/A"}
                                         </td>
                                         <td className="p-4">
-                                            {c.averageResponseTime}s
+                                            {overviewSummary?.engagementRate != null ? (
+                                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-primary">
+                                                    {((c.activeUsers / c.totalUsers) * 100).toFixed(0)}%
+                                                </span>
+                                            ) : (
+                                                "N/A"
+                                            )}
                                         </td>
                                         <td className="p-4">
-                                            <span className="inline-flex items-center gap-1">
-                                                ⭐ {c.satisfaction}/5.0
-                                            </span>
+                                            {overviewSummary?.totalQueries != null
+                                                ? c.chatbotQueries.toLocaleString()
+                                                : "N/A"}
+                                        </td>
+                                        <td className="p-4">
+                                            {overviewSummary ? `${c.averageResponseTime}s` : "N/A"}
+                                        </td>
+                                        <td className="p-4">
+                                            {overviewSummary ? (
+                                                <span className="inline-flex items-center gap-1">
+                                                    ⭐ {c.satisfaction}/5.0
+                                                </span>
+                                            ) : (
+                                                "N/A"
+                                            )}
                                         </td>
                                     </tr>
                                 ))}

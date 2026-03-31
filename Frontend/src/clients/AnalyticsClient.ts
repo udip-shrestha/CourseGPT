@@ -21,6 +21,7 @@ export interface QueryDistributionItem {
 export interface TopQuestionsItem {
     queryText: string;
     count: number;
+    answer?: string;
 }
 
 export interface TopKeywordsItem {
