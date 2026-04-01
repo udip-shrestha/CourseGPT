@@ -16,6 +16,7 @@ import { CourseIntegrationsPage } from "./CourseIntegrationsPage.tsx";
 import { CourseChatPage } from "./CourseChatPage.tsx";
 import { SettingsPage } from "./CourseSettingsPage.tsx";
 import { CourseAnalyticsPage } from "./CourseAnalyticsPage.tsx";
+import { CourseAllQuestionsPage } from "./CourseAllQuestionsPage";
 
 export function CoursePage() {
   const { courseId } = useParams();
@@ -180,6 +181,10 @@ export function CoursePage() {
       <Routes>
         <Route index element={<CourseDocPage course={course} />} />
         <Route path="chats" element={<CourseChatPage course={course} />} />
+        <Route
+          path="questions"
+          element={<CourseAllQuestionsPage course={course} />}
+        />
         <Route
           path="integrations"
           element={<CourseIntegrationsPage course={course} />}

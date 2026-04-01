@@ -13,6 +13,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./ui/select";
+import { Button } from "./ui/button";
 import { Users, MessageSquare, TrendingUp, Activity, HelpCircle } from "lucide-react";
 import {
     LineChart,
@@ -29,6 +30,7 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
+import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../clients/ApiClientContext";
 import type { OverviewSummary, UsageTrendPoint, QueryDistributionItem, TopQuestionsItem, TopKeywordsItem} from "../clients/AnalyticsClient";
 import { StatCard } from "./StatCard";
@@ -77,7 +79,9 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
 
     const { analyticsClient } = useApiClient();
-    const courseId = course.id;
+    const navigate = useNavigate();
+    const { courseId: routeCourseId } = useParams();
+    const courseId = course.id ?? routeCourseId ?? "";
     const instructorId = course.instructor_id;
 
     // Mock data for course table and bar chart (when no API or single-course view)
@@ -223,14 +227,25 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {/* Frequently Asked Questions */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <HelpCircle className="h-5 w-5" />
-                            Frequently Asked Questions
-                        </CardTitle>
-                        <CardDescription>
-                            Top questions students asked in this course (by count)
-                        </CardDescription>
+                    <CardHeader className="flex flex-row items-center justify-between gap-2">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <HelpCircle className="h-5 w-5" />
+                                Frequently Asked Questions
+                            </CardTitle>
+                            <CardDescription>
+                                Top questions students asked in this course (by count)
+                            </CardDescription>
+                        </div>
+                        {courseId && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => navigate(`/courses/${courseId}/questions`)}
+                            >
+                                See All
+                            </Button>
+                        )}
                     </CardHeader>
                     <CardContent>
                         {loading ? (
@@ -434,7 +449,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                             <thead>
                                 <tr className="border-b">
                                     <th className="p-4 text-left">Course</th>
-                                    <th className="p-4 text-left">Active Users</th>
+                                    {/* <th className="p-4 text-left">Active Users</th> */}
                                     <th className="p-4 text-left">Total Enrolled</th>
                                     <th className="p-4 text-left">Engagement Rate</th>
                                     <th className="p-4 text-left">Chatbot Queries</th>
