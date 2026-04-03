@@ -103,7 +103,8 @@ def test_query(repo, mock_collection, mock_client):
     mock_client.get_collection.assert_called_once_with(name="course-1")
     mock_collection.query.assert_called_once_with(
         query_texts=["what is ai?"],
-        n_results=2
+        n_results=2,
+        where=None,
     )
     mock_collection.get.assert_called_once_with(
         ids=["a_-1", "a_1", "b_0", "b_2"],
