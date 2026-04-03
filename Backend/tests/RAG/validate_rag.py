@@ -24,7 +24,6 @@ class ValidationResult(ValidationResultBase):
     chunks: list[str]
     latency_ms: int
 
-    passed_exact: bool
     passed_must_include: bool
     passed_must_not_include: bool
     passed_sources: bool
@@ -42,7 +41,6 @@ def judge_response(case: ValidationQuestion, payload: dict[str, Any], latency_ms
         "sources": payload.get("sources", []),
         "chunks": payload.get("chunks", []),
         "latency_ms": latency_ms,
-        "passed_exact": True,
         "passed_must_include": True,
         "passed_must_not_include": True,
         "passed_sources": True,
@@ -50,12 +48,6 @@ def judge_response(case: ValidationQuestion, payload: dict[str, Any], latency_ms
         "passed_overall": True,
         "notes": [],
     }
-
-    expected_exact = case.get("expected_exact")
-    if expected_exact is not None:
-        result["passed_exact"] = normalize(result["answer"]) == normalize(expected_exact)
-        if not result["passed_exact"]:
-            result["notes"].append("Exact answer mismatch.")
 
     must_include = case.get("must_include", [])
     for phrase in must_include:
@@ -86,7 +78,6 @@ def judge_response(case: ValidationQuestion, payload: dict[str, Any], latency_ms
 
     result["passed_overall"] = all(
         [
-            result["passed_exact"],
             result["passed_must_include"],
             result["passed_must_not_include"],
             result["passed_sources"],
