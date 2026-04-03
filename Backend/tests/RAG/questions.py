@@ -746,9 +746,6 @@ QUESTIONS: list[ValidationQuestion] = [
         ],
         "description": "Should refuse because binary search complexity is not mentioned in the materials.",
     },
-<<<<<<< Updated upstream
-  
-=======
     {
         "id": "51",
         "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
@@ -950,5 +947,4 @@ QUESTIONS: list[ValidationQuestion] = [
         "description": "Should describe object as instance of class."
     },
 
->>>>>>> Stashed changes
 ]
