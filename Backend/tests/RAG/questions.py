@@ -746,5 +746,209 @@ QUESTIONS: list[ValidationQuestion] = [
         ],
         "description": "Should refuse because binary search complexity is not mentioned in the materials.",
     },
+<<<<<<< Updated upstream
   
+=======
+    {
+        "id": "51",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is the main purpose of a firewall in a network",
+        "must_include": ["protect", "network"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain firewall protects network from threats."
+    },
+    {
+        "id": "52",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "where should a firewall be placed in a large organization",
+        "must_include": ["network", "boundaries"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should mention deployment at network boundaries."
+    },
+    {
+        "id": "53",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what happens when no firewall rule matches a packet",
+        "must_include": ["default", "deny", "drop"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain default deny policy."
+    },
+    {
+        "id": "54",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what attributes of a packet are used in firewall rules",
+        "must_include": ["ip", "port", "protocol"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should mention IP, port, and protocol."
+    },
+    {
+        "id": "55",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is pfSense",
+        "must_include": ["firewall", "freebsd"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe pfSense as firewall/router software."
+    },
+    {
+        "id": "56",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is the main difference between tcp and udp",
+        "must_include": ["connection", "reliable"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain TCP reliable vs UDP connectionless."
+    },
+    {
+        "id": "57",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is the purpose of the tcp three way handshake",
+        "must_include": ["connection", "establish"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain handshake establishes connection."
+    },
+    {
+        "id": "58",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what does a port represent in networking",
+        "must_include": ["application", "service"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain port as service endpoint."
+    },
+    {
+        "id": "59",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is the range of well known ports",
+        "must_include": ["0", "1023"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should state range 0-1023."
+    },
+    {
+        "id": "60",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "does udp guarantee delivery of packets",
+        "must_include": ["no", "not", "guarantee"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should clearly state UDP is unreliable."
+    },
+    {
+        "id": "61",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "when is the midterm exam",
+        "must_include": ["march", "5"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should extract midterm date."
+    },
+    {
+        "id": "62",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what topic is covered on february 24",
+        "must_include": ["dns", "routing"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should extract lecture topics."
+    },
+    {
+        "id": "63",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "when is homework 3 due",
+        "must_include": ["3/11", "11:59"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should extract HW3 due date."
+    },
+    {
+        "id": "64",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what happens during week 8 of the course",
+        "must_include": ["spring break"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should identify spring break."
+    },
+    {
+        "id": "65",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "where is the final exam held",
+        "expected_exact": "I do not have enough course information to answer that.",
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should refuse because location is not mentioned."
+    },
+    {
+        "id": "66",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "where was the fisherman located",
+        "must_include": ["mexican", "village"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should mention small Mexican coastal village."
+    },
+    {
+        "id": "67",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what did the fisherman catch",
+        "must_include": ["tuna"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should identify yellow-fin tuna."
+    },
+    {
+        "id": "68",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "why did the fisherman not want to catch more fish",
+        "must_include": ["enough", "family"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain he had enough for his needs."
+    },
+    {
+        "id": "69",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what did the businessman suggest the fisherman should do",
+        "must_include": ["business", "boats"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe expansion plan."
+    },
+    {
+        "id": "70",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is the main idea of the story",
+        "must_include": ["life", "simple"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should capture theme of simple life vs ambition."
+    },
+    {
+        "id": "71",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is one difference between arrays and arraylists",
+        "must_include": ["fixed", "dynamic"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain fixed vs dynamic size."
+    },
+    {
+        "id": "72",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what can arraylists store when using primitive values",
+        "must_include": ["wrapper", "object"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain wrapper classes."
+    },
+    {
+        "id": "73",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what are the four components of oop",
+        "must_include": ["encapsulation", "inheritance", "polymorphism", "abstraction"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should list all OOP pillars."
+    },
+    {
+        "id": "74",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is a class in java",
+        "must_include": ["blueprint"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe class as blueprint."
+    },
+    {
+        "id": "75",
+        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "question": "what is an object in java",
+        "must_include": ["instance"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe object as instance of class."
+    },
+
+>>>>>>> Stashed changes
 ]
