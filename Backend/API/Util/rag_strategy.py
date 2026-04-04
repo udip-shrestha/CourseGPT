@@ -56,11 +56,11 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
         formatted_chunks = []
 
         for chunk_id, chunk in results:
-            formatted_chunks.append(f"[{chunk_id}]: {chunk.page_content}")
-
-            title = chunk.metadata.get("title") or chunk.metadata.get("file_name") or "Unknown"
-            if title not in sources:
+            title = chunk.metadata.get("source") or chunk.metadata.get("title") or chunk.metadata.get("file_name") or "Unknown"
+            if title != "Unknown" and title not in sources:
                 sources.append(title)
+
+            formatted_chunks.append(f"[Source: {title} | Chunk: {chunk_id}]\n{chunk.page_content}")
 
         content = "\n\n".join(formatted_chunks)
 
@@ -89,8 +89,6 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
         )
         return cleaned.strip()
     
-    
-
     @abstractmethod
     def run(
         self,
@@ -131,11 +129,6 @@ class SimpleRAGStrategy(BaseRAGStrategy):
             vector_repo, course_id, question
         )
 
-        if not retrieved_content:
-            answer = NO_ANSWER_RESPONSE
-            if not validate: sql_repo.create_query(student_id, course_id, query_text=question, response_text=answer)
-            return {"strategy": self.__class__.__name__, "answer": answer, "sources": [], "chunks": None if not validate else []}
-
         # ---------------------------------------------------
         # Metadata + Date Injection
         # ---------------------------------------------------
@@ -148,29 +141,36 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         
         messages = [
             SystemMessage(content=(
-                "You are CourseGPT, a knowledgeable, professional and encouraging AI Teaching Assistant. "
-                "Your goal is to provide answer to STUDENT QUESTION using ONLY the provided course materials.\n\n"
+                "You are CourseGPT, an AI Teaching Assistant. Answer the STUDENT QUESTION accurately and concisely.\n\n"
 
-                "### CONSTRAINTS (Strictly Enforced)\n"
-                "1. GROUNDING: Use only the retrieved course materials and metadata to answer STUDENT QUESTION. Do not use external knowledge.\n"
-                f"2. NO ANSWER RULE (HIGHEST PRIORITY): If the answer to STUDENT QUESTION cannot be reasonably found or inferred from the retrieved materials, reply EXACTLY with: '{NO_ANSWER_RESPONSE}'. "
-                "You may synthesize an answer from information clearly present in the text, including drawing direct conclusions from stated facts."
-                "3. STRICT REFUSAL FORMAT: If rule 2 applies, output ONLY the exact sentence above with no additional words, explanations, or changes.\n"
-                "4. NO INFERENCE: Do not guess, assume, or infer missing details about STUDENT QUESTION. Only use explicitly stated information.\n"
-                "5. RELEVANCE CHECK: If the retrieved content is not clearly relevant to the STUDENT QUESTION, treat it as missing information and apply rule 2.\n"
-                "6. SCOPE LIMIT: Answer only the specific STUDENT QUESTION asked. Do not add unrelated context, examples, background, commentary, or follow-up explanation unless the question explicitly asks for it.\n"
-                "7. STOP RULE: Once the question has been directly and sufficiently answered, stop immediately and do not add any additional sentences.\n"
-                "8. CONCISENESS: Prefer the shortest complete answer that fully answers the question.\n"
+                "Follow this decision order exactly and stop at the first matching case:\n\n"
 
-                "### COMMUNICATION STYLE\n"
-                "- When applying rule 2 (NO ANSWER RULE), IGNORE all style guidance and follow the exact output requirement strictly.\n"
-                "- When answering normally, be natural, human-like, and direct, and concise.\n"
-                "- Do not include extra explanation beyond what is needed to answer the question.\n"
-                "- CLEAN OUTPUT: NEVER mention file names, page numbers, 'chunks', 'metadata', or 'retrieved materials'.\n"
-                "- ANONYMITY: Do not say 'According to the document...' or 'Based on my search...'. Simply state the facts.\n"
+                "A) If COURSE METADATA directly answers the question, answer from metadata only.\n"
+                "   Do not add any disclaimer.\n\n"
 
-                "### INTERNAL VERIFICATION\n"
-                "Before outputting, verify: Is every claim supported by the context? Are there any source references or chunk IDs? If yes, remove them and rewrite to be clean and natural."
+                "B) Otherwise, if RETRIEVED COURSE MATERIAL contains any information that is topically relevant to the question,\n"
+                "   answer using only that material.\n"
+                "   - Topically relevant means it discusses the same topic, even if only partially.\n"
+                "   - You may restate, summarize, combine, or make a small direct inference from the material.\n"
+                "   - Do not add any disclaimer.\n"
+                "   - Do not use outside knowledge.\n\n"
+
+                "C) Otherwise, if the question asks for a course-specific fact that is missing from both metadata and retrieved material\n"
+                "   (for example: due date, exam room, grading rule, office hours, textbook, policy, logistics), respond with exactly:\n"
+                "   This information is not available in the specific course material.\n\n"
+
+                "D) Otherwise, if the question is general or conceptual and neither metadata nor retrieved material contains relevant information,\n"
+                "   begin with exactly:\n"
+                "   This is based on general knowledge, not specific course material.\n"
+                "   Then answer using general knowledge.\n\n"
+
+                "Important rules:\n"
+                "- If retrieved material is topically relevant at all, use B, not D.\n"
+                "- Do not say information is unavailable if metadata or retrieved material supports an answer.\n"
+                "- Do not add unsupported facts.\n"
+                "- Do not mention metadata, retrieved material, chunk IDs, file names, or the retrieval process.\n"
+                "- Answer only what was asked.\n"
+                "- Be concise.\n"
             )),
             SystemMessage(content=f"### STUDENT QUESTION\n{question}"),
             SystemMessage(content=f"Current Date: {current_date}"),
@@ -204,7 +204,7 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         return {
             "strategy": self.__class__.__name__,
             "answer": answer,
-            "sources": retrieved_sources if answer != NO_ANSWER_RESPONSE and retrieved_sources else [],
+            "sources": retrieved_sources,
             "chunks": [retrieved_content] if validate else None
         }
 
