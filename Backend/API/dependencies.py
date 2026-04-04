@@ -67,7 +67,7 @@ def get_chroma_client() -> Client:
         return HttpClient(host=os.environ["CHROMA_HOST"], port=int(os.environ["CHROMA_PORT"]))
 
     elif client_type == "persistent":
-        return PersistentClient(path=["CHROMA_DATA_PATH"])
+        return PersistentClient(path=os.environ["CHROMA_DATA_PATH"])
 
     else:
         raise ValueError(f"Invalid CHROMA_CLIENT type: {client_type}. Expected 'persistent' or 'http'.")
