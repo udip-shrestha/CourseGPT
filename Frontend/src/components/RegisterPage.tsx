@@ -1,54 +1,89 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import {
+    Card,
+    CardContent,
+    CardDescription,
+    CardHeader,
+    CardTitle
+} from "../components/ui/card";
+import {
+    Eye,
+    EyeOff,
+    CheckCircle2,
+    Circle
+} from "lucide-react";
 // --- 1. Import the ApiClient hook ---
 import { useApiClient } from "../clients/ApiClientContext";
 
-// Renamed component for clarity
 export function RegisterPage() {
     const navigate = useNavigate();
-    // --- 2. Initialize the ApiClient ---
     const { authClient } = useApiClient();
 
-    // --- 3. Add state for all required fields ---
+    // Form State
     const [name, setName] = useState("");
     const [title, setTitle] = useState("");
     const [university, setUniversity] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
-    // --- End state ---
 
+    // UI State
+    const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
-    // --- 4. Replace the entire handleSubmit function ---
+    // --- PASSWORD STRENGTH LOGIC ---
+    // Enforcing security requirements to prevent weak passwords
+    const passwordRequirements = useMemo(() => [
+        { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+        { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
+        { label: "At least one lowercase letter", test: (p: string) => /[a-z]/.test(p) },
+        { label: "At least one number", test: (p: string) => /[0-9]/.test(p) },
+        { label: "At least one special character", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
+    ], []);
+
+    const strengthScore = useMemo(() => {
+        if (!password) return 0;
+        return passwordRequirements.filter(req => req.test(password)).length;
+    }, [password, passwordRequirements]);
+
+    const strengthColor = useMemo(() => {
+        if (strengthScore <= 2) return "bg-destructive";
+        if (strengthScore <= 4) return "bg-yellow-500";
+        return "bg-emerald-500";
+    }, [strengthScore]);
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        // --- Basic Validation ---
+        // 1. Basic Validation
         if (!name || !title || !university || !email || !password || !confirmPassword) {
             setError("Please fill out all fields.");
             setIsLoading(false);
             return;
         }
+
+        // 2. Security Strength Check (Enforcing minimum 3/5 requirements)
+        if (strengthScore < 3) {
+            setError("Your password is too weak. Please meet at least 3 security requirements.");
+            setIsLoading(false);
+            return;
+        }
+
+        // 3. Password Match Check
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
             setIsLoading(false);
             return;
         }
-        // --- End Validation ---
 
-        console.log("Submitting new instructor registration...");
-
-        // --- ACTUAL API CALL using ApiClient ---
         try {
-            // ApiClient.register handles the form-urlencoded part
             const { data, errorMessage } = await authClient.register(
                 name,
                 title,
@@ -58,33 +93,21 @@ export function RegisterPage() {
             );
 
             if (errorMessage) {
-                // If the backend sends an error, display it
                 throw new Error(errorMessage);
             }
 
-            // ApiClient.register automatically sets the token and instructor ID
             console.log('Instructor registration successful:', data.instructor_id);
-
-            // Navigate to login after successful registration
             navigate('/login');
 
         } catch (err: any) {
-            console.error("Instructor registration failed:", err);
-            if (err instanceof TypeError && err.message === "Failed to fetch") {
-                setError("Could not connect to the server. Please ensure it's running.");
-            } else {
-                setError(err.message || "An unexpected error occurred.");
-            }
+            setError(err.message || "An unexpected error occurred.");
         } finally {
             setIsLoading(false);
         }
-        // --- End of API call section ---
     };
 
     return (
-        // Centering container
         <div className="w-full flex items-center justify-center p-4">
-            {/* Responsive Card */}
             <Card className="w-full max-w-md shadow-md">
                 <CardHeader>
                     <CardTitle>Register as Instructor</CardTitle>
@@ -141,33 +164,66 @@ export function RegisterPage() {
                             />
                         </div>
 
-                        {/* --- 5. Add Password and Confirm Password fields --- */}
+                        {/* Password Section with Strength Meter */}
                         <div className="grid gap-2">
-                            <Label htmlFor="password">Password</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="password">Password</Label>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                                >
+                                    {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                                    {showPassword ? "Hide" : "Show"}
+                                </button>
+                            </div>
                             <Input
                                 id="password"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 placeholder="********"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 required
                             />
+
+                            {/* Strength Indicator Overlay */}
+                            {password.length > 0 && (
+                                <div className="mt-1 space-y-2 animate-in fade-in duration-200">
+                                    <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
+                                        <div
+                                            className={`h-full ${strengthColor} transition-all duration-300`}
+                                            style={{ width: `${(strengthScore / 5) * 100}%` }}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 gap-1">
+                                        {passwordRequirements.map((req, idx) => {
+                                            const met = req.test(password);
+                                            return (
+                                                <div key={idx} className={`flex items-center gap-2 text-[10px] uppercase font-bold transition-colors ${met ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                                                    {met ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Circle className="h-2.5 w-2.5 opacity-20" />}
+                                                    {req.label}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            )}
                         </div>
+
                         <div className="grid gap-2">
                             <Label htmlFor="confirmPassword">Confirm Password</Label>
                             <Input
                                 id="confirmPassword"
-                                type="password"
+                                type={showPassword ? "text" : "password"}
                                 placeholder="********"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
                             />
                         </div>
-                        {/* --- End of added fields --- */}
 
                         {/* Error Message */}
-                        {error && <p className="text-sm text-destructive">{error}</p>}
+                        {error && <p className="text-sm text-destructive font-medium">{error}</p>}
 
                         {/* Submit Button */}
                         <Button type="submit" className="w-full" disabled={isLoading}>
@@ -178,10 +234,10 @@ export function RegisterPage() {
                         <Button
                             type="button"
                             variant="link"
-                            className="w-full text-sm"
+                            className="w-full text-sm font-bold uppercase tracking-widest text-muted-foreground"
                             onClick={() => navigate('/login')}
                         >
-                            Already registered? Sign In
+                            Already registered? <span className="text-primary ml-1.5 underline">Sign In</span>
                         </Button>
                     </form>
                 </CardContent>
@@ -189,4 +245,3 @@ export function RegisterPage() {
         </div>
     );
 }
-
