@@ -14,10 +14,10 @@ import {
     Eye,
     EyeOff,
     CheckCircle2,
-    Circle
+    Circle,
+    AlertCircle
 } from "lucide-react";
-// --- 1. Import the ApiClient hook ---
-import { useApiClient } from "../clients/ApiClientContext";
+import { useApiClient } from "../clients/ApiClientContext.tsx";
 
 export function RegisterPage() {
     const navigate = useNavigate();
@@ -37,7 +37,6 @@ export function RegisterPage() {
     const [error, setError] = useState<string | null>(null);
 
     // --- PASSWORD STRENGTH LOGIC ---
-    // Enforcing security requirements to prevent weak passwords
     const passwordRequirements = useMemo(() => [
         { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
         { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
@@ -57,26 +56,35 @@ export function RegisterPage() {
         return "bg-emerald-500";
     }, [strengthScore]);
 
+    const strengthLabel = useMemo(() => {
+        if (strengthScore <= 1) return "Very Weak";
+        if (strengthScore === 2) return "Weak";
+        if (strengthScore === 3) return "Medium";
+        if (strengthScore === 4) return "Strong";
+        return "Very Strong";
+    }, [strengthScore]);
+
+    // --- REAL-TIME MATCH CHECK ---
+    const isMatching = confirmPassword.length > 0 && password === confirmPassword;
+    const showMatchError = confirmPassword.length > 0 && password !== confirmPassword;
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsLoading(true);
         setError(null);
 
-        // 1. Basic Validation
         if (!name || !title || !university || !email || !password || !confirmPassword) {
             setError("Please fill out all fields.");
             setIsLoading(false);
             return;
         }
 
-        // 2. Security Strength Check (Enforcing minimum 3/5 requirements)
         if (strengthScore < 3) {
             setError("Your password is too weak. Please meet at least 3 security requirements.");
             setIsLoading(false);
             return;
         }
 
-        // 3. Password Match Check
         if (password !== confirmPassword) {
             setError("Passwords do not match.");
             setIsLoading(false);
@@ -96,9 +104,7 @@ export function RegisterPage() {
                 throw new Error(errorMessage);
             }
 
-            console.log('Instructor registration successful:', data.instructor_id);
             navigate('/login');
-
         } catch (err: any) {
             setError(err.message || "An unexpected error occurred.");
         } finally {
@@ -115,80 +121,40 @@ export function RegisterPage() {
                 </CardHeader>
                 <CardContent>
                     <form onSubmit={handleSubmit} className="grid gap-4">
-                        {/* Name */}
                         <div className="grid gap-2">
                             <Label htmlFor="name">Full Name</Label>
-                            <Input
-                                id="name"
-                                type="text"
-                                placeholder="e.g., Dr. Ada Lovelace"
-                                value={name}
-                                onChange={(e) => setName(e.target.value)}
-                                required
-                            />
+                            <Input id="name" placeholder="Dr. Jordan Smith" value={name} onChange={(e) => setName(e.target.value)} required />
                         </div>
-                        {/* Title Field */}
                         <div className="grid gap-2">
                             <Label htmlFor="title">Title</Label>
-                            <Input
-                                id="title"
-                                type="text"
-                                placeholder="e.g., Associate Professor"
-                                value={title}
-                                onChange={(e) => setTitle(e.target.value)}
-                                required
-                            />
+                            <Input id="title" placeholder="Associate Professor" value={title} onChange={(e) => setTitle(e.target.value)} required />
                         </div>
-                        {/* University Field */}
                         <div className="grid gap-2">
                             <Label htmlFor="university">University</Label>
-                            <Input
-                                id="university"
-                                type="text"
-                                placeholder="e.g., Tech University"
-                                value={university}
-                                onChange={(e) => setUniversity(e.target.value)}
-                                required
-                            />
+                            <Input id="university" placeholder="State University" value={university} onChange={(e) => setUniversity(e.target.value)} required />
                         </div>
-                        {/* Email */}
                         <div className="grid gap-2">
                             <Label htmlFor="email">Email</Label>
-                            <Input
-                                id="email"
-                                type="email"
-                                placeholder="ada@example.com"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                            />
+                            <Input id="email" type="email" placeholder="j.smith@university.edu" value={email} onChange={(e) => setEmail(e.target.value)} required />
                         </div>
 
-                        {/* Password Section with Strength Meter */}
+                        {/* Password Section */}
                         <div className="grid gap-2">
                             <div className="flex items-center justify-between">
                                 <Label htmlFor="password">Password</Label>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
-                                >
+                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1">
                                     {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
                                     {showPassword ? "Hide" : "Show"}
                                 </button>
                             </div>
-                            <Input
-                                id="password"
-                                type={showPassword ? "text" : "password"}
-                                placeholder="********"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                required
-                            />
+                            <Input id="password" type={showPassword ? "text" : "password"} placeholder="********" value={password} onChange={(e) => setPassword(e.target.value)} required />
 
-                            {/* Strength Indicator Overlay */}
                             {password.length > 0 && (
-                                <div className="mt-1 space-y-2 animate-in fade-in duration-200">
+                                <div className="mt-1 space-y-2">
+                                    <div className="flex justify-between items-center text-[10px] uppercase font-bold tracking-wider">
+                                        <span className="text-muted-foreground">Strength: {strengthLabel}</span>
+                                        <span className={strengthScore >= 3 ? "text-emerald-600" : "text-muted-foreground"}>{strengthScore}/5</span>
+                                    </div>
                                     <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
                                         <div
                                             className={`h-full ${strengthColor} transition-all duration-300`}
@@ -196,22 +162,32 @@ export function RegisterPage() {
                                         />
                                     </div>
                                     <div className="grid grid-cols-1 gap-1">
-                                        {passwordRequirements.map((req, idx) => {
-                                            const met = req.test(password);
-                                            return (
-                                                <div key={idx} className={`flex items-center gap-2 text-[10px] uppercase font-bold transition-colors ${met ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                                                    {met ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Circle className="h-2.5 w-2.5 opacity-20" />}
-                                                    {req.label}
-                                                </div>
-                                            );
-                                        })}
+                                        {passwordRequirements.map((req, idx) => (
+                                            <div key={idx} className={`flex items-center gap-2 text-[10px] uppercase font-bold ${req.test(password) ? 'text-emerald-600' : 'text-muted-foreground'}`}>
+                                                {req.test(password) ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Circle className="h-2.5 w-2.5 opacity-20" />}
+                                                {req.label}
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             )}
                         </div>
 
+                        {/* Confirm Password Section with Real-time feedback */}
                         <div className="grid gap-2">
-                            <Label htmlFor="confirmPassword">Confirm Password</Label>
+                            <div className="flex items-center justify-between">
+                                <Label htmlFor="confirmPassword">Confirm Password</Label>
+                                {isMatching && (
+                                    <span className="text-[10px] font-bold text-emerald-600 flex items-center gap-1 uppercase tracking-wider animate-in fade-in slide-in-from-right-1">
+                                        <CheckCircle2 className="h-2.5 w-2.5" /> Matches
+                                    </span>
+                                )}
+                                {showMatchError && (
+                                    <span className="text-[10px] font-bold text-destructive flex items-center gap-1 uppercase tracking-wider animate-in fade-in slide-in-from-right-1">
+                                        <AlertCircle className="h-2.5 w-2.5" /> No Match
+                                    </span>
+                                )}
+                            </div>
                             <Input
                                 id="confirmPassword"
                                 type={showPassword ? "text" : "password"}
@@ -219,26 +195,25 @@ export function RegisterPage() {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                                 required
+                                className={showMatchError ? "border-destructive ring-destructive/20 focus-visible:ring-destructive" : ""}
                             />
                         </div>
 
-                        {/* Error Message */}
                         {error && <p className="text-sm text-destructive font-medium">{error}</p>}
 
-                        {/* Submit Button */}
                         <Button type="submit" className="w-full" disabled={isLoading}>
                             {isLoading ? "Registering..." : "Create Account"}
                         </Button>
 
-                        {/* Link back to Login */}
-                        <Button
-                            type="button"
-                            variant="link"
-                            className="w-full text-sm font-bold uppercase tracking-widest text-muted-foreground"
-                            onClick={() => navigate('/login')}
-                        >
-                            Already registered? <span className="text-primary ml-1.5 underline">Sign In</span>
-                        </Button>
+                        <div className="text-center pt-2">
+                            <button
+                                type="button"
+                                className="text-sm font-bold text-muted-foreground hover:text-primary transition-colors uppercase tracking-widest underline underline-offset-4"
+                                onClick={() => navigate('/login')}
+                            >
+                                Already registered?
+                            </button>
+                        </div>
                     </form>
                 </CardContent>
             </Card>
