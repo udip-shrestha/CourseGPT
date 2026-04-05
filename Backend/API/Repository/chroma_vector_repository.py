@@ -101,14 +101,31 @@ class ChromaVectorRepository(IVectorRepository):
             if dist < distance_cutoff
         ]
 
+        if not hits:
+            return []
 
-        hits.extend(self._query_neighbors(collection,  hits))
-        hits.sort(key=lambda item: (
-            item[0].rsplit("_", 1)[0],                                         # doc_id
-            int(item[0].rsplit("_", 1)[1]) if item[0].rsplit("_", 1)[1].isdigit() else 0  # chunk index
-        ))
+        # Preserve Chroma's relevance order for primary hits, then place adjacent
+        # neighbors next to each matched chunk so the model gets local context
+        # without losing the original ranking signal.
+        neighbor_map = {chunk_id: doc for chunk_id, doc in self._query_neighbors(collection, hits)}
+        ordered_hits: List[Tuple[str, Document]] = []
+        seen_ids: set[str] = set()
 
-        return hits
+        for chunk_id, doc in hits:
+            if chunk_id not in seen_ids:
+                ordered_hits.append((chunk_id, doc))
+                seen_ids.add(chunk_id)
+
+            parts = chunk_id.rsplit("_", 1)
+            if len(parts) == 2 and parts[1].isdigit():
+                doc_id, idx = parts[0], int(parts[1])
+                for neighbor_id in (f"{doc_id}_{idx - 1}", f"{doc_id}_{idx + 1}"):
+                    neighbor_doc = neighbor_map.get(neighbor_id)
+                    if neighbor_doc and neighbor_id not in seen_ids:
+                        ordered_hits.append((neighbor_id, neighbor_doc))
+                        seen_ids.add(neighbor_id)
+
+        return ordered_hits
 
     def delete_index(self, course_id: str, document_id: str) -> None:
         """
