@@ -25,6 +25,7 @@ from API.Service.queries_service import QueryService
 from API.Service.feedback_service import FeedbackService
 from API.Service.analytics_service import AnalyticsService
 from API.Service.canvas_service import CanvasService
+from API.Service.gmail_service import GmailService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import LOADER_CLASS_REGISTRY, ILoader, LoaderFactory
@@ -277,11 +278,23 @@ def get_llm() -> BaseChatModel:
 # ============================================================
 
 
+def get_gmail_service() -> GmailService:
+    """Provide a GmailService instance configured from environment variables."""
+    return GmailService(
+        gmail_host=os.environ["GMAIL_HOST"],
+        gmail_port=int(os.environ["GMAIL_PORT"]),
+        gmail_username=os.environ["GMAIL_USERNAME"],
+        gmail_password=os.environ["GMAIL_PASSWORD"],
+        gmail_from_email=os.environ["GMAIL_FROM_EMAIL"],
+        gmail_from_name=os.environ["GMAIL_FROM_NAME"]
+    )
+
 def get_auth_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),
+    gmail_service: GmailService = Depends(get_gmail_service),
 ) -> AuthService:
     """Provide an AuthService using the SQL repository."""
-    return AuthService(sql_repo)
+    return AuthService(sql_repo, gmail_service)
 
 
 def get_course_service(
