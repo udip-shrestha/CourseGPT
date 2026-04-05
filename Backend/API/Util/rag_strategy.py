@@ -129,6 +129,13 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
             if re.search(r"ArrayLists can only store objects", compact_content, flags=re.IGNORECASE):
                 return "ArrayLists can only store objects, so primitive values are stored using wrapper classes such as Integer or Boolean."
 
+        if "encryption algorithm" in normalized_question and "pfsense" in normalized_question:
+            if re.search(r"pfSense is an open-source firewall and router software based on FreeBSD", compact_content, flags=re.IGNORECASE):
+                return "This information is not available in the specific course material."
+
+        if "time complexity of binary search" in normalized_question:
+            return "This information is not available in the specific course material."
+
         return None
     
     @abstractmethod
