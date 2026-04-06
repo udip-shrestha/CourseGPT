@@ -52,4 +52,37 @@ export class QueryClient {
         });
     }
 
+    /**
+     * Paginated Q&A history for one student in a course.
+     * GET /courses/{course_id}/students/{student_id}/queries
+     */
+    async getStudentQueries(
+        courseId: string,
+        studentId: string,
+        options?: {
+            limit?: number;
+            offset?: number;
+            orderBy?: string;
+            orderDir?: "asc" | "desc";
+        }
+    ) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        if (!studentId) return { errorMessage: "Student ID is required." };
+        const limit = options?.limit ?? 1000;
+        const offset = options?.offset ?? 0;
+        return this.baseClient.request<CourseQueriesResponse>(
+            "GET",
+            `/courses/${courseId}/students/${studentId}/queries`,
+            {
+                query: {
+                    limit,
+                    offset,
+                    order_by: options?.orderBy ?? "asked_at",
+                    order_dir: options?.orderDir ?? "desc",
+                },
+                operationId: `student-queries-${courseId}-${studentId}`,
+            }
+        );
+    }
+
 }

@@ -1,4 +1,5 @@
 import { APIClient } from "./ApiClient.ts";
+import type { CourseQueriesResponse } from "./QueryClient";
 
 export interface OverviewSummary {
     activeUsers?: number;
@@ -87,6 +88,22 @@ export class AnalyticsClient {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<QueryDistributionItem[]>("GET", `/instructors/${instructorId}/analytics/query-distribution`, {
             query: { days: timeRangeToDays(timeRange) }
+        });
+    }
+
+    /**
+     * Full course Q&A history (questions and answers) via GET /courses/{id}/queries/all.
+     */
+    async getAllCourseQueries(
+        courseId: string,
+        options?: { orderBy?: string; orderDir?: "asc" | "desc" }
+    ) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.client.request<CourseQueriesResponse>("GET", `/courses/${courseId}/queries/all`, {
+            query: {
+                order_by: options?.orderBy ?? "asked_at",
+                order_dir: options?.orderDir ?? "desc",
+            },
         });
     }
 
