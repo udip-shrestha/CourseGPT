@@ -1,67 +1,56 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "./ui/card";
-// --- 1. IMPORT THE API CLIENT HOOK ---
+} from "../components/ui/card";
+import {
+  Eye,
+  EyeOff
+} from "lucide-react";
 import { useApiClient } from "../clients/ApiClientContext";
-
-// --- 2. REMOVED the old 'Instructor' interface ---
-// (No longer needed)
 
 export function LoginPage() {
   const navigate = useNavigate();
-  // read optional redirect target (e.g. ?next=/register-course?canvas_course_id=...)
   const params = new URLSearchParams(window.location.search);
   const redirectTo = params.get("next");
-  // --- 3. INITIALIZE THE API CLIENT ---
   const { authClient } = useApiClient();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- 4. REPLACED 'handleSubmit' with the new version ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    // --- 5. ADDED VALIDATION (Your Suggestion) ---
-    // Check if the input looks like an email before sending
+    // Basic email format validation
     if (!email.includes("@")) {
-      setError("Please use your email address to log in, not your name.");
+      setError("Please use your email address to log in.");
       setIsLoading(false);
       return;
     }
-    // --- END OF ADDED VALIDATION ---
 
-    // This now calls the real login endpoint from ApiClient.ts
     try {
       console.log("Login attempt for:", email);
-
-      // This one line handles the API call and password check
-      // It correctly sends 'email' as the 'username' field
       const { data, errorMessage } = await authClient.login(email, password);
 
       if (errorMessage) {
-        throw new Error(errorMessage); // Throw error if login fails
+        throw new Error(errorMessage);
       }
 
-      // On success, the authClient has stored the token
-      // and returned the instructor_id
       const instructorId = data.instructor_id;
       console.log("Login successful for instructor:", instructorId);
 
-      // Navigate according to next param if provided, else instructor profile
       if (redirectTo) {
         navigate(redirectTo);
       } else {
@@ -70,79 +59,83 @@ export function LoginPage() {
     } catch (err: any) {
       console.error("Login failed:", err);
       if (err instanceof TypeError && err.message === "Failed to fetch") {
-        setError(
-          "Could not connect to the server. Please ensure it's running and check CORS settings.",
-        );
+        setError("Could not connect to the server. Please ensure it's running.");
       } else {
-        // Display the specific error from the backend (e.g., "Invalid credentials")
-        setError(
-          err.message || "Login failed. Please check your email and password.",
-        );
+        setError(err.message || "Login failed. Please check your email and password.");
       }
     } finally {
       setIsLoading(false);
     }
-    // --- End of new handleSubmit ---
   };
 
   return (
-    // The JSX (visual part) remains exactly the same
-    <div className="w-full flex items-center justify-center p-4">
-      <Card className="w-full max-w-md shadow-md">
-        <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Sign in to your CourseGPT account</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            {/* Email Input */}
-            <div className="grid gap-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="m@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                aria-invalid={!!error}
-              />
-            </div>
-            {/* Password Input */}
-            <div className="grid gap-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="********"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                aria-invalid={!!error}
-              />
-            </div>
+      <div className="w-full flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-md">
+          <CardHeader>
+            <CardTitle>Login</CardTitle>
+            <CardDescription>Sign in to your CourseGPT account</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="grid gap-4">
+              {/* Email Input */}
+              <div className="grid gap-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                    id="email"
+                    type="email"
+                    placeholder="m@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    aria-invalid={!!error}
+                />
+              </div>
 
-            {/* Error Message Display */}
-            {error && <p className="text-sm text-destructive">{error}</p>}
+              {/* Password Input */}
+              <div className="grid gap-2">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password">Password</Label>
+                  <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
+                  >
+                    {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+                <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="********"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    aria-invalid={!!error}
+                />
+              </div>
 
-            {/* Sign In Button */}
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Signing in..." : "Sign in"}
-            </Button>
+              {/* Error Message Display */}
+              {error && <p className="text-sm text-destructive font-medium">{error}</p>}
 
-            {/* Register Button */}
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full"
-              onClick={() => navigate("/register")}
-              disabled={isLoading}
-            >
-              Create New Account
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+              {/* Sign In Button */}
+              <Button type="submit" className="w-full" disabled={isLoading}>
+                {isLoading ? "Signing in..." : "Sign in"}
+              </Button>
+
+              {/* Register Button */}
+              <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={() => navigate("/register")}
+                  disabled={isLoading}
+              >
+                Create New Account
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
   );
 }
