@@ -85,13 +85,14 @@ class ChromaVectorRepository(IVectorRepository):
             for chunk_id, doc_text, meta in zip(neighbor_results["ids"], neighbor_results["documents"], neighbor_results["metadatas"],)
         ]
 
-    def query(self, course_id: str, question: str, top_k: Optional[int] = 8, distance_cutoff: Optional[float] = 1.5) -> List[Tuple[str, Document]]:
+    def query(self, course_id: str, question: str, top_k: Optional[int] = 8, distance_cutoff: Optional[float] = 1.5, file_name: list[str] | None = None) -> List[Tuple[str, Document]]:
         """
         Retrieve top-k similar chunks using a specific embedding function and collection.
         Returns a list of (Document, score) tuples — same format as LangChain's Chroma
         """
         collection = self.client.get_collection(name=course_id)
-        results = collection.query(query_texts=[question], n_results=top_k)
+        where = {"$or": [{"source": s} for s in file_name]} if file_name else None
+        results = collection.query(query_texts=[question], n_results=top_k, where=where)
 
         # Convert Chroma QueryResult → LangChain-style format
         hits = [
@@ -99,7 +100,6 @@ class ChromaVectorRepository(IVectorRepository):
             for chunk_id, doc, meta, dist in zip(results["ids"][0], results["documents"][0], results["metadatas"][0], results["distances"][0])
             if dist < distance_cutoff
         ]
-
 
         hits.extend(self._query_neighbors(collection,  hits))
         hits.sort(key=lambda item: (

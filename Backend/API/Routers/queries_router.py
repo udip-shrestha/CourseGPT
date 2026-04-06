@@ -170,6 +170,27 @@ def get_student_queries(
         order_dir=order_dir,
     )
 
+@router.get(
+    "/courses/{course_id}/queries/all",
+    status_code=status.HTTP_200_OK,
+    summary="Retrieve all queries for a course",
+    description="Returns all questions and answers for a course without pagination.",
+)
+def get_all_course_queries(
+    course_id: str = Path(...),
+    order_by: str = Query("asked_at"),
+    order_dir: str = Query("desc", pattern="^(asc|desc)$"),
+    _course: dict = Depends(validate_course),
+    service: QueryService = Depends(get_query_service),
+):
+    return service.get_course_queries(
+        course_id=course_id,
+        limit=1000,   #a high cap
+        offset=0,
+        order_by=order_by,
+        order_dir=order_dir,
+    )
+
 
 @router.get(
     "/courses/{course_id}/queries/{query_id}",
@@ -196,7 +217,6 @@ def read_query(
 ):
     """Fetch one stored question/answer by ID."""
     return service.get_query(course_id, query_id)
-
 
 @router.delete(
     "/courses/{course_id}/queries/{query_id}",

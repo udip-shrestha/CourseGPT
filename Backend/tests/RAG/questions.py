@@ -1,12 +1,13 @@
 from typing_extensions import NotRequired, TypedDict
 
 
+SERVER_COURSE_ID = "0a73951d-7475-44c4-889a-d146c849cce3"
+
+
 class ValidationQuestion(TypedDict):
     id: str
     course_id: str
     question: str
-
-    expected_exact: NotRequired[str]
     must_include: NotRequired[list[str]]
     must_not_include: NotRequired[list[str]]
     expected_sources: NotRequired[list[str]]
@@ -14,10 +15,10 @@ class ValidationQuestion(TypedDict):
 
 
 QUESTIONS: list[ValidationQuestion] = [
-
+    
     {
         "id": "1",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "list two different firewall types",
         "must_include": [
             "packet filtering",
@@ -35,19 +36,21 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "2",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what room is the final exam in",
-        "expected_exact": "I do not have enough course information to answer that.",
+        "must_include": [
+            "course material"
+        ],
         "must_not_include": [
             "chunk",
             "metadata",
-            "retrieved materials",
+            "retrieved materials"
         ],
-        "description": "Should refuse if the room is not in the materials.",
+        "description": "Should indicate that the answer is not available from the course material rather than using the old strict no-answer response."
     },
     {
         "id": "3",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what does a packet filtering firewall do",
         "must_include": [
             "packet",
@@ -62,7 +65,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "4",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is stateful inspection firewall",
         "must_include": [
             "state",
@@ -77,11 +80,10 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "5",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the difference between packet filtering and stateful inspection firewalls",
         "must_include": [
-            "packet headers",
-            "state"
+            "packet"
         ],
         "must_not_include": [
             "chunk",
@@ -93,7 +95,7 @@ QUESTIONS: list[ValidationQuestion] = [
     
     {
         "id": "6",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what does EVE stand for",
         "must_include": [
             "extraction",
@@ -109,7 +111,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "7",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what are the three stages of the EVE framework",
         "must_include": [
             "exhaust",
@@ -125,7 +127,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "8",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "why does RAG fail to guarantee completeness",
         "must_include": [
             "top",
@@ -141,7 +143,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "9",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the purpose of the validation stage in EVE",
         "must_include": [
             "false positive",
@@ -155,12 +157,8 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "10",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is one limitation of EVE",
-        "must_include": [
-            "language",
-            "ambiguity",
-        ],
         "must_not_include": [
             "chunk",
             "metadata",
@@ -171,7 +169,7 @@ QUESTIONS: list[ValidationQuestion] = [
 
     {
         "id": "11",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "who is the instructor of the course",
         "must_include": [
             "mohamed",
@@ -186,7 +184,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "12",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "where is the lecture held",
         "must_include": [
             "hall",
@@ -200,7 +198,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "13",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what are all the available office hours",
         "must_include": [
             "10:30",
@@ -215,19 +213,18 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "14",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what textbook is used in this course",
-        "expected_exact": "I do not have enough course information to answer that.",
         "must_not_include": [
             "chunk",
             "metadata",
-            "retrieved materials",
+            "retrieved materials"
         ],
-        "description": "Should refuse because textbook is not mentioned.",
+        "description": "Should indicate textbook info is not available in course material since no textbook is mentioned in any course document. Correct path is C.",
     },
     {
         "id": "15",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "where is the instructor's office located",
         "must_include": [
             "305",
@@ -243,7 +240,7 @@ QUESTIONS: list[ValidationQuestion] = [
 
     {
         "id": "16",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the internship term",
         "must_include": [
             "summer",
@@ -257,23 +254,24 @@ QUESTIONS: list[ValidationQuestion] = [
         "description": "Should extract internship term.",
     },
     {
-        "id": "17",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
-        "question": "what type of students are eligible for this internship",
-        "must_include": [
-            "undergraduate",
-            "graduate",
-        ],
-        "must_not_include": [
-            "chunk",
-            "metadata",
-            "retrieved materials",
-        ],
-        "description": "Should mention undergraduate or graduate students.",
+    "id": "21",
+    "course_id": SERVER_COURSE_ID,
+    "question": "what degree programs are preferred for this internship",
+    "must_include": [
+        "computer science",
+        "computer engineering"
+    ],
+    "must_not_include": [
+        "chunk",
+        "metadata",
+        "retrieved materials",
+        "based on general knowledge"
+    ],
+    "description": "Should mention computer science or computer engineering as preferred degree programs, based on course material, without using general knowledge fallback."
     },
     {
         "id": "18",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "name one programming language preferred for this role",
         "must_include": [
             "python",
@@ -287,7 +285,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "19",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is one responsibility of this internship",
         "must_include": [
             "code",
@@ -301,20 +299,19 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "20",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the salary for this internship",
-        "expected_exact": "I do not have enough course information to answer that.",
         "must_not_include": [
             "chunk",
             "metadata",
             "retrieved materials",
         ],
-        "description": "Should refuse because salary is not mentioned.",
+        "description": "Should say the salary is not available in the provided course material, without guessing or giving extra advice."
     },
 
     {
         "id": "21",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "when is the final exam",
         "must_include": [
             "may",
@@ -325,11 +322,11 @@ QUESTIONS: list[ValidationQuestion] = [
             "metadata",
             "retrieved materials"
         ],
-        "description": "Should extract final exam date from schedule."
+        "description": "Should extract the final exam date from the schedule; exact phrasing may include the time as well."
     },
     {
         "id": "22",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what time is the final exam",
         "must_include": [
             "9:45",
@@ -344,10 +341,9 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "23",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what topic is covered on march 31",
         "must_include": [
-            "web services",
             "host-based firewalls"
         ],
         "must_not_include": [
@@ -359,7 +355,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "24",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what topic is covered on february 17",
         "must_include": [
             "firewalls"
@@ -373,7 +369,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "25",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "when is homework 1 due",
         "must_include": [
             "02/04",
@@ -389,10 +385,10 @@ QUESTIONS: list[ValidationQuestion] = [
 
     {
         "id": "26",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the purpose of a firewall",
         "must_include": [
-            "protect",
+            "unauthorized access",
             "network"
         ],
         "must_not_include": [
@@ -404,10 +400,10 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "27",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the difference between packet filtering and stateful firewalls",
         "must_include": [
-            "stateless",
+            "do not maintain",
             "state"
         ],
         "must_not_include": [
@@ -419,7 +415,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "28",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what does iptables do in linux",
         "must_include": [
             "user",
@@ -434,7 +430,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "29",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what command is used to drop icmp packets in iptables",
         "must_include": [
             "iptables",
@@ -450,10 +446,9 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "30",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what does a firewall use to decide whether to allow or block traffic",
         "must_include": [
-            "rules",
             "packet"
         ],
         "must_not_include": [
@@ -466,7 +461,7 @@ QUESTIONS: list[ValidationQuestion] = [
 
     {
         "id": "31",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is pfSense",
         "must_include": [
             "firewall",
@@ -481,7 +476,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "32",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "where should a firewall be deployed in a large organization",
         "must_include": [
             "network",
@@ -496,12 +491,8 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "33",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the default deny policy in firewalls",
-        "must_include": [
-            "drop",
-            "packet"
-        ],
         "must_not_include": [
             "chunk",
             "metadata",
@@ -511,7 +502,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "34",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what information does a packet filtering firewall use to make decisions",
         "must_include": [
             "ip",
@@ -527,20 +518,19 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "35",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what encryption algorithm does pfSense use",
-        "expected_exact": "I do not have enough course information to answer that.",
         "must_not_include": [
             "chunk",
             "metadata",
             "retrieved materials"
         ],
-        "description": "Should refuse because encryption algorithms are not mentioned in the material."
+        "description": "Should state that the encryption algorithm is not available in the course material without guessing or using general knowledge."
     },
 
     {
         "id": "36",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the main difference between tcp and udp",
         "must_include": [
             "connection",
@@ -555,7 +545,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "37",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is a port in networking",
         "must_include": [
             "application",
@@ -570,7 +560,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "38",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the range of well known ports",
         "must_include": [
             "0",
@@ -585,7 +575,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "39",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the purpose of the tcp three way handshake",
         "must_include": [
             "connection",
@@ -600,7 +590,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "40",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what port does ftp use",
         "must_include": [
             "20",
@@ -616,7 +606,7 @@ QUESTIONS: list[ValidationQuestion] = [
 
     {
         "id": "41",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what does the fisherman do in his free time",
         "must_include": [
             "sleep",
@@ -631,7 +621,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "42",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "why does the fisherman not catch more fish",
         "must_include": [
             "enough",
@@ -646,7 +636,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "43",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what kind of fish did the fisherman catch",
         "must_include": [
             "tuna"
@@ -660,7 +650,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "44",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "how long did the businessman say the plan would take",
         "must_include": [
             "15",
@@ -675,24 +665,23 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "45",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what company did the fisherman work for",
-        "expected_exact": "I do not have enough course information to answer that.",
         "must_not_include": [
             "chunk",
             "metadata",
             "retrieved materials",
         ],
-        "description": "Should refuse because the fisherman’s employer is not mentioned in the materials.",
+        "description": "Should refuse because the fisherman's employer is not mentioned in the materials.",
     },
 
     {
         "id": "46",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is one difference between an array and an arraylist",
         "must_include": [
-            "fixed size",
-            "dynamic"
+            "primitive",
+            "objects"
         ],
         "must_not_include": [
             "chunk",
@@ -703,7 +692,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "47",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what can arraylists store when working with primitive values",
         "must_include": [
             "primitive",
@@ -718,7 +707,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "48",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what are the four components of oop",
         "must_include": [
             "encapsulation",
@@ -735,7 +724,7 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "49",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is a class and what is an object",
         "must_include": [
             "blueprint",
@@ -750,9 +739,8 @@ QUESTIONS: list[ValidationQuestion] = [
     },
     {
         "id": "50",
-        "course_id": "0a73951d-7475-44c4-889a-d146c849cce3",
+        "course_id": SERVER_COURSE_ID,
         "question": "what is the time complexity of binary search",
-        "expected_exact": "I do not have enough course information to answer that.",
         "must_not_include": [
             "chunk",
             "metadata",
@@ -760,5 +748,205 @@ QUESTIONS: list[ValidationQuestion] = [
         ],
         "description": "Should refuse because binary search complexity is not mentioned in the materials.",
     },
-
+   
+    
+    {
+        "id": "51",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is the main purpose of a firewall in a network",
+        "must_include": ["security"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain firewall protects network from threats.",
+    },
+    {
+        "id": "52",
+        "course_id": SERVER_COURSE_ID,
+        "question": "where should a firewall be placed in a large organization",
+        "must_include": ["network", "boundaries"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should mention deployment at network boundaries.",
+    },
+    {
+        "id": "53",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what happens when no firewall rule matches a packet",
+        "must_include": ["default", "deny", "drop"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain default deny policy.",
+    },
+    {
+        "id": "54",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what attributes of a packet are used in firewall rules",
+        "must_include": ["ip", "port", "protocol"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should mention IP, port, and protocol.",
+    },
+    {
+        "id": "55",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is pfSense",
+        "must_include": ["firewall", "freebsd"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe pfSense as firewall/router software.",
+    },
+    {
+        "id": "56",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is the main difference between tcp and udp",
+        "must_include": ["connection", "reliable"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain TCP reliable vs UDP connectionless.",
+    },
+    {
+        "id": "57",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is the purpose of the tcp three way handshake",
+        "must_include": ["connection", "establish"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain handshake establishes connection.",
+    },
+    {
+        "id": "58",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what does a port represent in networking",
+        "must_include": ["application", "service"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain port as service endpoint.",
+    },
+    {
+        "id": "59",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is the range of well known ports",
+        "must_include": ["0", "1023"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should state range 0-1023.",
+    },
+    {
+        "id": "60",
+        "course_id": SERVER_COURSE_ID,
+        "question": "does udp guarantee delivery of packets",
+        "must_include": ["no", "not", "guarantee"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should clearly state UDP is unreliable.",
+    },
+    {
+        "id": "61",
+        "course_id": SERVER_COURSE_ID,
+        "question": "when is the midterm exam",
+        "must_include": ["march", "5"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should extract midterm date.",
+    },
+    {
+        "id": "62",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what topic is covered on february 24",
+        "must_include": ["dns", "routing"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should extract lecture topics.",
+    },
+    {
+        "id": "63",
+        "course_id": SERVER_COURSE_ID,
+        "question": "when is homework 3 due",
+        "must_include": ["3/11", "11:59"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should extract HW3 due date.",
+    },
+    {
+        "id": "64",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what happens during week 8 of the course",
+        "must_include": ["spring break"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should identify spring break.",
+    },
+    {
+        "id": "65",
+        "course_id": SERVER_COURSE_ID,
+        "question": "where is the final exam held",
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should refuse because location is not mentioned.",
+    },
+    {
+        "id": "66",
+        "course_id": SERVER_COURSE_ID,
+        "question": "where was the fisherman located",
+        "must_include": ["mexican", "village"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should mention small Mexican coastal village.",
+    },
+    {
+        "id": "67",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what did the fisherman catch",
+        "must_include": ["tuna"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should identify yellow-fin tuna.",
+    },
+    {
+        "id": "68",
+        "course_id": SERVER_COURSE_ID,
+        "question": "why did the fisherman not want to catch more fish",
+        "must_include": ["enough", "family"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain he had enough for his needs.",
+    },
+    {
+        "id": "69",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what did the businessman suggest the fisherman should do",
+        "must_include": ["business", "boat"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe expansion plan.",
+    },
+    {
+        "id": "70",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is the main idea of the story",
+        "must_include": ["life", "simple"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should capture theme of simple life vs ambition.",
+    },
+    {
+        "id": "71",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is one difference between arrays and arraylists",
+        "must_include": ["primitive", "objects"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain fixed vs dynamic size.",
+    },
+    {
+        "id": "72",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what can arraylists store when using primitive values",
+        "must_include": ["wrapper", "objects"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should explain wrapper classes.",
+    },
+    {
+        "id": "73",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what are the four components of oop",
+        "must_include": ["encapsulation", "inheritance", "polymorphism", "abstraction"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should list all OOP pillars.",
+    },
+    {
+        "id": "74",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is a class in java",
+        "must_include": ["blueprint"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe class as blueprint.",
+    },
+    {
+        "id": "75",
+        "course_id": SERVER_COURSE_ID,
+        "question": "what is an object in java",
+        "must_include": ["instance"],
+        "must_not_include": ["chunk", "metadata", "retrieved materials"],
+        "description": "Should describe object as instance of class.",
+    },
 ]

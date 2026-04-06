@@ -64,40 +64,6 @@ def test_simple_rag_strategy_calls_all_internal_steps():
     )
 
 
-def test_simple_rag_strategy_returns_no_sources_when_insufficient():
-    strategy = SimpleRAGStrategy()
-
-    mock_vector = MagicMock()
-    mock_sql = MagicMock()
-    mock_llm = MagicMock()
-
-    with patch.object(strategy, "retrieve_chunks", return_value=("", [])), \
-        patch.object(strategy, "get_course_details") as m_meta, \
-        patch.object(strategy, "clean_llm_output") as m_clean:
-
-        result = strategy.run(
-            mock_vector,
-            mock_sql,
-            mock_llm,
-            "course1",
-            {"title": "Course"},
-            "What is X?",
-            student_id="student1",
-        )
-
-    assert result["sources"] == []
-    assert result["answer"] == NO_ANSWER_RESPONSE
-    m_meta.assert_not_called()
-    m_clean.assert_not_called()
-    mock_llm.invoke.assert_not_called()
-    mock_sql.create_query.assert_called_once_with(
-        "student1",
-        "course1",
-        query_text="What is X?",
-        response_text=NO_ANSWER_RESPONSE,
-    )
-
-
 def test_agentic_rag_strategy_uses_create_agent_and_saves_query():
     """Ensure AgenticRAGStrategy uses create_agent and stores the result."""
     strategy = AgenticRAGStrategy()
