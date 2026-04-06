@@ -24,14 +24,23 @@ def save_json(file_path: str, content: dict) -> None:
         json.dump(content, file, indent=2)
 
 
+def get_api_base_url() -> str:
+    explicit_base_url = os.environ.get("API_BASE_URL")
+    if explicit_base_url:
+        return explicit_base_url.rstrip("/")
+
+    host = os.environ.get("API_HOST", "127.0.0.1")
+    port = os.environ.get("API_PORT", "8000")
+    return f"http://{host}:{port}"
+
+
 
 
 
 def call_query_endpoint(course_id: str, question: str) -> tuple[int, dict[str, Any]]:
-    BASE_URL = f"http://{os.environ['API_HOST']}:{os.environ['API_PORT']}"
-
     TIMEOUT_SECONDS = 60
-    url = f"{BASE_URL}/courses/{course_id}/queries"
+    base_url = get_api_base_url()
+    url = f"{base_url}/courses/{course_id}/queries"
     params = {
         "question": question,
         "validate": "true",
