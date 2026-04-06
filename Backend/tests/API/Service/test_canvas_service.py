@@ -22,18 +22,18 @@ def test_get_course_by_canvas_id_not_found(course_service: CourseService, mock_s
 
 
 def test_link_canvas_course_success(course_service: CourseService, mock_sql_repo: ISQLRepository):
-    mock_sql_repo.get_course_by_name.return_value = {"id": "c2"}
+    mock_sql_repo.read_course.return_value = {"id": "c2"}
     mock_sql_repo.update_course.return_value = {"id": "c2"}
-    result = course_service.link_canvas_course("CS101", "canvas-123")
-    mock_sql_repo.get_course_by_name.assert_called_once_with("CS101")
-    mock_sql_repo.update_course.assert_called_once_with("c2", {"canvas_course_id": "canvas-123"})
+    result = course_service.link_canvas_course("c2", "canvas-ctx-456", "canvas-123")
+    mock_sql_repo.read_course.assert_called_once_with("c2")
+    mock_sql_repo.update_course.assert_called_once_with("c2", {"canvas_course_id": "canvas-123", "canvas_context_id": "canvas-ctx-456"})
     assert result == {"course_id": "c2"}
 
 
 def test_link_canvas_course_not_found(course_service: CourseService, mock_sql_repo: ISQLRepository):
-    mock_sql_repo.get_course_by_name.return_value = None
+    mock_sql_repo.read_course.return_value = None
     with pytest.raises(HTTPException) as exc_info:
-        course_service.link_canvas_course("Unknown", "canvas-abc")
+        course_service.link_canvas_course("Unknown", "canvas-abc", "canvas-ctx-789")
     assert exc_info.value.status_code == status.HTTP_404_NOT_FOUND
 
 

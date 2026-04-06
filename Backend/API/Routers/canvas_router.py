@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 from fastapi import APIRouter, Depends, HTTPException, status, Form, Request, Header, Path
 from typing import Dict, Any, List
 from urllib.parse import urlencode
@@ -11,6 +12,8 @@ from Metrics.metrics import MetricsRoute
 import os
 import jwt
 import uuid
+
+load_dotenv()
 
 router = APIRouter(tags=["Canvas LTI"], route_class=MetricsRoute)
 
@@ -90,8 +93,10 @@ async def lti_launch(
 
         canvas_user_id = decoded.get("sub")
         context = decoded.get("https://purl.imsglobal.org/spec/lti/claim/context", {})
-        canvas_course_id = context.get("id")
+        canvas_context_id = context.get("id")
         roles = decoded.get("https://purl.imsglobal.org/spec/lti/claim/roles", [])
+        custom = decoded.get("https://purl.imsglobal.org/spec/lti/claim/custom", {})
+        canvas_course_id = custom.get("canvas_course_id")
 
         base_url = os.getenv("FRONTEND_BASE_URL")
 
@@ -108,7 +113,7 @@ async def lti_launch(
             if internal_id:
                 return canvas_service.redirect_to(base_url, f"/courses/{internal_id}")
             else:
-                return canvas_service.redirect_to(base_url, f"/register-course?canvas_course_id={canvas_course_id}")
+                return canvas_service.redirect_to(base_url, f"/register-course?canvas_context_id={canvas_context_id}&canvas_course_id={canvas_course_id}")
 
         # student flows
         if not internal_id:
@@ -124,34 +129,13 @@ async def lti_launch(
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"LTI launch failed: {e}")
-
-@router.get("/canvas/files", summary="List Canvas files (ingestion helper)")
-def canvas_files(
-    authorization: str | None = Header(default=None),
-    service: CanvasService = Depends(get_canvas_service),
-) -> List[Dict[str, Any]]:
-    """Return a list of files fetched from Canvas or placeholder result.
-
-    If an Authorization header is present, it will be passed (not validated) to the fetch helper.
-    """
-    try:
-        token = None
-        if authorization:
-            if authorization.lower().startswith("bearer "):
-                token = authorization.split(" ", 1)[1]
-            else:
-                token = authorization
-        files = service.fetch_canvas_files(canvas_token=token)
-        return files
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
     
 @router.get(
-    "/courses/{course_id}/canvas/modules",
+    "/courses/{course_id}/canvas/files",
     status_code=status.HTTP_200_OK,
-    summary="Retrieve Canvas modules for a course",
+    summary="Retrieve Canvas files for a course",
 )
-async def get_canvas_modules(
+async def get_canvas_files(
     course_id: str = Path(..., description="CourseGPT course ID"),
     course_service: CourseService = Depends(get_course_service),
     service: CanvasService = Depends(get_canvas_service),
@@ -167,5 +151,5 @@ async def get_canvas_modules(
 
     canvas_token = os.getenv("CANVAS_API")
 
-    return await service.get_canvas_modules(canvas_course_id, canvas_token)
+    return await service.get_canvas_files(canvas_course_id, canvas_token)
 
