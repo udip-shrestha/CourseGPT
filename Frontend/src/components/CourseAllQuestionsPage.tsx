@@ -18,6 +18,8 @@ interface CourseAllQuestionsPageProps {
     course: { name: string; id?: string };
 }
 
+    //function to format the date and time
+
 function formatDateTimeDdMmYyyyHhMm(iso: string | undefined): string | null {
     if (!iso) return null;
     const d = new Date(iso);
