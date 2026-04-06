@@ -77,8 +77,9 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [topQuestions, setTopQuestions] = useState<TopQuestionsItem[]>([]);
     const [queryDistribution, setQueryDistribution] = useState<QueryDistributionItem[]>([]);
     const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
+    const [totalCount, setTotalCount] = useState<number | null>(null);
 
-    const { analyticsClient } = useApiClient();
+    const { analyticsClient, queryClient } = useApiClient();
     const navigate = useNavigate();
     const { courseId: routeCourseId } = useParams();
     const courseId = course.id ?? routeCourseId ?? "";
@@ -100,21 +101,29 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     useEffect(() => {
         if (!courseId) {
+            setTotalCount(null);
             setLoading(false);
             return;
         }
         let cancelled = false;
         setLoading(true);
         (async () => {
-            const [overviewSummaryRes, trendRes, topQuestionsRes, distRes, topKeywordsRes] = await Promise.all([
-                analyticsClient.getOverviewSummary(courseId, selectedTimeRange),
-                analyticsClient.getUsageTrend(courseId, selectedTimeRange),
-                analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
-                instructorId
-                    ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange)
-                    : Promise.resolve({ data: undefined, errorStatus: 404 }),
-                analyticsClient.topKeywords(courseId, 5, selectedTimeRange),
-            ]);
+            const [overviewSummaryRes, trendRes, topQuestionsRes, distRes, topKeywordsRes, courseQueriesRes] =
+                await Promise.all([
+                    analyticsClient.getOverviewSummary(courseId, selectedTimeRange),
+                    analyticsClient.getUsageTrend(courseId, selectedTimeRange),
+                    analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
+                    instructorId
+                        ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange)
+                        : Promise.resolve({ data: undefined, errorStatus: 404 }),
+                    analyticsClient.topKeywords(courseId, 5, selectedTimeRange),
+                    queryClient.getCourseQueries(courseId, {
+                        limit: 1,
+                        offset: 0,
+                        orderBy: "asked_at",
+                        orderDir: "desc",
+                    }),
+                ]);
             if (cancelled) return;
             if (overviewSummaryRes.data) setOverviewSummary(overviewSummaryRes.data);
             if (trendRes.data && trendRes.data.length > 0) setUsageTrend(trendRes.data);
@@ -125,13 +134,22 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             else setQueryDistribution([]);
             if (topKeywordsRes.data) setTopKeywords(topKeywordsRes.data);
             else setTopKeywords([]);
+            if ("errorMessage" in courseQueriesRes && courseQueriesRes.errorMessage) {
+                setTotalCount(null);
+            } else if (courseQueriesRes.data) {
+                setTotalCount(
+                    courseQueriesRes.data.total ?? courseQueriesRes.data.queries?.length ?? null
+                );
+            } else {
+                setTotalCount(null);
+            }
             setLoading(false);
         })();
-    }, [courseId, instructorId, selectedTimeRange, analyticsClient]);
+    }, [courseId, instructorId, selectedTimeRange, analyticsClient, queryClient]);
 
     const totalActiveUsers = overviewSummary?.activeUsers ?? courseUsageData[0]?.activeUsers ?? 0;
     const totalChatbotQueries = overviewSummary?.totalQueries ?? courseUsageData[0]?.chatbotQueries ?? 0;
-    const averageSatisfaction = "4.6";
+    // const averageSatisfaction = "4.6";
     const totalEnrolledUsers = overviewSummary?.totalEnrolled ?? courseUsageData[0]?.totalUsers ?? 0;
     const engagementRate =
         overviewSummary?.engagementRate ?? (totalEnrolledUsers ? Math.round((totalActiveUsers / totalEnrolledUsers) * 100) : 0);
@@ -198,15 +216,17 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         value={
                             loading
                                 ? "—"
-                                : overviewSummary?.totalQueries != null
-                                ? totalChatbotQueries.toLocaleString()
-                                : "N/A"
+                                : totalCount != null
+                                  ? totalCount.toLocaleString()
+                                  : overviewSummary?.totalQueries != null
+                                    ? totalChatbotQueries.toLocaleString()
+                                    : "N/A"
                         }
                         label="Chatbot Queries"
                         icon={MessageSquare}
                     />
                     <StatCard
-                        value={overviewSummary ? `${averageSatisfaction}/5.0` : "N/A"}
+                        value={overviewSummary ? `/5.0` : "N/A"}
                         label="Avg. Satisfaction"
                         icon={TrendingUp}
                     />
