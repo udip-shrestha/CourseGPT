@@ -76,3 +76,66 @@ def register(
 ):
     """Public registration endpoint that returns access token."""
     return auth_service.register(name=name, title=title, university=university, email=email, password=password)
+
+
+# ---------------------------------------------------------------------
+# Request Password Reset Code
+# ---------------------------------------------------------------------
+@router.post(
+    "/auth/request-password-reset",
+    status_code=status.HTTP_200_OK,
+    summary="Send a password reset code to instructor email",
+    description=(
+        "Generates a 6-digit password reset code for the instructor account "
+        "associated with the provided email and sends it by email."
+    ),
+)
+def request_password_reset(
+    email: str = Form(
+        ...,
+        examples=["jane.doe@iastate.edu"],
+        description="Instructor's email address",
+    ),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Request a password reset code."""
+    return auth_service.request_password_reset(instructor_email=email)
+
+
+# ---------------------------------------------------------------------
+# Confirm Password Reset
+# ---------------------------------------------------------------------
+@router.post(
+    "/auth/confirm-password-reset",
+    status_code=status.HTTP_200_OK,
+    summary="Verify password reset code and set a new password",
+    description=(
+        "Verifies the 6-digit password reset code sent to the instructor's email "
+        "and updates the instructor password."
+    ),
+)
+def confirm_password_reset(
+    email: str = Form(
+        ...,
+        examples=["jane.doe@iastate.edu"],
+        description="Instructor's email address",
+    ),
+    code: str = Form(
+        ...,
+        examples=["123456"],
+        description="6-digit password reset code",
+    ),
+    new_password: str = Form(
+        ...,
+        examples=["mynewsecurepassword"],
+        description="New password for the instructor account",
+    ),
+    auth_service: AuthService = Depends(get_auth_service),
+):
+    """Confirm password reset using the emailed code."""
+    return auth_service.confirm_password_reset(
+        instructor_email=email,
+        code=code,
+        new_password=new_password,
+    )
+
