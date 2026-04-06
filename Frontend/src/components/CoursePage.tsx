@@ -118,14 +118,14 @@ export function CoursePage() {
         <h2 className="text-lg font-semibold mb-4">Student Registration</h2>
         <p className="text-sm mb-2">
           This course requires registration to proceed. Please provide your name
-          (optional) and click confirm.
+          and click confirm.
         </p>
         {studentError && (
           <p className="text-destructive mb-2">{studentError}</p>
         )}
         <input
           className="w-full border px-2 py-1 mb-4"
-          placeholder="Your name (optional)"
+          placeholder="Your full name"
           value={studentName}
           onChange={(e) => setStudentName(e.target.value)}
         />

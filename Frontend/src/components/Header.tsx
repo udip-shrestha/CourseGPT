@@ -247,7 +247,7 @@ export function Header() {
         )}
 
         {/* Rightmost Profile Icon Menu on Desktop */}
-        {!isMobile && isAuthenticated && (
+        {!isMobile && isAuthenticated && !isStudentRole && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1 rounded-full hover:bg-accent transition">
@@ -300,7 +300,9 @@ export function Header() {
           {/* Logo */}
           <div
             className="flex items-center justify-center sm:justify-start gap-2 cursor-pointer"
-            onClick={() => { if (!isStudentRole) navigate("/"); }}
+            onClick={() => {
+              if (!isStudentRole) navigate("/");
+            }}
           >
             <GraduationCap className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-primary">CourseGPT</h1>
