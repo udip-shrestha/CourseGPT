@@ -57,6 +57,7 @@ deploy_backend:
   only:
     - main
     - master
+    - 61-canvas-cleanup
   needs:
     - job: test_backend
       artifacts: false
@@ -72,6 +73,7 @@ deploy_frontend:
   only:
     - main
     - master
+    - 61-canvas-cleanup
   needs:
     - job: build_frontend
       artifacts: true

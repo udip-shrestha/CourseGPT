@@ -59,7 +59,7 @@ export function Header() {
     return (
       <>
         {/* Uppermost Profile Icon Menu */}
-        {isMobile && isAuthenticated && (
+        {isMobile && isAuthenticated && !isStudentRole && (
           <div className="w-full flex justify-center mb-4">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -300,7 +300,7 @@ export function Header() {
           {/* Logo */}
           <div
             className="flex items-center justify-center sm:justify-start gap-2 cursor-pointer"
-            onClick={() => navigate("/")}
+            onClick={() => { if (!isStudentRole) navigate("/"); }}
           >
             <GraduationCap className="h-8 w-8 text-primary" />
             <h1 className="text-2xl font-bold text-primary">CourseGPT</h1>
