@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
@@ -12,15 +12,12 @@ import {
 } from "../components/ui/card";
 import {
   Eye,
-  EyeOff,
-  CheckCircle2,
-  Circle
+  EyeOff
 } from "lucide-react";
 import { useApiClient } from "../clients/ApiClientContext";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  // read optional redirect target (e.g. ?next=/register-course?canvas_course_id=...)
   const params = new URLSearchParams(window.location.search);
   const redirectTo = params.get("next");
   const { authClient } = useApiClient();
@@ -31,43 +28,14 @@ export function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // --- PASSWORD STRENGTH LOGIC ---
-  const passwordRequirements = useMemo(() => [
-    { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-    { label: "At least one uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-    { label: "At least one lowercase letter", test: (p: string) => /[a-z]/.test(p) },
-    { label: "At least one number", test: (p: string) => /[0-9]/.test(p) },
-    { label: "At least one special character", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-  ], []);
-
-  const strengthScore = useMemo(() => {
-    if (!password) return 0;
-    return passwordRequirements.filter(req => req.test(password)).length;
-  }, [password, passwordRequirements]);
-
-  const strengthColor = useMemo(() => {
-    if (strengthScore <= 2) return "bg-destructive";
-    if (strengthScore <= 4) return "bg-yellow-500";
-    return "bg-emerald-500";
-  }, [strengthScore]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
 
-    // Basic validation
+    // Basic email format validation
     if (!email.includes("@")) {
-      setError("Please use your email address to log in, not your name.");
-      setIsLoading(false);
-      return;
-    }
-
-    // --- STRENGTH VALIDATION ---
-    // Prevent login attempt if the password doesn't meet minimum complexity
-    // (Blocking submission for scores below 3 to ensure account security)
-    if (password.length > 0 && strengthScore < 3) {
-      setError("Your password does not meet the minimum security requirements.");
+      setError("Please use your email address to log in.");
       setIsLoading(false);
       return;
     }
@@ -101,7 +69,6 @@ export function LoginPage() {
   };
 
   return (
-      // Restricted background and layout to match your original design
       <div className="w-full flex items-center justify-center p-4">
         <Card className="w-full max-w-md shadow-md">
           <CardHeader>
@@ -134,7 +101,7 @@ export function LoginPage() {
                       className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1"
                   >
                     {showPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                    {showPassword ? "Show" : "Hide"}
+                    {showPassword ? "Hide" : "Show"}
                   </button>
                 </div>
                 <Input
@@ -146,29 +113,6 @@ export function LoginPage() {
                     required
                     aria-invalid={!!error}
                 />
-
-                {/* Password Strength Indicator (Integrated into the existing layout) */}
-                {password.length > 0 && (
-                    <div className="mt-1 space-y-2 animate-in fade-in duration-200">
-                      <div className="h-1 w-full bg-muted rounded-full overflow-hidden">
-                        <div
-                            className={`h-full ${strengthColor} transition-all duration-300`}
-                            style={{ width: `${(strengthScore / 5) * 100}%` }}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 gap-1">
-                        {passwordRequirements.map((req, idx) => {
-                          const met = req.test(password);
-                          return (
-                              <div key={idx} className={`flex items-center gap-2 text-[10px] uppercase font-bold transition-colors ${met ? 'text-emerald-600' : 'text-muted-foreground'}`}>
-                                {met ? <CheckCircle2 className="h-2.5 w-2.5" /> : <Circle className="h-2.5 w-2.5 opacity-20" />}
-                                {req.label}
-                              </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                )}
               </div>
 
               {/* Error Message Display */}
