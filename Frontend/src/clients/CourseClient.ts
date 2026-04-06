@@ -103,4 +103,22 @@ export class CourseClient {
       operationId: `course-link-canvas-${canvasCourseId}`,
     });
   }
+
+  async isCanvasLinked(courseId: string) {
+    if (!courseId) return { errorMessage: "Course ID is required." };
+    return this.baseClient.request(
+      "GET",
+      `/courses/${courseId}/canvas/linked`,
+      {
+        operationId: `course-canvas-linked-${courseId}`,
+      },
+    );
+  }
+
+  async getCanvasFiles(courseId: string) {
+    if (!courseId) return { errorMessage: "Course ID is required." };
+    return this.baseClient.request("GET", `/courses/${courseId}/canvas/files`, {
+      operationId: `course-canvas-files-${courseId}`,
+    });
+  }
 }
