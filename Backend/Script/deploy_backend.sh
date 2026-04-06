@@ -77,12 +77,23 @@ LLM_MODEL=${LLM_MODEL:-}
 HUGGINGFACEHUB_API_TOKEN=${HUGGINGFACEHUB_API_TOKEN:-}
 
 # ===========================================
+# Gmail Settings
+# ===========================================
+GMAIL_HOST=${GMAIL_HOST:-}
+GMAIL_PORT=${GMAIL_PORT:-}
+GMAIL_USERNAME=${GMAIL_USERNAME:-}
+GMAIL_PASSWORD=${GMAIL_PASSWORD:-}
+GMAIL_FROM_EMAIL=${GMAIL_FROM_EMAIL:-}
+GMAIL_FROM_NAME=${GMAIL_FROM_NAME:-}
+
+# ===========================================
 # Canvas LTI Configuration
 # ===========================================
 CANVAS_PUBLIC_KEY_B64=${CANVAS_PUBLIC_KEY_B64:-}
 CANVAS_PRIVATE_KEY_B64=${CANVAS_PRIVATE_KEY_B64:-}
 CANVAS_KEY_ID=${CANVAS_KEY_ID:-}
 FRONTEND_BASE_URL=${FRONTEND_BASE_URL:-}
+CANVAS_API=${CANVAS_API:-}
 EOF
 
 

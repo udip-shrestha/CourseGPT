@@ -224,16 +224,21 @@ def get_course_id_by_name(
     ),
 )
 def link_canvas_course(
-    course_name: str = Query(
+    course_id: str = Query(
         ...,
-        description="Exact name of the CourseGPT course to link.",
-        examples={"example": "Data Structures"},
+        description="Internal ID of the CourseGPT course to link.",
+        examples={"example": "a4e7b4a9-8423-4d34-b8b2-4a07f4448dc9"},
+    ),
+    canvas_context_id: str = Query(
+        ...,
+        description="Canvas context ID provided by LTI launch.",
+        examples={"example": "280716395fd5023da5ffee970b39589b601b7807"},
     ),
     canvas_course_id: str = Query(
         ...,
-        description="Canvas course ID provided by LTI launch.",
-        examples={"example": "280716395fd5023da5ffee970b39589b601b7807"},
+        description="Canvas course ID to link with the CourseGPT course.",
+        examples={"example": "12345"},
     ),
     service: CourseService = Depends(get_course_service),
 ):
-    return service.link_canvas_course(course_name, canvas_course_id)
+    return service.link_canvas_course(course_id, canvas_context_id, canvas_course_id)

@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS courses (
     semester_id INTEGER NOT NULL REFERENCES semesters(id) ON DELETE RESTRICT,
     rag_strategy_id INT REFERENCES rag_strategies(id) ON DELETE SET NULL,
     -- Canvas integration
-    canvas_course_id VARCHAR(100) UNIQUE
+    canvas_course_id VARCHAR(100) UNIQUE,
+    canvas_context_id VARCHAR(255) UNIQUE
 );
 
 -- -----------------------------

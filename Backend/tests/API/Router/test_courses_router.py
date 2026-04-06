@@ -227,24 +227,25 @@ def test_link_canvas_course_success(
     mock_sql_repo: ISQLRepository
 ):
     """Should associate a canvas ID with an existing course."""
-    # Arrange: prepare SQL repo to find course and accept update
-    mock_sql_repo.get_course_by_name.return_value = {"id": "course-1"}
+    # Arrange: prepare SQL repo to find course by id and accept update
+    mock_sql_repo.read_course.return_value = {"id": "course-1"}
     mock_sql_repo.update_course.return_value = None
 
     # Act: call the router endpoint with the required query params
     response = client.post(
         "/courses/link-canvas",
         params={
-            "course_name": "CS101",
-            "canvas_course_id": "canvas-abc"
+            "course_id": "course-1",
+            "canvas_course_id": "canvas-abc",
+            "canvas_context_id": "canvas-ctx-123"
         }
     )
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"course_id": "course-1"}
-    mock_sql_repo.get_course_by_name.assert_called_once_with("CS101")
-    mock_sql_repo.update_course.assert_called_once_with("course-1", {"canvas_course_id": "canvas-abc"})
+    mock_sql_repo.read_course.assert_called_once_with("course-1")
+    mock_sql_repo.update_course.assert_called_once_with("course-1", {"canvas_course_id": "canvas-abc", "canvas_context_id": "canvas-ctx-123"})
 
 
 def test_link_canvas_course_not_found(
@@ -254,15 +255,16 @@ def test_link_canvas_course_not_found(
 ):
     """Should return 404 when the named course does not exist."""
     # Configure mock to indicate absence of course
-    mock_sql_repo.get_course_by_name.return_value = None
+    mock_sql_repo.read_course.return_value = None
 
     response = client.post(
         "/courses/link-canvas",
         params={
-            "course_name": "DoesNotExist",
-            "canvas_course_id": "canvas-xyz"
+            "course_id": "nonexistent-course",
+            "canvas_course_id": "canvas-abc",
+            "canvas_context_id": "canvas-ctx-123"
         }
     )
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
-    mock_sql_repo.get_course_by_name.assert_called_once_with("DoesNotExist")
+    mock_sql_repo.read_course.assert_called_once_with("nonexistent-course")
