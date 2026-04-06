@@ -98,7 +98,7 @@ def test_lti_launch_instructor_course_linked(
     os.environ["FRONTEND_BASE_URL"] = "http://frontend.test"
     payload = {
         "sub": "user1",
-        "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "canvas-course"},
+        "https://purl.imsglobal.org/spec/lti/claim/custom": {"canvas_course_id": "canvas-course"},
         "https://purl.imsglobal.org/spec/lti/claim/roles": ["Instructor"],
     }
     token = make_id_token(payload)
@@ -119,6 +119,7 @@ def test_lti_launch_instructor_course_not_linked(
         "sub": "user2",
         "https://purl.imsglobal.org/spec/lti/claim/context": {"id": "uncourse"},
         "https://purl.imsglobal.org/spec/lti/claim/roles": ["Instructor"],
+        "https://purl.imsglobal.org/spec/lti/claim/custom": {"canvas_course_id": "123"},
     }
     token = make_id_token(payload)
     # simulate not found by raising HTTPException
@@ -128,7 +129,7 @@ def test_lti_launch_instructor_course_not_linked(
 
     response = client.post("/lti/launch", data={"id_token": token})
     assert response.status_code == status.HTTP_302_FOUND
-    assert response.headers["location"] == "http://frontend.test/register-course?canvas_course_id=uncourse"
+    assert response.headers["location"] == "http://frontend.test/register-course?canvas_context_id=uncourse&canvas_course_id=123"
 
 
 def test_lti_launch_student_not_linked_course(
