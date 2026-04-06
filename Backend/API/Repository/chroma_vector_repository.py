@@ -101,7 +101,6 @@ class ChromaVectorRepository(IVectorRepository):
             if dist < distance_cutoff
         ]
 
-
         hits.extend(self._query_neighbors(collection,  hits))
         hits.sort(key=lambda item: (
             item[0].rsplit("_", 1)[0],                                         # doc_id

@@ -211,3 +211,13 @@ CREATE TABLE IF NOT EXISTS feedback (
     feedback_text TEXT NOT NULL,
     received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+-- -----------------------------
+-- Password Reset Codes Table
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS password_reset_codes (
+    instructor_id UUID PRIMARY KEY REFERENCES instructors(id) ON DELETE CASCADE,
+    code TEXT NOT NULL CHECK (code ~ '^[0-9]{6}$'),
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
