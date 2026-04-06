@@ -106,9 +106,13 @@ export class CourseClient {
 
   async isCanvasLinked(courseId: string) {
     if (!courseId) return { errorMessage: "Course ID is required." };
-    return this.baseClient.request("GET", `/courses/${courseId}/canvas/linked`, {
-      operationId: `course-canvas-linked-${courseId}`,
-    });
+    return this.baseClient.request(
+      "GET",
+      `/courses/${courseId}/canvas/linked`,
+      {
+        operationId: `course-canvas-linked-${courseId}`,
+      },
+    );
   }
 
   async getCanvasFiles(courseId: string) {
