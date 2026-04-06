@@ -149,7 +149,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     const totalActiveUsers = overviewSummary?.activeUsers ?? courseUsageData[0]?.activeUsers ?? 0;
     const totalChatbotQueries = overviewSummary?.totalQueries ?? courseUsageData[0]?.chatbotQueries ?? 0;
-    const averageSatisfaction = "4.6";
+    // const averageSatisfaction = "4.6";
     const totalEnrolledUsers = overviewSummary?.totalEnrolled ?? courseUsageData[0]?.totalUsers ?? 0;
     const engagementRate =
         overviewSummary?.engagementRate ?? (totalEnrolledUsers ? Math.round((totalActiveUsers / totalEnrolledUsers) * 100) : 0);
@@ -226,7 +226,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         icon={MessageSquare}
                     />
                     <StatCard
-                        value={overviewSummary ? `-/5.0` : "N/A"}
+                        value={overviewSummary ? `/5.0` : "N/A"}
                         label="Avg. Satisfaction"
                         icon={TrendingUp}
                     />
