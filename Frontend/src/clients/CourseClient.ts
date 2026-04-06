@@ -81,14 +81,22 @@ export class CourseClient {
   }
 
   /**
-   * Associate an existing CourseGPT course (by name) with a Canvas course identifier.
-   * Used when an instructor comes from Canvas and the two systems need to be linked.
+   * Link an existing CourseGPT course (by internal ID) with a Canvas course identifier.
+   * Used when an instructor selects a CourseGPT course to link from the Canvas flow.
    */
-  async linkCanvas(courseName: string, canvasCourseId: string) {
-    if (!courseName) return { errorMessage: "Course name is required." };
+  async linkCanvas(
+    courseId: string,
+    canvasContextId: string | null,
+    canvasCourseId: string,
+  ) {
+    if (!courseId) return { errorMessage: "Course ID is required." };
     if (!canvasCourseId)
       return { errorMessage: "Canvas course ID is required." };
-    const query = { course_name: courseName, canvas_course_id: canvasCourseId };
+    const query = {
+      course_id: courseId,
+      canvas_context_id: canvasContextId || undefined,
+      canvas_course_id: canvasCourseId,
+    };
     return this.baseClient.request("POST", `/courses/link-canvas`, {
       query,
       isJson: false,

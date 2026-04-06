@@ -287,6 +287,37 @@ class SQLRepository(ISQLRepository):
         """
         return self.cm.select_one(sql, tuple(values))
 
+    def update_instructor_password(self, instructor_id: str, encrypted_password: str) -> None:
+        sql = """
+            UPDATE instructors
+            SET password = %s, updated_at = NOW()
+            WHERE id = %s;
+        """
+        self.cm.execute(sql, (encrypted_password, instructor_id))
+
+    # ======================================================
+    # PASSWORD RESET CODES
+    # ======================================================
+    def create_password_reset_code(self, instructor_id: str, code: str) -> None:
+        sql = """
+            INSERT INTO password_reset_codes (instructor_id, code, created_at, expires_at)
+            VALUES (%s, %s, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 hour')
+            ON CONFLICT (instructor_id)
+            DO UPDATE SET
+                code = EXCLUDED.code,
+                expires_at = CURRENT_TIMESTAMP + INTERVAL '1 hour',
+                created_at = CURRENT_TIMESTAMP;
+        """
+        self.cm.execute(sql, (instructor_id, code))
+
+    def read_password_reset_code(self, instructor_id: str) -> Optional[dict]:
+        sql = """
+            SELECT code
+            FROM password_reset_codes
+            WHERE instructor_id = %s aND expires_at > NOW();
+        """
+        return self.cm.select_one(sql, (instructor_id,))
+    
     # ======================================================
     # COURSES
     # ======================================================
@@ -319,6 +350,7 @@ class SQLRepository(ISQLRepository):
         sql = """
             SELECT 
                 c.id, c.name, c.institution, c.semester_id, c.year, c.created_at,
+                c.canvas_course_id, c.canvas_context_id,
                 i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email,
                 rs.id AS rag_strategy_id, rs.type_name AS rag_strategy_name,
                 s.name AS semester_name

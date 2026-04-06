@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timedelta
+import secrets
 from typing import Optional
 from datetime import datetime, timedelta, timezone
 import jwt
@@ -26,6 +27,8 @@ def encrypt_password(password: str) -> str:
     """Fake password encryption using placeholder prefix."""
     return password_hash.hash(password)
 
+def generate_password_reset_code() -> str:
+    return f"{secrets.randbelow(1000000):06d}"
 
 # ============================================================
 # 🧩 Token Utilities

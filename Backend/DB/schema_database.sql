@@ -76,7 +76,8 @@ CREATE TABLE IF NOT EXISTS courses (
     semester_id INTEGER NOT NULL REFERENCES semesters(id) ON DELETE RESTRICT,
     rag_strategy_id INT REFERENCES rag_strategies(id) ON DELETE SET NULL,
     -- Canvas integration
-    canvas_course_id VARCHAR(100) UNIQUE
+    canvas_course_id VARCHAR(100) UNIQUE,
+    canvas_context_id VARCHAR(255) UNIQUE
 );
 
 -- -----------------------------
@@ -210,4 +211,14 @@ CREATE TABLE IF NOT EXISTS feedback (
     course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
     feedback_text TEXT NOT NULL,
     received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------
+-- Password Reset Codes Table
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS password_reset_codes (
+    instructor_id UUID PRIMARY KEY REFERENCES instructors(id) ON DELETE CASCADE,
+    code TEXT NOT NULL CHECK (code ~ '^[0-9]{6}$'),
+    expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

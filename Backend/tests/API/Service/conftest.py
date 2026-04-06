@@ -11,6 +11,7 @@ from API.Service.auth_service import AuthService
 from API.Service.instructors_service import InstructorService
 from API.Service.students_service import StudentService
 from API.Service.queries_service import QueryService
+from API.Service.gmail_service import GmailService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Util.rag_strategy import RAGStrategyFactory
 from API.Util.loaders import LoaderFactory
@@ -56,6 +57,10 @@ def mock_rag_service() -> RAGService:
     """Provides a plain mocked RAGService instance."""
     return MagicMock(spec=RAGService)
 
+@pytest.fixture
+def mock_gmail_service() -> GmailService:
+    """Provides a GmailService instance."""
+    return MagicMock(spec=GmailService)
 
 @pytest.fixture
 def rag_service(
@@ -92,7 +97,7 @@ def course_service(mock_sql_repo: ISQLRepository, mock_vector_repo: IVectorRepos
 @pytest.fixture
 def auth_service(mock_sql_repo: ISQLRepository) -> AuthService:
     """Provides an AuthService wired with a mock SQL repository."""
-    return AuthService(sql_repo=mock_sql_repo)
+    return AuthService(sql_repo=mock_sql_repo, gmail_service=mock_gmail_service)
 
 
 @pytest.fixture
