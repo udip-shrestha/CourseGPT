@@ -242,3 +242,24 @@ def link_canvas_course(
     service: CourseService = Depends(get_course_service),
 ):
     return service.link_canvas_course(course_id, canvas_context_id, canvas_course_id)
+
+
+@router.get(
+    "/courses/{course_id}/canvas/linked",
+    status_code=status.HTTP_200_OK,
+    summary="Check if course is linked to Canvas",
+)
+def is_course_linked_to_canvas(
+    course_id: str = Path(..., description="UUID of the course to check."),
+    service: CourseService = Depends(get_course_service),
+):
+    """Return whether the given course is linked to Canvas and include the ids when present."""
+    course = service.read_course(course_id)
+    canvas_course_id = course.get("canvas_course_id")
+    canvas_context_id = course.get("canvas_context_id")
+
+    return {
+        "linked": bool(canvas_course_id and canvas_context_id),
+        "canvas_course_id": canvas_course_id,
+        "canvas_context_id": canvas_context_id,
+    }
