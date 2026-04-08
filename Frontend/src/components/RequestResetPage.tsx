@@ -30,7 +30,7 @@ export function RequestResetPage() {
                 throw new Error(errorMessage);
             }
 
-            setMessage("Email is registered, you will receive a 6-digit code shortly.");
+            setMessage("Check your email! We've sent a 6-digit code to your registered address. Don't forget to check your Junk/Spam folder if it doesn't appear in a few minutes.");
 
             // Navigate to the verification page after a short delay
             setTimeout(() => {
