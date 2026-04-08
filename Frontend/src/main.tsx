@@ -2,11 +2,11 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from "react-router-dom";
 
-// Import Tailwind base styles (order matters)
+
 import './index.css';
 
 import App from './App.tsx';
-// --- 1. Import the ApiClientProvider ---
+
 import { ApiClientProvider } from './clients/ApiClientContext.tsx';
 import { WebSocketClientProvider } from './clients/WebSocketClientContext.tsx';
 
