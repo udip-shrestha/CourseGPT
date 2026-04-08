@@ -54,4 +54,36 @@ export class AuthClient {
         return { data, errorStatus: errorStatus ?? -1, errorMessage: message };
     }
 
+    /**
+     * Request a 6-digit password reset code be sent to the instructor's email.
+     */
+    async requestPasswordReset(email: string) {
+        const form = new URLSearchParams();
+        form.append("email", email);
+
+        return await this.baseClient.request("POST", "/auth/request-password-reset", {
+            body: form,
+            isJson: false,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            operationId: "request-password-reset",
+        });
+    }
+
+    /**
+     * Verify the 6-digit code and set a new password.
+     */
+    async confirmPasswordReset(email: string, code: string, newPassword: string) {
+        const form = new URLSearchParams();
+        form.append("email", email);
+        form.append("code", code);
+        form.append("new_password", newPassword);
+
+        return await this.baseClient.request("POST", "/auth/confirm-password-reset", {
+            body: form,
+            isJson: false,
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            operationId: "confirm-password-reset",
+        });
+    }
+
 }
