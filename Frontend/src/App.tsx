@@ -9,7 +9,7 @@ import { NotFoundPage } from "./components/NotFoundPage.tsx";
 import { CoursePage } from "./components/CoursePage.tsx";
 import { CanvasLinkPage } from "./components/CanvasLinkPage.tsx";
 import { RequestResetPage } from "./components/RequestResetPage.tsx";
-//import { ResetPasswordPage } from "./components/ResetPasswordPage.tsx";
+import { ResetPasswordPage } from "./components/ResetPasswordPage.tsx";
 
 /**
  * The main Layout component.
@@ -46,7 +46,7 @@ export default function App() {
 
                 {/* Password Reset Flow */}
                 <Route path="/RequestResetPage" element={<RequestResetPage />} />
-
+                <Route path="/reset-password" element={<ResetPasswordPage />} />
 
                 {/* Instructor Routes */}
                 <Route
