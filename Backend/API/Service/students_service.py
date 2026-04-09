@@ -107,6 +107,15 @@ class StudentService:
         # simple pagination (repository could also handle it internally)
         paginated = students[offset:offset + limit]
         return paginated
+    # ------------------------------------------------------
+    # COUNT All Students
+    # ------------------------------------------------------
+
+    @clean_service
+    def count_students(self, course_id: str) -> int:
+        """Return total number of students in a course (no pagination)."""
+        students = self.sql_repo.read_all_students(course_id=course_id)
+        return len(students)
 
     # ------------------------------------------------------
     # Delete Student
