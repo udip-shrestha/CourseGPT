@@ -47,6 +47,20 @@ export class AnalyticsClient {
         this.client = client;
     }
 
+
+    /**
+     * Get the number of students registered in a course
+     * Matches: GET /students/count?course_id={id}
+     */
+    async getStudentCount(courseId: string) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.client.request<{ course_id: string; student_count: number }>(
+            "GET",
+            "/students/count",
+            { query: { course_id: courseId } }
+        );
+    }
+
     async getCourseOverview(courseId: string, days?: number) {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request("GET", `/courses/${courseId}/analytics/overview`, {
