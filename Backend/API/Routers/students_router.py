@@ -166,3 +166,23 @@ def unregister_student(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to unregister student: {e}")
+    
+@router.get(
+    "/count",
+    summary="Get number of students registered in a course",
+    description="Returns the total number of students enrolled in a given course.",
+)
+def count_students(
+    course_id: str = Query(
+        ...,
+        description="Course ID to count students for.",
+        examples={"example": "c0c3a8be-bf07-419d-bc07-266fa35be7d1"},
+    ),
+    service: StudentService = Depends(get_student_service),
+) -> dict:
+    """Returns count of students in a course."""
+    try:
+        count = service.count_students(course_id=course_id)
+        return {"course_id": course_id, "student_count": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to count students: {e}")
