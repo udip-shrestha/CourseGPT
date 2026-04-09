@@ -226,7 +226,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         icon={MessageSquare}
                     />
                     <StatCard
-                        value={overviewSummary ? `/5.0` : "N/A"}
+                        value={overviewSummary ? `-/5.0` : "N/A"}
                         label="Avg. Satisfaction"
                         icon={TrendingUp}
                     />
