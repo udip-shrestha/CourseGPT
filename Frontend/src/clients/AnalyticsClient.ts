@@ -6,6 +6,7 @@ export interface OverviewSummary {
     totalEnrolled?: number;
     totalQueries?: number;
     engagementRate?: number;
+    averageSatisfaction?: number;
 }
 
 export interface UsageTrendPoint {

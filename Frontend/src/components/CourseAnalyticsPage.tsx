@@ -1,19 +1,19 @@
-import { useState, useEffect} from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
     Card,
     CardContent,
     CardDescription,
     CardHeader,
     CardTitle,
-} from "./ui/card";
+} from "./ui/card.tsx";
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
     SelectValue,
-} from "./ui/select";
-import { Button } from "./ui/button";
+} from "./ui/select.tsx";
+import { Button } from "./ui/button.tsx";
 import { Users, MessageSquare, TrendingUp, Activity, HelpCircle } from "lucide-react";
 import {
     LineChart,
@@ -31,9 +31,9 @@ import {
     ResponsiveContainer,
 } from "recharts";
 import { useNavigate, useParams } from "react-router-dom";
-import { useApiClient } from "../clients/ApiClientContext";
-import type { OverviewSummary, UsageTrendPoint, QueryDistributionItem, TopQuestionsItem, TopKeywordsItem} from "../clients/AnalyticsClient";
-import { StatCard } from "./StatCard";
+import { useApiClient } from "../clients/ApiClientContext.tsx";
+import type { OverviewSummary, UsageTrendPoint, QueryDistributionItem, TopQuestionsItem, TopKeywordsItem } from "../clients/AnalyticsClient";
+import { StatCard } from "./StatCard.tsx";
 
 const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -79,23 +79,41 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
     const [totalCount, setTotalCount] = useState<number | null>(null);
 
+    // Live Enrolled State
+    const [enrolledCount, setEnrolledCount] = useState<number>(0);
+
     const { analyticsClient, queryClient } = useApiClient();
     const navigate = useNavigate();
     const { courseId: routeCourseId } = useParams();
     const courseId = course.id ?? routeCourseId ?? "";
     const instructorId = course.instructor_id;
 
-    // Mock data for course table and bar chart (when no API or single-course view)
+    // --- WEIGHTED ENGAGEMENT CALCULATION ---
+    const engagementScore = useMemo(() => {
+        const activeUsers = overviewSummary?.activeUsers ?? 0;
+        const queries = totalCount ?? overviewSummary?.totalQueries ?? 0;
+
+        if (enrolledCount === 0) return 0;
+
+        const reach = activeUsers / enrolledCount;
+        const intensity = Math.min((queries / enrolledCount) / 10, 1);
+
+        // 70% participation, 30% interaction intensity
+        return Math.round((reach * 0.7 + intensity * 0.3) * 100);
+    }, [overviewSummary, totalCount, enrolledCount]);
+
+    const totalChatbotQueries = totalCount ?? overviewSummary?.totalQueries ?? 0;
+
     const courseUsageData: CourseUsageData[] = [
         {
-            courseId: "1",
+            courseId: courseId,
             courseName: course.name,
             courseCode: course.name.slice(0, 8),
             activeUsers: overviewSummary?.activeUsers ?? 0,
-            totalUsers: overviewSummary?.totalEnrolled ?? 0,
-            chatbotQueries: overviewSummary?.totalQueries ?? 0,
+            totalUsers: enrolledCount,
+            chatbotQueries: totalChatbotQueries,
             averageResponseTime: 0,
-            satisfaction: 0,
+            satisfaction: overviewSummary?.averageSatisfaction ?? 0,
         },
     ];
 
@@ -108,23 +126,37 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         let cancelled = false;
         setLoading(true);
         (async () => {
-            const [overviewSummaryRes, trendRes, topQuestionsRes, distRes, topKeywordsRes, courseQueriesRes] =
-                await Promise.all([
-                    analyticsClient.getOverviewSummary(courseId, selectedTimeRange),
-                    analyticsClient.getUsageTrend(courseId, selectedTimeRange),
-                    analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
-                    instructorId
-                        ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange)
-                        : Promise.resolve({ data: undefined, errorStatus: 404 }),
-                    analyticsClient.topKeywords(courseId, 5, selectedTimeRange),
-                    queryClient.getCourseQueries(courseId, {
-                        limit: 1,
-                        offset: 0,
-                        orderBy: "asked_at",
-                        orderDir: "desc",
-                    }),
-                ]);
+            const [
+                overviewSummaryRes,
+                trendRes,
+                topQuestionsRes,
+                distRes,
+                topKeywordsRes,
+                courseQueriesRes,
+                studentCountRes
+            ] = await Promise.all([
+                analyticsClient.getOverviewSummary(courseId, selectedTimeRange),
+                analyticsClient.getUsageTrend(courseId, selectedTimeRange),
+                analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
+                instructorId
+                    ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange)
+                    : Promise.resolve({ data: undefined, errorStatus: 404 }),
+                analyticsClient.topKeywords(courseId, 5, selectedTimeRange),
+                queryClient.getCourseQueries(courseId, {
+                    limit: 1,
+                    offset: 0,
+                    orderBy: "asked_at",
+                    orderDir: "desc",
+                }),
+                analyticsClient.getStudentCount(courseId)
+            ]);
+
             if (cancelled) return;
+
+            if (studentCountRes.data) {
+                setEnrolledCount(studentCountRes.data.student_count ?? 0);
+            }
+
             if (overviewSummaryRes.data) setOverviewSummary(overviewSummaryRes.data);
             if (trendRes.data && trendRes.data.length > 0) setUsageTrend(trendRes.data);
             else setUsageTrend([]);
@@ -134,6 +166,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             else setQueryDistribution([]);
             if (topKeywordsRes.data) setTopKeywords(topKeywordsRes.data);
             else setTopKeywords([]);
+
             if ("errorMessage" in courseQueriesRes && courseQueriesRes.errorMessage) {
                 setTotalCount(null);
             } else if (courseQueriesRes.data) {
@@ -145,25 +178,19 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             }
             setLoading(false);
         })();
+        return () => { cancelled = true; };
     }, [courseId, instructorId, selectedTimeRange, analyticsClient, queryClient]);
-
-    const totalActiveUsers = overviewSummary?.activeUsers ?? courseUsageData[0]?.activeUsers ?? 0;
-    const totalChatbotQueries = overviewSummary?.totalQueries ?? courseUsageData[0]?.chatbotQueries ?? 0;
-    // const averageSatisfaction = "4.6";
-    const totalEnrolledUsers = overviewSummary?.totalEnrolled ?? courseUsageData[0]?.totalUsers ?? 0;
-    const engagementRate =
-        overviewSummary?.engagementRate ?? (totalEnrolledUsers ? Math.round((totalActiveUsers / totalEnrolledUsers) * 100) : 0);
 
     const courseDistribution: CourseDistributionData[] =
         queryDistribution.length > 0
             ? queryDistribution.map((d, i) => ({
-                  name: d.courseName,
-                  value: d.count,
-                  color: CHART_COLORS[i % CHART_COLORS.length],
-              }))
+                name: d.courseName,
+                value: d.count,
+                color: CHART_COLORS[i % CHART_COLORS.length],
+            }))
             : [
-                  { name: course.name, value: totalChatbotQueries || 1, color: CHART_COLORS[0] },
-              ];
+                { name: course.name, value: totalChatbotQueries || 1, color: CHART_COLORS[0] },
+            ];
 
     return (
         <div className="space-y-6">
@@ -202,42 +229,22 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </p>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
                     <StatCard
-                        value={
-                            loading
-                                ? "—"
-                                : overviewSummary?.activeUsers != null
-                                ? totalActiveUsers
-                                : "N/A"
-                        }
+                        value={loading ? "—" : enrolledCount.toLocaleString()}
                         label="Enrolled Users"
                         icon={Users}
                     />
                     <StatCard
-                        value={
-                            loading
-                                ? "—"
-                                : totalCount != null
-                                  ? totalCount.toLocaleString()
-                                  : overviewSummary?.totalQueries != null
-                                    ? totalChatbotQueries.toLocaleString()
-                                    : "N/A"
-                        }
+                        value={loading ? "—" : totalChatbotQueries.toLocaleString()}
                         label="Chatbot Queries"
                         icon={MessageSquare}
                     />
                     <StatCard
-                        value={overviewSummary ? `-/5.0` : "N/A"}
+                        value={loading ? "—" : (overviewSummary?.averageSatisfaction ? `${overviewSummary.averageSatisfaction} / 5.0` : "— / 5.0")}
                         label="Avg. Satisfaction"
                         icon={TrendingUp}
                     />
                     <StatCard
-                        value={
-                            loading
-                                ? "—"
-                                : overviewSummary?.engagementRate != null
-                                ? `${engagementRate}%`
-                                : "N/A"
-                        }
+                        value={loading ? "—" : `${engagementScore}%`}
                         label="Engagement Rate"
                         icon={Activity}
                     />
@@ -277,8 +284,8 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                 {topQuestions.map((item, i) => (
                                     <li key={i} className="border-b border-border pb-2 last:border-0 space-y-1">
                                         <div className="flex justify-between gap-4">
-                                        <span className="text-sm font-medium flex-1 min-w-0">{item.queryText}</span>
-                                        <span className="text-sm text-muted-foreground shrink-0">
+                                            <span className="text-sm font-medium flex-1 min-w-0">{item.queryText}</span>
+                                            <span className="text-sm text-muted-foreground shrink-0">
                                             {item.count} {item.count === 1 ? "time" : "times"}
                                         </span>
                                         </div>
@@ -388,11 +395,11 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                 />
                                 <XAxis
                                     dataKey="courseName"
-                                    stroke="#008000" // green color
+                                    stroke="#008000"
                                     tick={{ fill: "#008000" }}
                                 />
                                 <YAxis
-                                    stroke="#008000" // green color
+                                    stroke="#008000"
                                     tick={{ fill: "#008000" }}
                                 />
                                 <Tooltip
@@ -463,70 +470,47 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         Detailed metrics for each course
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="p-0">
                     <div className="overflow-x-auto">
-                        <table className="w-full">
+                        <table className="w-full text-sm">
                             <thead>
-                                <tr className="border-b">
-                                    <th className="p-4 text-left">Course</th>
-                                    {/* <th className="p-4 text-left">Active Users</th> */}
-                                    <th className="p-4 text-left">Total Enrolled</th>
-                                    <th className="p-4 text-left">Engagement Rate</th>
-                                    <th className="p-4 text-left">Chatbot Queries</th>
-                                    <th className="p-4 text-left">Avg. Response Time</th>
-                                    <th className="p-4 text-left">Satisfaction</th>
-                                </tr>
+                            <tr className="border-b bg-muted/30">
+                                <th className="p-4 text-left font-semibold">Course</th>
+                                <th className="p-4 text-center font-semibold">Total Enrolled</th>
+                                <th className="p-4 text-center font-semibold">Engagement Rate</th>
+                                <th className="p-4 text-center font-semibold">Chatbot Queries</th>
+                                <th className="p-4 text-center font-semibold">Avg. Response Time</th>
+                                <th className="p-4 text-right font-semibold">Satisfaction</th>
+                            </tr>
                             </thead>
                             <tbody>
-                                {courseUsageData.map((c) => (
-                                    <tr
-                                        key={c.courseId}
-                                        className="border-b hover:bg-muted/50"
-                                    >
-                                        <td className="p-4">
-                                            <div>
-                                                <div className="font-medium">
-                                                    {c.courseCode}
-                                                </div>
-                                                <div className="text-sm text-muted-foreground">
-                                                    {c.courseName}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="p-4">
-                                            {overviewSummary?.activeUsers != null ? c.activeUsers : "N/A"}
-                                        </td>
-                                        <td className="p-4">
-                                            {overviewSummary?.totalEnrolled != null ? c.totalUsers : "N/A"}
-                                        </td>
-                                        <td className="p-4">
-                                            {overviewSummary?.engagementRate != null ? (
-                                                <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-primary">
-                                                    {((c.activeUsers / c.totalUsers) * 100).toFixed(0)}%
-                                                </span>
-                                            ) : (
-                                                "N/A"
-                                            )}
-                                        </td>
-                                        <td className="p-4">
-                                            {overviewSummary?.totalQueries != null
-                                                ? c.chatbotQueries.toLocaleString()
-                                                : "N/A"}
-                                        </td>
-                                        <td className="p-4">
-                                            {overviewSummary ? `${c.averageResponseTime}s` : "N/A"}
-                                        </td>
-                                        <td className="p-4">
-                                            {overviewSummary ? (
-                                                <span className="inline-flex items-center gap-1">
-                                                    ⭐ {c.satisfaction}/5.0
-                                                </span>
-                                            ) : (
-                                                "N/A"
-                                            )}
-                                        </td>
-                                    </tr>
-                                ))}
+                            {courseUsageData.map((c) => (
+                                <tr key={c.courseId} className="border-b hover:bg-muted/50 transition-colors">
+                                    <td className="p-4">
+                                        <div>
+                                            <div className="font-bold text-primary">{c.courseCode}</div>
+                                            <div className="text-xs text-muted-foreground">{c.courseName}</div>
+                                        </div>
+                                    </td>
+                                    <td className="p-4 text-center font-medium">
+                                        {loading ? "..." : enrolledCount}
+                                    </td>
+                                    <td className="p-4 text-center">
+                                            <span className="inline-flex items-center rounded-full bg-primary/10 px-2 py-1 text-primary font-bold">
+                                                {engagementScore}%
+                                            </span>
+                                    </td>
+                                    <td className="p-4 text-center font-mono">
+                                        {totalChatbotQueries.toLocaleString()}
+                                    </td>
+                                    <td className="p-4 text-center text-muted-foreground italic">
+                                        {overviewSummary ? `${c.averageResponseTime}s` : "N/A"}
+                                    </td>
+                                    <td className="p-4 text-right font-bold">
+                                        {overviewSummary ? `⭐ ${overviewSummary.averageSatisfaction || "—"}/5.0` : "N/A"}
+                                    </td>
+                                </tr>
+                            ))}
                             </tbody>
                         </table>
                     </div>
