@@ -1,6 +1,7 @@
 from typing import Protocol, List, Dict, Type, Optional, runtime_checkable
 from langchain_core.documents import Document
 from langchain_community.document_loaders import UnstructuredPDFLoader, TextLoader, UnstructuredExcelLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader, UnstructuredPowerPointLoader, UnstructuredWordDocumentLoader, UnstructuredXMLLoader, UnstructuredCSVLoader
+from unstructured.partition.auto import partition
 from API.Util.files import create_temp_file_from_bytes
 
 
@@ -100,6 +101,21 @@ class PPTXLoader(ILoader):
             ]
 
 
+class ImageLoader(ILoader):
+    """Extracts OCR/text content from supported image files."""
+    def load(self, file_name: str, file_bytes: bytes) -> List[Document]:
+        with create_temp_file_from_bytes(file_name, file_bytes) as path:
+            elements = partition(filename=str(path))
+
+        docs: List[Document] = []
+        for element in elements:
+            text = getattr(element, "text", None) or str(element)
+            if text and text.strip():
+                docs.append(Document(page_content=text.strip(), metadata={"source": file_name}))
+
+        return docs
+
+
 LOADER_CLASS_REGISTRY: Dict[str, Type[ILoader]] = {
     "PDFLoader": PDFLoader,
     "TXTLoader": TXTLoader,
@@ -109,7 +125,8 @@ LOADER_CLASS_REGISTRY: Dict[str, Type[ILoader]] = {
     "CSVLoader": CSVLoader,
     "DOCXLoader": DOCXLoader,
     "XLSXLoader": XLSXLoader,
-    "PPTXLoader": PPTXLoader
+    "PPTXLoader": PPTXLoader,
+    "ImageLoader": ImageLoader,
 }
 
 

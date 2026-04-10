@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { Send, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "./ui/dialog";
+import { Send, Loader2, Paperclip, X } from "lucide-react";
 import { useApiClient } from "../clients/ApiClientContext";
 
 interface Message {
@@ -10,19 +11,32 @@ interface Message {
   content: string;
   timestamp?: string;
   isStreaming?: boolean;
+  imageName?: string;
+  imagePreviewUrl?: string;
 }
 
 export function CourseChatPage({ course }: { course: any }) {
   const { queryClient } = useApiClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
+  const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imageUrlsRef = useRef<string[]>([]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    return () => {
+      imageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
+    };
+  }, []);
 
   const formatSources = (raw: unknown): string => {
     // Normalize input into tokens
@@ -100,17 +114,28 @@ export function CourseChatPage({ course }: { course: any }) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!inputValue.trim()) return;
+    if (!inputValue.trim() && !selectedImage) return;
+
+    const questionText = inputValue.trim() || "Please explain the uploaded image.";
+    const imageToSend = selectedImage;
+    const imagePreviewUrl = selectedImagePreviewUrl;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: inputValue,
+      content: imageToSend ? `${questionText}\n\n[Attached image: ${imageToSend.name}]` : questionText,
       timestamp: new Date().toISOString(),
+      imageName: imageToSend?.name,
+      imagePreviewUrl: imagePreviewUrl ?? undefined,
     };
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    setSelectedImage(null);
+    setSelectedImagePreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
     setLoading(true);
     setError(null);
 
@@ -129,7 +154,8 @@ export function CourseChatPage({ course }: { course: any }) {
       // Use ApiClient to query the course
       const { data, errorMessage } = await queryClient.queryCourse(
         course.id,
-        userMessage.content
+        questionText,
+        imageToSend
       );
 
       if (errorMessage) {
@@ -159,89 +185,242 @@ export function CourseChatPage({ course }: { course: any }) {
     }
   };
 
-  return (
-    <div className="chat-container">
-      {/* Chat Header */}
-      <div className="chat-header">
-        <h2 className="text-lg font-semibold">Course AI Assistant</h2>
-        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-          Ask questions about {course.name}
-        </p>
-      </div>
+  const handleImageSelection = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) {
+      setSelectedImage(null);
+      return;
+    }
 
-      {/* Messages Container */}
-      <div className="chat-messages">
-        {messages.length === 0 ? (
-          <div className="chat-empty-state">
-            <div className="text-5xl mb-4">💬</div>
-            <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
-            <p className="text-sm text-muted-foreground max-w-sm">
-              Ask questions about the course material and get instant answers
-              powered by AI.
-            </p>
-          </div>
-        ) : (
-          messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${
-                message.role === "user" ? "justify-end" : "justify-start"
-              } animate-fadeIn`}
-            >
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setError("Please upload a PNG or JPEG image.");
+      setSelectedImage(null);
+      if (selectedImagePreviewUrl) {
+        URL.revokeObjectURL(selectedImagePreviewUrl);
+        imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
+        setSelectedImagePreviewUrl(null);
+      }
+      e.target.value = "";
+      return;
+    }
+
+    if (selectedImagePreviewUrl) {
+      URL.revokeObjectURL(selectedImagePreviewUrl);
+      imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
+    }
+
+    const nextPreviewUrl = URL.createObjectURL(file);
+    imageUrlsRef.current.push(nextPreviewUrl);
+    setError(null);
+    setSelectedImage(file);
+    setSelectedImagePreviewUrl(nextPreviewUrl);
+  };
+
+  return (
+    <>
+      <div className="chat-container">
+        {/* Chat Header */}
+        <div className="chat-header">
+          <h2 className="text-lg font-semibold">Course AI Assistant</h2>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+            Ask questions about {course.name}
+          </p>
+        </div>
+
+        {/* Messages Container */}
+        <div className="chat-messages">
+          {messages.length === 0 ? (
+            <div className="chat-empty-state">
+              <div className="text-5xl mb-4">💬</div>
+              <h3 className="text-lg font-semibold mb-2">Start a conversation</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Ask questions about the course material and get instant answers
+                powered by AI.
+              </p>
+            </div>
+          ) : (
+            messages.map((message) => (
               <div
-                className={`chat-message ${
-                  message.role === "user"
-                    ? "chat-message-user"
-                    : "chat-message-assistant"
-                }`}
+                key={message.id}
+                className={`flex ${
+                  message.role === "user" ? "justify-end" : "justify-start"
+                } animate-fadeIn`}
               >
-                <p className="chat-content">
-                  {message.content}
-                  {message.isStreaming && (
-                    <span className="inline-block w-2 h-5 ml-1 bg-current animate-streamingCursor" />
+                <div
+                  className={`chat-message ${
+                    message.role === "user"
+                      ? "chat-message-user"
+                      : "chat-message-assistant"
+                  }`}
+                >
+                  {message.imagePreviewUrl && (
+                    <button
+                      type="button"
+                      className="mb-3 block overflow-hidden rounded-lg border bg-background/30 text-left"
+                      onClick={() =>
+                        setPreviewImage({
+                          url: message.imagePreviewUrl!,
+                          name: message.imageName || "Uploaded image",
+                        })
+                      }
+                    >
+                      <img
+                        src={message.imagePreviewUrl}
+                        alt={message.imageName || "Uploaded image"}
+                        className="max-h-44 w-auto object-cover"
+                      />
+                      <div className="px-3 py-2 text-xs opacity-80">
+                        {message.imageName || "Uploaded image"} - Click to preview
+                      </div>
+                    </button>
                   )}
-                </p>
-                {message.timestamp && (
-                  <p className="chat-timestamp">
-                    {new Date(message.timestamp).toLocaleTimeString()}
+                  <p className="chat-content">
+                    {message.content}
+                    {message.isStreaming && (
+                      <span className="inline-block w-2 h-5 ml-1 bg-current animate-streamingCursor" />
+                    )}
                   </p>
-                )}
+                  {message.timestamp && (
+                    <p className="chat-timestamp">
+                      {new Date(message.timestamp).toLocaleTimeString()}
+                    </p>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+          {messages.length === 0 ? null : <div ref={messagesEndRef} />}
+        </div>
+
+        {/* Input Area */}
+        <div className="chat-input-area">
+          {error && (
+            <div className="mb-3 p-2 rounded bg-destructive/10 text-destructive text-xs">
+              {error}
+            </div>
+          )}
+          {selectedImage && (
+            <div className="mb-3 rounded border bg-muted/40 px-3 py-3 text-sm">
+              {selectedImagePreviewUrl && (
+                <div className="relative mb-3 inline-block overflow-hidden rounded-lg border bg-background">
+                  <button
+                    type="button"
+                    className="block"
+                    onClick={() =>
+                      setPreviewImage({
+                        url: selectedImagePreviewUrl,
+                        name: selectedImage.name,
+                      })
+                    }
+                  >
+                    <img
+                      src={selectedImagePreviewUrl}
+                      alt={selectedImage.name}
+                      className="max-h-36 w-auto object-cover"
+                    />
+                  </button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    className="absolute right-2 top-2 h-7 w-7 rounded-full shadow-sm"
+                    onClick={() => {
+                      setSelectedImage(null);
+                      if (selectedImagePreviewUrl) {
+                        URL.revokeObjectURL(selectedImagePreviewUrl);
+                        imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
+                        setSelectedImagePreviewUrl(null);
+                      }
+                      if (fileInputRef.current) {
+                        fileInputRef.current.value = "";
+                      }
+                    }}
+                    title="Remove attached image"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <span className="truncate">Attached image: {selectedImage.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7"
+                  onClick={() => {
+                    setSelectedImage(null);
+                    if (selectedImagePreviewUrl) {
+                      URL.revokeObjectURL(selectedImagePreviewUrl);
+                      imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
+                      setSelectedImagePreviewUrl(null);
+                    }
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = "";
+                    }
+                  }}
+                >
+                  <X className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-          ))
-        )}
-        {messages.length === 0 ? null : <div ref={messagesEndRef} />}
+          )}
+          <form onSubmit={handleSendMessage} className="flex gap-2">
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/png,image/jpeg"
+              className="hidden"
+              onChange={handleImageSelection}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              disabled={loading}
+              onClick={() => fileInputRef.current?.click()}
+              title="Attach PNG or JPEG image"
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+            <Input
+              type="text"
+              placeholder="Ask a question about the course or an attached image..."
+              value={inputValue}
+              onChange={(e) => setInputValue(e.target.value)}
+              disabled={loading}
+              className="flex-1"
+            />
+            <Button
+              type="submit"
+              disabled={loading || (!inputValue.trim() && !selectedImage)}
+              size="icon"
+            >
+              {loading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+            </Button>
+          </form>
+        </div>
       </div>
-
-      {/* Input Area */}
-      <div className="chat-input-area">
-        {error && (
-          <div className="mb-3 p-2 rounded bg-destructive/10 text-destructive text-xs">
-            {error}
-          </div>
-        )}
-        <form onSubmit={handleSendMessage} className="flex gap-2">
-          <Input
-            type="text"
-            placeholder="Ask a question about the course..."
-            value={inputValue}
-            onChange={(e) => setInputValue(e.target.value)}
-            disabled={loading}
-            className="flex-1"
-          />
-          <Button
-            type="submit"
-            disabled={loading || !inputValue.trim()}
-            size="icon"
-          >
-            {loading ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-          </Button>
-        </form>
-      </div>
-    </div>
+      <Dialog open={!!previewImage} onOpenChange={(open) => !open && setPreviewImage(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>{previewImage?.name || "Image preview"}</DialogTitle>
+          </DialogHeader>
+          {previewImage && (
+            <div className="flex justify-center">
+              <img
+                src={previewImage.url}
+                alt={previewImage.name}
+                className="max-h-[70vh] w-auto rounded-lg object-contain"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

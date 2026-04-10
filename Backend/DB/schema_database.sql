@@ -80,6 +80,10 @@ CREATE TABLE IF NOT EXISTS courses (
     canvas_context_id VARCHAR(255) UNIQUE
 );
 
+ALTER TABLE courses
+    ADD COLUMN IF NOT EXISTS canvas_course_id VARCHAR(100) UNIQUE,
+    ADD COLUMN IF NOT EXISTS canvas_context_id VARCHAR(255) UNIQUE;
+
 -- -----------------------------
 -- File Types Table
 -- -----------------------------
@@ -135,7 +139,12 @@ VALUES
     ('application/vnd.ms-powerpoint', 'PPTXLoader', FALSE, FALSE),
     ('application/mspowerpoint', 'PPTXLoader', FALSE, FALSE),
     ('application/x-mspowerpoint', 'PPTXLoader', FALSE, FALSE),
-    ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTXLoader', FALSE, FALSE)
+    ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTXLoader', FALSE, FALSE),
+
+    -- Images
+    ('image/png', 'ImageLoader', TRUE, TRUE),
+    ('image/jpeg', 'ImageLoader', TRUE, TRUE),
+    ('image/jpg', 'ImageLoader', TRUE, TRUE)
 ON CONFLICT (mime_type) DO NOTHING;
 
 -- -----------------------------

@@ -32,7 +32,10 @@ class QueryService:
         course: dict,
         question: str,
         validate: bool = False,
-        student_id: Optional[str] = None
+        student_id: Optional[str] = None,
+        image_bytes: Optional[bytes] = None,
+        image_name: Optional[str] = None,
+        image_mime_type: Optional[str] = None,
     ) -> dict:
         """
         Executes the RAG pipeline:
@@ -41,11 +44,28 @@ class QueryService:
           3. Saves the resulting Q/A pair to SQL.
         """
 
-        if not question.strip():
+        normalized_question = question.strip()
+        if not normalized_question:
             return {"answer": "Question cannot be empty.", "sources": ""}
 
+        image_context: Optional[str] = None
+        if image_bytes is not None:
+            image_context = self.rag_service.extract_image_context(
+                image_name or "uploaded-image",
+                image_mime_type or "",
+                image_bytes,
+            )
+
         # --- Run RAG strategy (automatically logs query in DB) ---
-        return self.rag_service.query(course_id=course_id, course=course, question=question, validate=validate,student_id=student_id)
+        return self.rag_service.query(
+            course_id=course_id,
+            course=course,
+            question=normalized_question,
+            validate=validate,
+            student_id=student_id,
+            image_context=image_context,
+            image_name=image_name,
+        )
 
     @clean_service
     def get_student_queries(
