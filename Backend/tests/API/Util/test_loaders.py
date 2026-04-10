@@ -13,6 +13,7 @@ from API.Util.loaders import (
     DOCXLoader,
     XLSXLoader,
     PPTXLoader,
+    ImageLoader,
     LOADER_CLASS_REGISTRY,
 )
 
@@ -37,12 +38,13 @@ def test_loader_factory_returns_correct_loader_class():
     assert isinstance(factory.get("DOCXLoader"), DOCXLoader)
     assert isinstance(factory.get("XLSXLoader"), XLSXLoader)
     assert isinstance(factory.get("PPTXLoader"), PPTXLoader)
+    assert isinstance(factory.get("ImageLoader"), ImageLoader)
 
 
 def test_loader_registry_contains_all_loaders():
     assert set(LOADER_CLASS_REGISTRY.keys()) == {
         "PDFLoader","TXTLoader","MDLoader","HTMLLoader",
-        "XMLLoader","CSVLoader","DOCXLoader","XLSXLoader","PPTXLoader"
+        "XMLLoader","CSVLoader","DOCXLoader","XLSXLoader","PPTXLoader","ImageLoader"
     }
 
 
