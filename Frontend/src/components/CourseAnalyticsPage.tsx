@@ -32,7 +32,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../clients/ApiClientContext.tsx";
 import type { OverviewSummary, UsageTrendPoint, QueryDistributionItem, TopQuestionsItem, TopKeywordsItem } from "../clients/AnalyticsClient";
 import { StatCard } from "./StatCard.tsx";
-import { CourseBarChart } from "./charts/CoursebarcChart.tsx";
+import { CourseBarChart } from "./charts/CoursebarChart.tsx";
 
 const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
