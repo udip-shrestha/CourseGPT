@@ -274,8 +274,11 @@ class SimpleRAGStrategy(BaseRAGStrategy):
                 "- Do not add unsupported facts.\n"
                 "- Do not mention metadata, retrieved material, chunk IDs, file names, or the retrieval process.\n"
                 "- If uploaded image content is provided, treat it as request-specific course material for this answer.\n"
+                "- If uploaded image content is provided and the student asks to explain, describe, analyze, or give details, give a fuller explanation instead of a minimal one-line answer.\n"
+                "- For uploaded image content, describe the visible structure, labels, relationships, steps, and notable details that are supported by the extracted image material.\n"
+                "- If uploaded image content is present, do not say the information is unavailable unless the extracted image material is actually empty or unrelated.\n"
                 "- Answer only what was asked.\n"
-                "- Be concise.\n"
+                "- Be concise unless the student explicitly asks for a detailed explanation, walkthrough, or step-by-step analysis.\n"
             )),
             SystemMessage(content=f"### STUDENT QUESTION\n{question}"),
             SystemMessage(content=f"Current Date: {current_date}"),

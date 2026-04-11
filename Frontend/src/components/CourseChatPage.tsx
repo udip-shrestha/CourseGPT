@@ -21,6 +21,8 @@ export function CourseChatPage({ course }: { course: any }) {
   const [inputValue, setInputValue] = useState("");
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [selectedImagePreviewUrl, setSelectedImagePreviewUrl] = useState<string | null>(null);
+  const [retainedImage, setRetainedImage] = useState<File | null>(null);
+  const [retainedImagePreviewUrl, setRetainedImagePreviewUrl] = useState<string | null>(null);
   const [previewImage, setPreviewImage] = useState<{ url: string; name: string } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,6 +39,27 @@ export function CourseChatPage({ course }: { course: any }) {
       imageUrlsRef.current.forEach((url) => URL.revokeObjectURL(url));
     };
   }, []);
+
+  const clearPendingImage = () => {
+    if (selectedImagePreviewUrl && selectedImagePreviewUrl !== retainedImagePreviewUrl) {
+      URL.revokeObjectURL(selectedImagePreviewUrl);
+      imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
+    }
+    setSelectedImage(null);
+    setSelectedImagePreviewUrl(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const clearRetainedImage = () => {
+    if (retainedImagePreviewUrl) {
+      URL.revokeObjectURL(retainedImagePreviewUrl);
+      imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== retainedImagePreviewUrl);
+    }
+    setRetainedImage(null);
+    setRetainedImagePreviewUrl(null);
+  };
 
   const formatSources = (raw: unknown): string => {
     // Normalize input into tokens
@@ -114,16 +137,19 @@ export function CourseChatPage({ course }: { course: any }) {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!inputValue.trim() && !selectedImage) return;
+    if (!inputValue.trim() && !selectedImage && !retainedImage) return;
 
-    const questionText = inputValue.trim() || "Please explain the uploaded image.";
-    const imageToSend = selectedImage;
-    const imagePreviewUrl = selectedImagePreviewUrl;
+    const questionText = inputValue.trim() || "Please explain the uploaded image in detail.";
+    const imageToSend = selectedImage ?? retainedImage;
+    const imagePreviewUrl = selectedImagePreviewUrl ?? retainedImagePreviewUrl;
+    const isUsingRetainedImage = !selectedImage && !!retainedImage;
 
     const userMessage: Message = {
       id: `user-${Date.now()}`,
       role: "user",
-      content: imageToSend ? `${questionText}\n\n[Attached image: ${imageToSend.name}]` : questionText,
+      content: imageToSend
+        ? `${questionText}\n\n[${isUsingRetainedImage ? "Using previous image" : "Attached image"}: ${imageToSend.name}]`
+        : questionText,
       timestamp: new Date().toISOString(),
       imageName: imageToSend?.name,
       imagePreviewUrl: imagePreviewUrl ?? undefined,
@@ -131,6 +157,14 @@ export function CourseChatPage({ course }: { course: any }) {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue("");
+    if (selectedImage && selectedImagePreviewUrl) {
+      if (retainedImagePreviewUrl && retainedImagePreviewUrl !== selectedImagePreviewUrl) {
+        URL.revokeObjectURL(retainedImagePreviewUrl);
+        imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== retainedImagePreviewUrl);
+      }
+      setRetainedImage(selectedImage);
+      setRetainedImagePreviewUrl(selectedImagePreviewUrl);
+    }
     setSelectedImage(null);
     setSelectedImagePreviewUrl(null);
     if (fileInputRef.current) {
@@ -194,20 +228,12 @@ export function CourseChatPage({ course }: { course: any }) {
 
     if (!["image/png", "image/jpeg"].includes(file.type)) {
       setError("Please upload a PNG or JPEG image.");
-      setSelectedImage(null);
-      if (selectedImagePreviewUrl) {
-        URL.revokeObjectURL(selectedImagePreviewUrl);
-        imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
-        setSelectedImagePreviewUrl(null);
-      }
+      clearPendingImage();
       e.target.value = "";
       return;
     }
 
-    if (selectedImagePreviewUrl) {
-      URL.revokeObjectURL(selectedImagePreviewUrl);
-      imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
-    }
+    clearPendingImage();
 
     const nextPreviewUrl = URL.createObjectURL(file);
     imageUrlsRef.current.push(nextPreviewUrl);
@@ -299,6 +325,52 @@ export function CourseChatPage({ course }: { course: any }) {
               {error}
             </div>
           )}
+          {!selectedImage && retainedImage && retainedImagePreviewUrl && (
+            <div className="mb-3 rounded border bg-primary/5 px-3 py-3 text-sm">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Using previous image for follow-up questions
+              </div>
+              <div className="relative inline-block overflow-hidden rounded-lg border bg-background">
+                <button
+                  type="button"
+                  className="block"
+                  onClick={() =>
+                    setPreviewImage({
+                      url: retainedImagePreviewUrl,
+                      name: retainedImage.name,
+                    })
+                  }
+                >
+                  <img
+                    src={retainedImagePreviewUrl}
+                    alt={retainedImage.name}
+                    className="max-h-28 w-auto object-cover"
+                  />
+                </button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  className="absolute right-2 top-2 h-7 w-7 rounded-full shadow-sm"
+                  onClick={clearRetainedImage}
+                  title="Clear follow-up image context"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="mt-2 flex items-center justify-between gap-3">
+                <span className="truncate">{retainedImage.name}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearRetainedImage}
+                >
+                  Clear image context
+                </Button>
+              </div>
+            </div>
+          )}
           {selectedImage && (
             <div className="mb-3 rounded border bg-muted/40 px-3 py-3 text-sm">
               {selectedImagePreviewUrl && (
@@ -324,17 +396,7 @@ export function CourseChatPage({ course }: { course: any }) {
                     variant="secondary"
                     size="icon"
                     className="absolute right-2 top-2 h-7 w-7 rounded-full shadow-sm"
-                    onClick={() => {
-                      setSelectedImage(null);
-                      if (selectedImagePreviewUrl) {
-                        URL.revokeObjectURL(selectedImagePreviewUrl);
-                        imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
-                        setSelectedImagePreviewUrl(null);
-                      }
-                      if (fileInputRef.current) {
-                        fileInputRef.current.value = "";
-                      }
-                    }}
+                    onClick={clearPendingImage}
                     title="Remove attached image"
                   >
                     <X className="h-4 w-4" />
@@ -348,17 +410,7 @@ export function CourseChatPage({ course }: { course: any }) {
                   variant="ghost"
                   size="icon"
                   className="h-7 w-7"
-                  onClick={() => {
-                    setSelectedImage(null);
-                    if (selectedImagePreviewUrl) {
-                      URL.revokeObjectURL(selectedImagePreviewUrl);
-                      imageUrlsRef.current = imageUrlsRef.current.filter((url) => url !== selectedImagePreviewUrl);
-                      setSelectedImagePreviewUrl(null);
-                    }
-                    if (fileInputRef.current) {
-                      fileInputRef.current.value = "";
-                    }
-                  }}
+                  onClick={clearPendingImage}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -393,7 +445,7 @@ export function CourseChatPage({ course }: { course: any }) {
             />
             <Button
               type="submit"
-              disabled={loading || (!inputValue.trim() && !selectedImage)}
+              disabled={loading || (!inputValue.trim() && !selectedImage && !retainedImage)}
               size="icon"
             >
               {loading ? (

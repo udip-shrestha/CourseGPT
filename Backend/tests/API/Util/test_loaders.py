@@ -38,7 +38,9 @@ def test_loader_factory_returns_correct_loader_class():
     assert isinstance(factory.get("DOCXLoader"), DOCXLoader)
     assert isinstance(factory.get("XLSXLoader"), XLSXLoader)
     assert isinstance(factory.get("PPTXLoader"), PPTXLoader)
-    assert isinstance(factory.get("ImageLoader"), ImageLoader)
+    with patch("API.Util.loaders.shutil.which", return_value="/usr/bin/tesseract"), \
+         patch("API.Util.loaders.os.path.exists", return_value=True):
+        assert isinstance(factory.get("ImageLoader"), ImageLoader)
 
 
 def test_loader_registry_contains_all_loaders():
