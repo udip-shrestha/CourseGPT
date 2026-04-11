@@ -1,12 +1,8 @@
-import os
-import shutil
 from typing import Dict, List, Optional
 from fastapi import HTTPException, status
 from langchain_core.documents import Document
 from langchain_core.language_models import BaseChatModel
 from langchain_text_splitters import TextSplitter
-from unstructured_pytesseract.pytesseract import TesseractNotFoundError
-import unstructured_pytesseract.pytesseract as pytesseract
 from API.Util.loaders import ImageLoader, LoaderFactory
 from API.Util.rag_strategy import RAGStrategyFactory
 from API.Repository.i_vector_repository import IVectorRepository
@@ -42,21 +38,6 @@ class RAGService:
         self.rag_strategy_factory = rag_strategy_factory
         self.splitter = splitter
         self.llm = llm
-
-    def _configure_tesseract(self) -> None:
-        """Resolve the Tesseract executable for local OCR on Windows and other environments."""
-        candidates = [
-            os.environ.get("TESSERACT_CMD"),
-            shutil.which("tesseract"),
-            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-        ]
-
-        for candidate in candidates:
-            if candidate and os.path.exists(candidate):
-                pytesseract.tesseract_cmd = candidate
-                return
-
 
     # ======================================================
     # INDEXING (Loader → Splitter → Vector Store)
@@ -115,17 +96,7 @@ class RAGService:
                 detail="Unsupported image type. Please upload a PNG or JPEG image.",
             )
 
-        try:
-            self._configure_tesseract()
-            docs = ImageLoader().load(file_name, file_bytes)
-        except TesseractNotFoundError as exc:
-            raise HTTPException(
-                status.HTTP_503_SERVICE_UNAVAILABLE,
-                detail=(
-                    "Image OCR is not available on this server because Tesseract is not installed. "
-                    "Please install Tesseract OCR and restart the backend."
-                ),
-            ) from exc
+        docs = ImageLoader().load(file_name, file_bytes)
         extracted_text = "\n\n".join(doc.page_content.strip() for doc in docs if doc.page_content.strip())
         if not extracted_text:
             raise HTTPException(

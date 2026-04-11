@@ -80,10 +80,6 @@ CREATE TABLE IF NOT EXISTS courses (
     canvas_context_id VARCHAR(255) UNIQUE
 );
 
-ALTER TABLE courses
-    ADD COLUMN IF NOT EXISTS canvas_course_id VARCHAR(100) UNIQUE,
-    ADD COLUMN IF NOT EXISTS canvas_context_id VARCHAR(255) UNIQUE;
-
 -- -----------------------------
 -- File Types Table
 -- -----------------------------

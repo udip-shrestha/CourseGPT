@@ -158,3 +158,15 @@ def test_pptx_loader():
     p, m = _mock_loader("API.Util.loaders.UnstructuredPowerPointLoader")
     docs = PPTXLoader().load("a.pptx", b"x"); p.stop()
     m.load.assert_called_once(); assert docs[0].metadata["source"] == "a.pptx"
+
+
+def test_image_loader():
+    with patch("API.Util.loaders.shutil.which", return_value="/usr/bin/tesseract"), \
+         patch("API.Util.loaders.os.path.exists", return_value=True), \
+         patch("API.Util.loaders.UnstructuredImageLoader") as mock_loader_class:
+        mock_instance = _mock_unstructured_loader(mock_loader_class)
+        docs = ImageLoader().load("a.png", b"x")
+
+    mock_loader_class.assert_called_once()
+    mock_instance.load.assert_called_once()
+    assert docs[0].metadata["source"] == "a.png"
