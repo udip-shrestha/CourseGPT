@@ -68,6 +68,9 @@ def test_ask_question_success(client: TestClient, mock_query_service: QueryServi
         question="Hello?",
         validate=False,
         student_id="stu1",
+        image_bytes=None,
+        image_name=None,
+        image_mime_type=None,
     )
 
 
@@ -96,6 +99,9 @@ def test_ask_question_with_validate_true(client: TestClient, mock_query_service:
         question="Hello?",
         validate=True,
         student_id="stu1",
+        image_bytes=None,
+        image_name=None,
+        image_mime_type=None,
     )
 
 
@@ -123,6 +129,9 @@ def test_ask_question_publishes_websocket_event(
         question="Hello?",
         validate=False,
         student_id="stu1",
+        image_bytes=None,
+        image_name=None,
+        image_mime_type=None,
     )
 
     mock_ws_manager.publish.assert_called_once_with(

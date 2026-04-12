@@ -55,6 +55,8 @@ help:
 	@echo "make db-seed    -> Populate database with sample data"
 	@echo "make db-shell   -> Open interactive PostgreSQL shell"
 	@echo "make db-deploy  -> Create database if missing, preserve data"
+	@echo ""
+	@echo "make tesseract-install -> Install and configure Tesseract OCR"
 	@echo "-------------------------------------------"
 	@echo ""
 
@@ -332,4 +334,35 @@ db-migrate:
 	@echo "=============================================="
 	@echo " Migration completed successfully!"
 	@echo "=============================================="
+
+
+
+
+
+# ===========================================
+# Tessaract
+# ===========================================
+
+.PHONY: tesseract-install
+
+tesseract-install:
+ifeq ($(UNAME_S),Windows)
+	@echo "Installing Tesseract with winget if needed..."
+	@powershell -Command "try { winget install --id UB-Mannheim.TesseractOCR -e --silent; exit 0 } catch { exit 0 }"
+	@echo "Ensuring Tesseract is installed..."
+	@powershell -Command "if (Test-Path 'C:\Program Files\Tesseract-OCR\tesseract.exe') { Write-Host 'Tesseract is installed.' } else { Write-Error 'Tesseract is not installed.'; exit 1 }"
+	@echo "Adding Tesseract to user PATH safely..."
+	@powershell -Command "$$p=[Environment]::GetEnvironmentVariable('Path','User'); $$t='C:\Program Files\Tesseract-OCR'; if ($$p -notlike '*'+$$t+'*') { [Environment]::SetEnvironmentVariable('Path', $$p + ';' + $$t, 'User') }"
+	@echo "Done. Restart your terminal for PATH changes to take effect."
+else ifeq ($(UNAME_S),Darwin)
+	@echo "Installing Tesseract on macOS..."
+	@brew install tesseract
+	@echo "Tesseract installed successfully."
+else
+	@echo "Installing Tesseract on Linux..."
+	@sudo apt-get update
+	@sudo apt-get install -y tesseract-ocr
+	@echo "Tesseract installed successfully."
+endif
+
 

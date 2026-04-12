@@ -1,3 +1,4 @@
+from fastapi import HTTPException, status
 import pytest
 from unittest.mock import patch, MagicMock
 from langchain_core.documents import Document
@@ -13,6 +14,7 @@ from API.Util.loaders import (
     DOCXLoader,
     XLSXLoader,
     PPTXLoader,
+    ImageLoader,
     LOADER_CLASS_REGISTRY,
 )
 
@@ -38,11 +40,14 @@ def test_loader_factory_returns_correct_loader_class():
     assert isinstance(factory.get("XLSXLoader"), XLSXLoader)
     assert isinstance(factory.get("PPTXLoader"), PPTXLoader)
 
+    with patch("API.Util.loaders.pytesseract.get_tesseract_version", return_value="5.0.0"):
+        assert isinstance(factory.get("ImageLoader"), ImageLoader)
+
 
 def test_loader_registry_contains_all_loaders():
     assert set(LOADER_CLASS_REGISTRY.keys()) == {
         "PDFLoader","TXTLoader","MDLoader","HTMLLoader",
-        "XMLLoader","CSVLoader","DOCXLoader","XLSXLoader","PPTXLoader"
+        "XMLLoader","CSVLoader","DOCXLoader","XLSXLoader","PPTXLoader","ImageLoader"
     }
 
 
@@ -156,3 +161,27 @@ def test_pptx_loader():
     p, m = _mock_loader("API.Util.loaders.UnstructuredPowerPointLoader")
     docs = PPTXLoader().load("a.pptx", b"x"); p.stop()
     m.load.assert_called_once(); assert docs[0].metadata["source"] == "a.pptx"
+
+
+def test_image_loader():
+    with patch("API.Util.loaders.pytesseract.get_tesseract_version", return_value="5.0.0"), \
+         patch("API.Util.loaders.UnstructuredImageLoader") as mock_loader_class:
+        mock_instance = _mock_unstructured_loader(mock_loader_class)
+        docs = ImageLoader().load("a.png", b"x")
+
+    assert len(docs) == 1
+    assert docs[0].page_content == "sample text"
+    mock_loader_class.assert_called_once()
+    mock_instance.load.assert_called_once()
+
+
+def test_image_loader_raises_when_tesseract_unavailable():
+    with patch(
+        "API.Util.loaders.pytesseract.get_tesseract_version",
+        side_effect=Exception("not available"),
+    ):
+        with pytest.raises(HTTPException) as exc:
+            ImageLoader()
+
+    assert exc.value.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    assert "make tesseract-install" in exc.value.detail
