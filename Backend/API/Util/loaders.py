@@ -1,3 +1,4 @@
+import logging
 import os
 import shutil
 from typing import Protocol, List, Dict, Type, Optional, runtime_checkable
@@ -6,6 +7,9 @@ from langchain_community.document_loaders import UnstructuredPDFLoader, TextLoad
 from fastapi import HTTPException, status
 import unstructured_pytesseract.pytesseract as pytesseract
 from API.Util.files import create_temp_file_from_bytes
+
+
+logger = logging.getLogger(__name__)
 
 
 @runtime_checkable
@@ -110,26 +114,24 @@ class ImageLoader(ILoader):
         self._configure_tesseract()
 
     def _configure_tesseract(self) -> None:
-        candidates = [
-            os.environ.get("TESSERACT_CMD"),
-            shutil.which("tesseract"),
-            r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-            r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-        ]
-
-        for candidate in candidates:
-            if candidate and os.path.exists(candidate):
-                pytesseract.tesseract_cmd = candidate
-                return
-
-        raise HTTPException(
-            status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail=(
-                "Image OCR is not available on this server because Tesseract is not installed. "
-                "Please install Tesseract OCR and restart the backend."
-            ),
-        )
-
+        try:
+            if os.environ.get("TESSERACT_CMD"):
+                pytesseract.tesseract_cmd = os.environ["TESSERACT_CMD"]
+            # Try a simple command to verify Tesseract works
+            pytesseract.get_tesseract_version()
+        except Exception:
+            logger.error(
+                "Tesseract OCR is not available. "
+                "Please run `make tesseract-install` and restart the backend."
+            )
+            raise HTTPException(
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail=(
+                    "Tesseract OCR is not available. "
+                    "Please run `make tesseract-install` and restart the backend."
+                ),
+            )
+        
     def load(self, file_name: str, file_bytes: bytes) -> List[Document]:
         with create_temp_file_from_bytes(file_name, file_bytes) as path:
             return [
