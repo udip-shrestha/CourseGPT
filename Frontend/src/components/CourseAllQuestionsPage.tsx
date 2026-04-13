@@ -6,7 +6,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/
 import { Button } from "./ui/button.tsx";
 import { HelpCircle, ArrowLeft, ChevronDown } from "lucide-react";
 
-// Initial number of questions to show
+// Initial number of questions to show at the beginning of the list
 const INITIAL_BATCH = 20;
 
 function formatDateTimeDdMmYyyyHhMm(iso: string | undefined): string | null {
