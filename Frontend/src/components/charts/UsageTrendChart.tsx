@@ -9,8 +9,8 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
-// @ts-ignore
-import type { UsageTrendPoint } from "../clients/ApiClientContext";
+// Corrected path and source
+import type { UsageTrendPoint } from "../../clients/AnalyticsClient";
 
 interface UsageTrendChartProps {
     data: UsageTrendPoint[];
