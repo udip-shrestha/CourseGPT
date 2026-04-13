@@ -91,18 +91,16 @@ class RAGService:
         """Extract readable text from a transient chat image attachment."""
         supported_types = {"image/png", "image/jpeg", "image/jpg"}
         if mime_type not in supported_types:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail="Unsupported image type. Please upload a PNG or JPEG image.",
-            )
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Unsupported image type. Please upload a PNG or JPEG image.")
 
-        docs = ImageLoader().load(file_name, file_bytes)
+        loader = self.loader_factory.get(mime_type)
+        docs = loader.load(file_name, file_bytes)
+        if not docs:
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No text extracted from file. Please upload a valid document.")
+
         extracted_text = "\n\n".join(doc.page_content.strip() for doc in docs if doc.page_content.strip())
         if not extracted_text:
-            raise HTTPException(
-                status.HTTP_400_BAD_REQUEST,
-                detail="No readable text could be extracted from the uploaded image.",
-            )
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="No readable text could be extracted from the uploaded image.")
 
         return extracted_text
 
