@@ -36,11 +36,19 @@ import { CourseBarChart } from "./charts/CoursebarChart.tsx";
 
 const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
+// Filler words to filter out of the Top Keywords display
+const STOPWORDS = new Set([
+    "the", "a", "an", "and", "or", "but", "is", "are", "was", "were",
+    "what", "who", "where", "when", "why", "how", "to", "of", "in",
+    "for", "on", "with", "at", "by", "from", "up", "about", "into",
+    "over", "after", "your", "mine", "my", "me", "you", "they", "them",
+    "this", "that", "these", "those", "it", "its", "it's"
+]);
+
 interface CourseAnalyticsPageProps {
     course: { name: string; id?: string; instructor_id?: string };
 }
 
-// Local Component for Trend Chart
 function UsageTrendChart({ data }: { data: UsageTrendPoint[] }) {
     const queryTrendColor = useMemo(() => {
         if (data.length < 2) return "#3b82f6";
@@ -83,6 +91,13 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const { courseId: routeCourseId } = useParams();
     const courseId = course.id ?? routeCourseId ?? "";
     const instructorId = course.instructor_id;
+
+    // Filtered keywords logic
+    const filteredKeywords = useMemo(() => {
+        return topKeywords.filter(
+            (item) => !STOPWORDS.has(item.keyword.toLowerCase())
+        );
+    }, [topKeywords]);
 
     const engagementScore = useMemo(() => {
         const activeUsers = overviewSummary?.activeUsers ?? 0;
@@ -145,15 +160,17 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
                     <p className="text-muted-foreground">Course engagement and chatbot usage insights for {course.name}</p>
                 </div>
-                <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                    <SelectTrigger className="w-40"><SelectValue placeholder="Time range" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="7d">Last 7 days</SelectItem>
-                        <SelectItem value="30d">Last 30 days</SelectItem>
-                        <SelectItem value="90d">Last 90 days</SelectItem>
-                        <SelectItem value="1y">Last year</SelectItem>
-                    </SelectContent>
-                </Select>
+                <div className="flex flex-wrap gap-4">
+                    <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
+                        <SelectTrigger className="w-40"><SelectValue placeholder="Time range" /></SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="7d">Last 7 days</SelectItem>
+                            <SelectItem value="30d">Last 30 days</SelectItem>
+                            <SelectItem value="90d">Last 90 days</SelectItem>
+                            <SelectItem value="1y">Last year</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
             <div>
@@ -177,10 +194,10 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <Button variant="outline" size="sm" onClick={() => navigate(`/courses/${courseId}/questions`)}>See All</Button>
                     </CardHeader>
                     <CardContent>
-                        {loading ? <p className="text-sm">Loading…</p> : topQuestions.length === 0 ? <p className="text-sm">No questions recorded yet.</p> : (
+                        {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : topQuestions.length === 0 ? <p className="text-sm text-muted-foreground italic">No questions recorded yet.</p> : (
                             <ul className="space-y-3">
                                 {topQuestions.map((item, i) => (
-                                    <li key={i} className="border-b pb-2 last:border-0"><div className="flex justify-between gap-4"><span className="text-sm font-medium">{item.queryText}</span><span className="text-sm text-muted-foreground">{item.count}×</span></div></li>
+                                    <li key={i} className="border-b border-border pb-2 last:border-0"><div className="flex justify-between gap-4"><span className="text-sm font-medium">{item.queryText}</span><span className="text-sm text-muted-foreground">{item.count}×</span></div></li>
                                 ))}
                             </ul>
                         )}
@@ -193,10 +210,17 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <CardDescription>Most common keywords in student questions</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {topKeywords.length === 0 ? <p className="text-sm">No keywords recorded yet.</p> : (
+                        {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : filteredKeywords.length === 0 ? (
+                            <p className="text-sm text-muted-foreground italic">No keywords recorded yet.</p>
+                        ) : (
                             <ul className="space-y-3">
-                                {topKeywords.map((item, i) => (
-                                    <li key={i} className="flex justify-between border-b pb-2 last:border-0"><span className="text-sm">{item.keyword}</span><span className="text-sm font-medium text-muted-foreground">{item.count}×</span></li>
+                                {filteredKeywords.map((item, i) => (
+                                    <li key={i} className="flex justify-between border-b border-border pb-2 last:border-0">
+                                        <span className="text-sm font-medium">{item.keyword}</span>
+                                        <span className="text-sm font-medium text-muted-foreground shrink-0">
+                                            {item.count} {item.count === 1 ? "time" : "times"}
+                                        </span>
+                                    </li>
                                 ))}
                             </ul>
                         )}
@@ -221,7 +245,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <CardDescription>Total queries per course</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        {/* Now using the imported component */}
                         <CourseBarChart data={courseUsageData} />
                     </CardContent>
                 </Card>
