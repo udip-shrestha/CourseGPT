@@ -9,27 +9,37 @@ import {
     Legend,
     ResponsiveContainer,
 } from "recharts";
-// Corrected path and source
-import type { UsageTrendPoint } from "../../clients/AnalyticsClient";
+// Corrected import path to reach the interface in AnalyticsClient.ts
+import type { UsageTrendPoint } from "../../clients/AnalyticsClient.ts";
 
 interface UsageTrendChartProps {
     data: UsageTrendPoint[];
 }
 
 export function UsageTrendChart({ data }: UsageTrendChartProps) {
+    // 1. Momentum Color Logic
     const queryTrendColor = useMemo(() => {
-        if (data.length < 2) return "#3b82f6";
+        if (!data || data.length < 2) return "#3b82f6";
         const first = data[0].queries;
         const last = data[data.length - 1].queries;
         return last >= first ? "#10b981" : "#ef4444";
     }, [data]);
 
     const userTrendColor = useMemo(() => {
-        if (data.length < 2) return "#94a3b8";
+        if (!data || data.length < 2) return "#94a3b8";
         const first = data[0].uniqueUsers;
         const last = data[data.length - 1].uniqueUsers;
         return last >= first ? "#059669" : "#dc2626";
     }, [data]);
+
+    // 2. Safe-guard against empty data
+    if (!data || data.length === 0) {
+        return (
+            <div className="flex h-[300px] items-center justify-center text-muted-foreground italic text-sm">
+                No trend data available for this time range.
+            </div>
+        );
+    }
 
     return (
         <ResponsiveContainer width="100%" height={300}>
@@ -39,6 +49,11 @@ export function UsageTrendChart({ data }: UsageTrendChartProps) {
                     dataKey="date"
                     stroke="hsl(var(--muted-foreground))"
                     fontSize={12}
+                    tickFormatter={(str) => {
+                        // Optional: Format "2024-02-03" to "Feb 03" for cleaner look
+                        const date = new Date(str);
+                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                    }}
                 />
                 <YAxis
                     stroke="hsl(var(--muted-foreground))"
@@ -59,6 +74,7 @@ export function UsageTrendChart({ data }: UsageTrendChartProps) {
                     strokeWidth={3}
                     dot={false}
                     name="Total Queries"
+                    animationDuration={1500}
                 />
                 <Line
                     type="monotone"
@@ -68,6 +84,7 @@ export function UsageTrendChart({ data }: UsageTrendChartProps) {
                     strokeDasharray="5 5"
                     dot={false}
                     name="Unique Users (Students)"
+                    animationDuration={1500}
                 />
             </LineChart>
         </ResponsiveContainer>
