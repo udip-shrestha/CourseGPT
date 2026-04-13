@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, WebSocket, status, Path, Query
+from fastapi import APIRouter, Depends, File, Form, Path, Query, UploadFile, WebSocket, status
 from typing import Optional
 from API.Service.queries_service import QueryService
 from API.dependencies import get_query_service, validate_course, get_web_socket_manager
@@ -29,33 +29,65 @@ def ask_question(
         description="UUID of the course the question belongs to.",
         examples={"example": "8b7e9f2a-d4a1-4e5c-94b9-3c6f4ab0e9cd"},
     ),
-    question: str = Query(
-        ...,
+    question: Optional[str] = Query(
+        None,
         description="The student's natural-language question.",
         examples={"example": "What is the difference between a controller and a service?"},
+    ),
+    question_form: Optional[str] = Form(
+        None,
+        alias="question",
+        description="The student's natural-language question when sent as multipart/form-data.",
     ),
     student_id: Optional[str] = Query(
         None,
         description="Optional student UUID (used for author attribution and analytics).",
         examples={"example": "c3e82b9d-f24d-4b1e-9e5c-0affd12e90b3"},
     ),
+    student_id_form: Optional[str] = Form(
+        None,
+        alias="student_id",
+        description="Optional student UUID when sent as multipart/form-data.",
+    ),
     validate: bool = Query(
         False, 
         description="When true, include retrieval data for evaluation."
+    ),
+    validate_form: Optional[bool] = Form(
+        None,
+        alias="validate",
+        description="Validation flag when sent as multipart/form-data.",
+    ),
+    image: Optional[UploadFile] = File(
+        None,
+        description="Optional PNG or JPEG image to analyze alongside the question.",
     ),
     course: dict = Depends(validate_course),
     service: QueryService = Depends(get_query_service),
     web_socket_manager: WebSocketManager = Depends(get_web_socket_manager),
 ):
     """Run the full RAG answer-generation pipeline for a single question."""
+    resolved_question = (question_form if question_form is not None else question) or ""
+    resolved_student_id = student_id_form if student_id_form is not None else student_id
+    resolved_validate = validate_form if validate_form is not None else validate
+    image_bytes = image.file.read() if image else None
 
     # Step 1: run RAG + save in DB
-    result = service.ask_question(course_id=course_id, course=course, question=question, validate=validate, student_id=student_id)
+    result = service.ask_question(
+        course_id=course_id,
+        course=course,
+        question=resolved_question,
+        validate=resolved_validate,
+        student_id=resolved_student_id,
+        image_bytes=image_bytes,
+        image_name=image.filename if image else None,
+        image_mime_type=image.content_type if image else None,
+    )
 
     # Step 2: broadcast event to websocket subscribers
     web_socket_manager.publish(COURSE_QUERIES_WS_ROUTE.format(course_id=course_id), {
         "event": "new_query",
-        "question": question,
+        "question": resolved_question,
         "answer": result.get("answer", ""),
     })
 
