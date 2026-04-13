@@ -15,24 +15,19 @@ import {
 } from "./ui/select.tsx";
 import { Button } from "./ui/button.tsx";
 import { Users, MessageSquare, TrendingUp, Activity, HelpCircle } from "lucide-react";
-import {
-    PieChart,
-    Pie,
-    Cell,
-    Tooltip,
-    Legend,
-    ResponsiveContainer,
-    LineChart,
-    Line,
-    XAxis,
-    YAxis,
-    CartesianGrid
-} from "recharts";
 import { useNavigate, useParams } from "react-router-dom";
 import { useApiClient } from "../clients/ApiClientContext.tsx";
-import type { OverviewSummary, UsageTrendPoint, QueryDistributionItem, TopQuestionsItem, TopKeywordsItem } from "../clients/AnalyticsClient";
+import type {
+    OverviewSummary,
+    UsageTrendPoint,
+    QueryDistributionItem,
+    TopQuestionsItem,
+    TopKeywordsItem
+} from "../clients/AnalyticsClient";
 import { StatCard } from "./StatCard.tsx";
 import { CourseBarChart } from "./charts/CoursebarChart.tsx";
+import { UsageTrendChart } from "./charts/UsageTrendChart.tsx";
+import { QueryDistributionPieChart } from "./charts/QueryDistributionPieChart.tsx";
 
 const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
 
@@ -47,32 +42,6 @@ const STOPWORDS = new Set([
 
 interface CourseAnalyticsPageProps {
     course: { name: string; id?: string; instructor_id?: string };
-}
-
-function UsageTrendChart({ data }: { data: UsageTrendPoint[] }) {
-    const queryTrendColor = useMemo(() => {
-        if (data.length < 2) return "#3b82f6";
-        return data[data.length - 1].queries >= data[0].queries ? "#10b981" : "#ef4444";
-    }, [data]);
-
-    const userTrendColor = useMemo(() => {
-        if (data.length < 2) return "#94a3b8";
-        return data[data.length - 1].uniqueUsers >= data[0].uniqueUsers ? "#059669" : "#dc2626";
-    }, [data]);
-
-    return (
-        <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.2} />
-                <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" />
-                <YAxis stroke="hsl(var(--muted-foreground))" />
-                <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
-                <Legend />
-                <Line type="monotone" dataKey="queries" stroke={queryTrendColor} strokeWidth={3} dot={false} name="Total Queries" />
-                <Line type="monotone" dataKey="uniqueUsers" stroke={userTrendColor} strokeWidth={2} strokeDasharray="5 5" dot={false} name="Unique Users (Students)" />
-            </LineChart>
-        </ResponsiveContainer>
-    );
 }
 
 export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
@@ -110,16 +79,11 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     const totalChatbotQueries = totalCount ?? overviewSummary?.totalQueries ?? 0;
 
-    const courseUsageData = [{
-        courseId: courseId,
+    // Memoize the data for the Bar Chart
+    const courseUsageData = useMemo(() => [{
         courseName: course.name,
-        courseCode: course.name.slice(0, 8),
-        activeUsers: overviewSummary?.activeUsers ?? 0,
-        totalUsers: enrolledCount,
         chatbotQueries: totalChatbotQueries,
-        averageResponseTime: 0,
-        satisfaction: overviewSummary?.averageSatisfaction ?? 0,
-    }];
+    }], [course.name, totalChatbotQueries]);
 
     useEffect(() => {
         if (!courseId) return;
@@ -149,30 +113,38 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         return () => { cancelled = true; };
     }, [courseId, instructorId, selectedTimeRange, analyticsClient, queryClient]);
 
-    const courseDistribution = queryDistribution.length > 0
-        ? queryDistribution.map((d, i) => ({ name: d.courseName, value: d.count, color: CHART_COLORS[i % CHART_COLORS.length] }))
-        : [{ name: course.name, value: totalChatbotQueries || 1, color: CHART_COLORS[0] }];
+    // Memoize the data for the Pie Chart
+    const courseDistributionData = useMemo(() => {
+        if (queryDistribution.length > 0) {
+            return queryDistribution.map((d, i) => ({
+                name: d.courseName,
+                value: d.count,
+                color: CHART_COLORS[i % CHART_COLORS.length]
+            }));
+        }
+        return [{ name: course.name, value: totalChatbotQueries || 1, color: CHART_COLORS[0] }];
+    }, [queryDistribution, course.name, totalChatbotQueries]);
 
     return (
         <div className="space-y-6">
+            {/* Header */}
             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                     <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
                     <p className="text-muted-foreground">Course engagement and chatbot usage insights for {course.name}</p>
                 </div>
-                <div className="flex flex-wrap gap-4">
-                    <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                        <SelectTrigger className="w-40"><SelectValue placeholder="Time range" /></SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="7d">Last 7 days</SelectItem>
-                            <SelectItem value="30d">Last 30 days</SelectItem>
-                            <SelectItem value="90d">Last 90 days</SelectItem>
-                            <SelectItem value="1y">Last year</SelectItem>
-                        </SelectContent>
-                    </Select>
-                </div>
+                <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
+                    <SelectTrigger className="w-40"><SelectValue placeholder="Time range" /></SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="7d">Last 7 days</SelectItem>
+                        <SelectItem value="30d">Last 30 days</SelectItem>
+                        <SelectItem value="90d">Last 90 days</SelectItem>
+                        <SelectItem value="1y">Last year</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
+            {/* Stat Cards */}
             <div>
                 <h2 className="text-lg font-semibold mb-3">Platform Engagement</h2>
                 <p className="text-sm text-muted-foreground mb-4">Key metrics for course engagement and chatbot usage in the selected time range.</p>
@@ -185,6 +157,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             </div>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* FAQ List */}
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between gap-2">
                         <div>
@@ -204,6 +177,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     </CardContent>
                 </Card>
 
+                {/* Filtered Keywords */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Top Keywords</CardTitle>
@@ -217,9 +191,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                 {filteredKeywords.map((item, i) => (
                                     <li key={i} className="flex justify-between border-b border-border pb-2 last:border-0">
                                         <span className="text-sm font-medium">{item.keyword}</span>
-                                        <span className="text-sm font-medium text-muted-foreground shrink-0">
-                                            {item.count} {item.count === 1 ? "time" : "times"}
-                                        </span>
+                                        <span className="text-sm font-medium text-muted-foreground shrink-0">{item.count} times</span>
                                     </li>
                                 ))}
                             </ul>
@@ -228,6 +200,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
+            {/* Trend Chart Component */}
             <Card>
                 <CardHeader>
                     <CardTitle>Chatbot Usage Trend</CardTitle>
@@ -239,6 +212,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             </Card>
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                {/* Bar Chart Component */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Chatbot Usage by Course</CardTitle>
@@ -249,56 +223,17 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     </CardContent>
                 </Card>
 
+                {/* Pie Chart Component */}
                 <Card>
                     <CardHeader>
                         <CardTitle>Query Distribution</CardTitle>
                         <CardDescription>Percentage breakdown by course</CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
-                            <PieChart>
-                                <Pie data={courseDistribution} cx="50%" cy="50%" outerRadius={100} dataKey="value">
-                                    {courseDistribution.map((entry, index) => <Cell key={index} fill={entry.color} />)}
-                                </Pie>
-                                <Tooltip />
-                            </PieChart>
-                        </ResponsiveContainer>
+                        <QueryDistributionPieChart data={courseDistributionData} />
                     </CardContent>
                 </Card>
             </div>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Course Engagement Details</CardTitle>
-                    <CardDescription>Detailed metrics for each course</CardDescription>
-                </CardHeader>
-                <CardContent className="p-0">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                            <thead>
-                            <tr className="border-b bg-muted/30">
-                                <th className="p-4 text-left font-semibold">Course</th>
-                                <th className="p-4 text-center font-semibold">Total Enrolled</th>
-                                <th className="p-4 text-center font-semibold">Engagement Rate</th>
-                                <th className="p-4 text-center font-semibold">Chatbot Queries</th>
-                                <th className="p-4 text-right font-semibold">Satisfaction</th>
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {courseUsageData.map((c) => (
-                                <tr key={c.courseId} className="border-b hover:bg-muted/50 transition-colors">
-                                    <td className="p-4"><div className="font-bold text-primary">{c.courseCode}</div><div className="text-xs text-muted-foreground">{c.courseName}</div></td>
-                                    <td className="p-4 text-center font-medium">{enrolledCount}</td>
-                                    <td className="p-4 text-center"><span className="bg-primary/10 text-primary px-2 py-1 rounded-full font-bold">{engagementScore}%</span></td>
-                                    <td className="p-4 text-center">{totalChatbotQueries.toLocaleString()}</td>
-                                    <td className="p-4 text-right font-bold">★ {overviewSummary?.averageSatisfaction || "—"}</td>
-                                </tr>
-                            ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </CardContent>
-            </Card>
         </div>
     );
 }
