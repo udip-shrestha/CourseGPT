@@ -1,12 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react"; // Removed useMemo
 import { useNavigate } from "react-router-dom";
 import { useApiClient } from "../clients/ApiClientContext.tsx";
 import type { CourseQueryRecord } from "../clients/QueryClient";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "./ui/card.tsx";
 import { Button } from "./ui/button.tsx";
-import { HelpCircle, ArrowLeft, ChevronDown } from "lucide-react";
+import { HelpCircle, ArrowLeft, ChevronDown, ArrowUp, Minimize2 } from "lucide-react";
 
-// Initial number of questions to show at the beginning of the list
 const INITIAL_BATCH = 20;
 
 function formatDateTimeDdMmYyyyHhMm(iso: string | undefined): string | null {
@@ -34,13 +33,13 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
     const [loading, setLoading] = useState(true);
     const [loadingMore, setLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
-
-    // Track how many items we are currently displaying
     const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH);
 
     const { queryClient } = useApiClient();
     const navigate = useNavigate();
     const courseId = course.id;
+
+    const scrollContainerRef = useRef<HTMLUListElement>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -52,17 +51,13 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
 
         (async () => {
             setLoading(true);
-            setError(null);
-            // We still fetch a healthy amount, but we only SHOW a slice of them
             const res = await queryClient.getCourseQueries(courseId, {
                 limit: 1000,
                 offset: 0,
                 orderBy: "asked_at",
                 orderDir: "desc",
             });
-
             if (cancelled) return;
-
             if ("errorMessage" in res && res.errorMessage) {
                 setError(res.errorMessage);
             } else if (res.data) {
@@ -71,22 +66,29 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
             }
             setLoading(false);
         })();
-
         return () => { cancelled = true; };
     }, [queryClient, courseId]);
 
-    // Function to "extend" the list
     const handleLoadMore = () => {
         setLoadingMore(true);
-        // Simulate a tiny delay for better UX feel, then show 20 more
         setTimeout(() => {
             setVisibleCount((prev) => prev + 20);
             setLoadingMore(false);
         }, 300);
     };
 
+    const handleBackToTop = () => {
+        scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+    };
+
+    const handleCollapseAll = () => {
+        setVisibleCount(INITIAL_BATCH);
+        handleBackToTop();
+    };
+
     const displayedQuestions = questions.slice(0, visibleCount);
     const hasMore = questions.length > visibleCount;
+    const isExtended = visibleCount > INITIAL_BATCH;
 
     return (
         <div className="space-y-4">
@@ -109,15 +111,33 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
 
             <Card>
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <HelpCircle className="h-5 w-5" />
-                        Questions and Answers
-                    </CardTitle>
-                    <CardDescription>
-                        {totalCount != null
-                            ? `Showing ${displayedQuestions.length} of ${totalCount} Q&A entries.`
-                            : "Loading entries..."}
-                    </CardDescription>
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <HelpCircle className="h-5 w-5" />
+                                Questions and Answers
+                            </CardTitle>
+                            <CardDescription>
+                                {totalCount != null
+                                    ? `Showing ${displayedQuestions.length} of ${totalCount} Q&A entries.`
+                                    : "Loading entries..."}
+                            </CardDescription>
+                        </div>
+
+                        {isExtended && (
+                            <div className="flex gap-2">
+                                {/* Changed size from 'xs' to 'sm' to fix TS error */}
+                                <Button variant="secondary" size="sm" onClick={handleCollapseAll} className="h-8 text-xs px-3">
+                                    <Minimize2 className="mr-1 h-3 w-3" />
+                                    Collapse
+                                </Button>
+                                <Button variant="secondary" size="sm" onClick={handleBackToTop} className="h-8 text-xs px-3">
+                                    <ArrowUp className="mr-1 h-3 w-3" />
+                                    Top
+                                </Button>
+                            </div>
+                        )}
+                    </div>
                 </CardHeader>
                 <CardContent>
                     {loading ? (
@@ -125,19 +145,17 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
                     ) : error ? (
                         <p className="text-sm text-destructive">{error}</p>
                     ) : questions.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">
-                            No questions recorded yet.
-                        </p>
+                        <p className="text-sm text-muted-foreground">No questions recorded yet.</p>
                     ) : (
                         <div className="space-y-6">
-                            <ul className="space-y-4 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar">
+                            <ul
+                                ref={scrollContainerRef}
+                                className="space-y-4 max-h-[65vh] overflow-y-auto pr-2 custom-scrollbar scroll-smooth"
+                            >
                                 {displayedQuestions.map((item) => {
                                     const when = formatDateTimeDdMmYyyyHhMm(item.asked_at);
                                     return (
-                                        <li
-                                            key={item.id}
-                                            className="border-b border-border pb-4 last:border-0 group"
-                                        >
+                                        <li key={item.id} className="border-b border-border pb-4 last:border-0 group">
                                             <div className="flex justify-between gap-4">
                                                 <span className="font-semibold text-sm flex-1 min-w-0 group-hover:text-primary transition-colors">
                                                     {item.query_text}
@@ -160,8 +178,8 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
                                 })}
                             </ul>
 
-                            {hasMore && (
-                                <div className="flex justify-center pt-2 border-t border-border">
+                            <div className="flex flex-col items-center gap-4 pt-4 border-t border-border">
+                                {hasMore && (
                                     <Button
                                         variant="ghost"
                                         size="sm"
@@ -172,8 +190,21 @@ export function CourseAllQuestionsPage({ course }: CourseAllQuestionsPageProps) 
                                         {loadingMore ? "Expanding..." : "See More Questions"}
                                         <ChevronDown className={`ml-2 h-4 w-4 ${loadingMore ? 'animate-pulse' : ''}`} />
                                     </Button>
-                                </div>
-                            )}
+                                )}
+
+                                {isExtended && (
+                                    <div className="flex gap-4">
+                                        <Button variant="link" size="sm" onClick={handleBackToTop} className="text-xs text-muted-foreground">
+                                            <ArrowUp className="mr-1 h-3 w-3" />
+                                            Scroll to Top
+                                        </Button>
+                                        <Button variant="link" size="sm" onClick={handleCollapseAll} className="text-xs text-muted-foreground">
+                                            <Minimize2 className="mr-1 h-3 w-3" />
+                                            Collapse All
+                                        </Button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
                 </CardContent>
