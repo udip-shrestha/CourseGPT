@@ -135,7 +135,12 @@ VALUES
     ('application/vnd.ms-powerpoint', 'PPTXLoader', FALSE, FALSE),
     ('application/mspowerpoint', 'PPTXLoader', FALSE, FALSE),
     ('application/x-mspowerpoint', 'PPTXLoader', FALSE, FALSE),
-    ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTXLoader', FALSE, FALSE)
+    ('application/vnd.openxmlformats-officedocument.presentationml.presentation', 'PPTXLoader', FALSE, FALSE),
+
+    -- Images
+    ('image/png', 'ImageLoader', TRUE, TRUE),
+    ('image/jpeg', 'ImageLoader', TRUE, TRUE),
+    ('image/jpg', 'ImageLoader', TRUE, TRUE)
 ON CONFLICT (mime_type) DO NOTHING;
 
 -- -----------------------------

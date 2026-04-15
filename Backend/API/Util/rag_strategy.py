@@ -4,6 +4,7 @@ import logging
 from typing import Any, List, Dict, Optional, Protocol, Tuple, runtime_checkable
 from datetime import datetime
 
+from chromadb.errors import NotFoundError
 from langchain.agents import create_agent
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage, ToolMessage
 from langchain_core.language_models import BaseChatModel
@@ -30,7 +31,9 @@ class IRAGStrategy(Protocol):
         course: dict,
         question: str,
         validate: bool = False,
-        student_id: Optional[str] = None
+        student_id: Optional[str] = None,
+        image_context: Optional[str] = None,
+        image_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         ...
 
@@ -47,7 +50,11 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
         question: str,
         k: int = 8,
     ):
-        results = vector_repo.query(course_id, question, k)
+        try:
+            results = vector_repo.query(course_id, question, k)
+        except NotFoundError:
+            logger.info("[RAG] No vector collection exists for course_id=%s; proceeding without retrieved chunks", course_id)
+            return "", []
 
         if not results:
             return "", []
@@ -137,6 +144,25 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
             return "This information is not available in the specific course material."
 
         return None
+
+    def merge_contexts(
+        self,
+        retrieved_content: str,
+        retrieved_sources: List[str],
+        image_context: Optional[str] = None,
+        image_name: Optional[str] = None,
+    ) -> Tuple[str, List[str]]:
+        if not image_context:
+            return retrieved_content, retrieved_sources
+
+        image_label = image_name or "uploaded image"
+        merged_sources = list(retrieved_sources)
+        if image_label not in merged_sources:
+            merged_sources.append(image_label)
+
+        image_section = f"[Source: {image_label} | Attachment]\n{image_context.strip()}"
+        merged_content = f"{retrieved_content}\n\n{image_section}".strip() if retrieved_content else image_section
+        return merged_content, merged_sources
     
     @abstractmethod
     def run(
@@ -148,7 +174,9 @@ class BaseRAGStrategy(ABC, IRAGStrategy):
         course: dict,
         question: str,
         validate: bool = False,
-        student_id: Optional[str] = None
+        student_id: Optional[str] = None,
+        image_context: Optional[str] = None,
+        image_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Subclasses must implement."""
         raise NotImplementedError
@@ -165,7 +193,9 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         course: dict,
         question: str,
         validate: bool = False,
-        student_id: Optional[str] = None
+        student_id: Optional[str] = None,
+        image_context: Optional[str] = None,
+        image_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         
         logger.info(f"[SimpleRAG] ---- START question={question!r} ----")
@@ -176,6 +206,13 @@ class SimpleRAGStrategy(BaseRAGStrategy):
 
         retrieved_content, retrieved_sources = self.retrieve_chunks(
             vector_repo, course_id, question
+        )
+
+        retrieved_content, retrieved_sources = self.merge_contexts(
+            retrieved_content,
+            retrieved_sources,
+            image_context=image_context,
+            image_name=image_name,
         )
 
         direct_answer = self.try_direct_answer(question, retrieved_content)
@@ -236,8 +273,12 @@ class SimpleRAGStrategy(BaseRAGStrategy):
                 "- For Java ArrayList questions about primitive values, explicitly mention that ArrayLists store objects and use wrapper classes for primitive values.\n"
                 "- Do not add unsupported facts.\n"
                 "- Do not mention metadata, retrieved material, chunk IDs, file names, or the retrieval process.\n"
+                "- If uploaded image content is provided, treat it as request-specific course material for this answer.\n"
+                "- If uploaded image content is provided and the student asks to explain, describe, analyze, or give details, give a fuller explanation instead of a minimal one-line answer.\n"
+                "- For uploaded image content, describe the visible structure, labels, relationships, steps, and notable details that are supported by the extracted image material.\n"
+                "- If uploaded image content is present, do not say the information is unavailable unless the extracted image material is actually empty or unrelated.\n"
                 "- Answer only what was asked.\n"
-                "- Be concise.\n"
+                "- Be concise unless the student explicitly asks for a detailed explanation, walkthrough, or step-by-step analysis.\n"
             )),
             SystemMessage(content=f"### STUDENT QUESTION\n{question}"),
             SystemMessage(content=f"Current Date: {current_date}"),
@@ -286,7 +327,9 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         course: dict,
         question: str,
         validate: bool = False,
-        student_id: Optional[str] = None
+        student_id: Optional[str] = None,
+        image_context: Optional[str] = None,
+        image_name: Optional[str] = None,
     ) -> Dict[str, Any]:
         
         logger.info(f"[AgenticRAG] ---- START question={question!r} ----")
@@ -301,7 +344,13 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         def tool_retrieve_chunks(question: str) -> Tuple[str, List[str]]:
             """Retrieve vector chunks relevant to the user's question."""
             logger.info(f"[AgenticRAG] Retrieving relevant chunks")
-            return self.retrieve_chunks(vector_repo, course_id, question)
+            retrieved_content, retrieved_sources = self.retrieve_chunks(vector_repo, course_id, question)
+            return self.merge_contexts(
+                retrieved_content,
+                retrieved_sources,
+                image_context=image_context,
+                image_name=image_name,
+            )
 
         tools = [
             tool_course_details,

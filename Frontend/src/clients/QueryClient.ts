@@ -20,8 +20,21 @@ export class QueryClient {
         this.baseClient = baseClient
     }
 
-    async queryCourse(courseId: string, question: string) {
+    async queryCourse(courseId: string, question: string, imageFile?: File | null) {
         if (!courseId || !question) return { errorMessage: "Course ID and question are required." };
+
+        if (imageFile) {
+            const formData = new FormData();
+            formData.append("question", question);
+            formData.append("image", imageFile);
+
+            return this.baseClient.request("POST", `/courses/${courseId}/queries`, {
+                body: formData,
+                isJson: false,
+                operationId: `course-query-${courseId}`,
+            });
+        }
+
         const params = { course_id: courseId, question };
         return this.baseClient.request("POST", `/courses/${courseId}/queries`, { query: params, operationId: `course-query-${courseId}` });
     }

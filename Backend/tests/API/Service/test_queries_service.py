@@ -25,7 +25,9 @@ def test_ask_question_success(query_service: QueryService, mock_rag_service: RAG
         course={"id": "c1", "rag_strategy_id": 1},
         question="Hello?",
         validate=False,
-        student_id="stu1"
+        student_id="stu1",
+        image_context=None,
+        image_name=None,
     )
 
     assert result == {"answer": "Hi", "sources": ["s1"]}
