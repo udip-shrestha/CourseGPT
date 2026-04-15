@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Query, Depends, status, Path
+from fastapi import APIRouter, Query, Depends, HTTPException, status, Path
 from API.Service.courses_service import CourseService
 from Metrics.metrics import MetricsRoute
 from API.dependencies import get_course_service
@@ -7,7 +7,26 @@ from typing import Optional
 
 router = APIRouter(tags=["Courses"], route_class=MetricsRoute)
 
+@router.get(
+    "/courses/count",
+    summary="Get total number of courses",
+    description="Returns total courses. Optional grouping by instructor.",
+)
+def count_courses(
+    group_by_instructor: bool = Query(
+        False,
+        description="If true, returns count grouped by instructor_id",
+    ),
+    service: CourseService = Depends(get_course_service),
+):
+    try:
+        if group_by_instructor:
+            return service.count_courses_grouped_by_instructor()
+        return {"total_courses": service.count_courses()}
 
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to count courses: {e}")
+    
 @router.post(
     "/instructors/{instructor_id}/courses",
     status_code=status.HTTP_200_OK,
@@ -242,8 +261,7 @@ def link_canvas_course(
     service: CourseService = Depends(get_course_service),
 ):
     return service.link_canvas_course(course_id, canvas_context_id, canvas_course_id)
-
-
+    
 @router.get(
     "/courses/{course_id}/canvas/linked",
     status_code=status.HTTP_200_OK,

@@ -1,7 +1,7 @@
 from io import BytesIO
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Query, Depends, WebSocket, status, Path
+from fastapi import APIRouter, BackgroundTasks, UploadFile, HTTPException, File, Query, Depends, WebSocket, status, Path
 from fastapi.responses import StreamingResponse
 
 from API.Service.document_service import DocumentService
@@ -244,3 +244,24 @@ async def subscribe_to_course_queries(
     WebSocket endpoint for subscribing to real-time query updates for a course.
     """
     await manager.handle_subscription(websocket.url.path, websocket)
+
+
+@router.get(
+    "/documents/count",
+    status_code=status.HTTP_200_OK,
+    summary="Get total number of documents",
+    description="Returns total documents uploaded. Optional grouping by course.",
+)
+def count_documents(
+    group_by_course: bool = Query(
+        False,
+        description="If true, returns count grouped by course_id",
+    ),
+    service: DocumentService = Depends(get_document_service),
+):
+    try:
+        if group_by_course:
+            return service.count_documents_grouped_by_course()
+        return {"total_documents": service.count_documents()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to count documents: {e}")

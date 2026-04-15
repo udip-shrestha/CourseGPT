@@ -180,6 +180,17 @@ class CourseService:
 
         updated_course = self.sql_repo.update_course(course_id, updates)
         return updated_course
+    
+    # ------------------------------------------------------
+    # Get Course Count
+    # ------------------------------------------------------
+    @clean_service
+    def count_courses(self) -> int:
+        return self.sql_repo.count_courses()
+
+    @clean_service
+    def count_courses_grouped_by_instructor(self) -> dict:
+        return self.sql_repo.count_courses_grouped_by_instructor()
 
     # ------------------------------------------------------
     # Canvas integration helpers
