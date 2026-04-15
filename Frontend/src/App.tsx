@@ -10,6 +10,7 @@ import { CoursePage } from "./components/CoursePage.tsx";
 import { CanvasLinkPage } from "./components/CanvasLinkPage.tsx";
 import { RequestResetPage } from "./components/RequestResetPage.tsx";
 import { ResetPasswordPage } from "./components/ResetPasswordPage.tsx";
+import { AdminAnalyticsPage } from "./components/AdminAnalyticsPage.tsx";
 
 /**
  * The main Layout component.
@@ -43,6 +44,7 @@ export default function App() {
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
                 <Route path="/register-course" element={<CanvasLinkPage />} />
+                <Route path="/admin" element={<AdminAnalyticsPage />} />
 
                 {/* Password Reset Flow */}
                 <Route path="/RequestResetPage" element={<RequestResetPage />} />

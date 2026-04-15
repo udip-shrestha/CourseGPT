@@ -10,6 +10,7 @@ import {
   Plug,
   UserCircle,
   Menu,
+  Shield,
 } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -190,6 +191,19 @@ export function Header() {
               >
                 <LayoutDashboard className="h-4 w-4" />
                 Analytics
+              </Button>
+
+              <Button
+                variant={
+                  path.includes(`/courses/${courseId}/admin`)
+                    ? "default"
+                    : "ghost"
+                }
+                className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                onClick={() => navigate(`/courses/${courseId}/admin`)}
+              >
+                <Shield className="h-4 w-4" />
+                Admin
               </Button>
             </>
           </>
