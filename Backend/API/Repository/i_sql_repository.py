@@ -61,6 +61,13 @@ class ISQLRepository(Protocol):
         """Mark a document's processing_status as FAILED."""
         ...
 
+    def count_documents(self) -> int:
+        """Return total number of documents."""
+    ...
+
+    def count_documents_grouped_by_course(self) -> Dict[str, int]:
+        """Return document counts grouped by course_id."""
+    ...
     # ======================================================
     # COURSES
     # ======================================================
@@ -110,6 +117,14 @@ class ISQLRepository(Protocol):
     def update_course(self, course_id: str, updates: dict) -> dict:
         """Update course fields."""
         ...
+
+    def count_courses(self) -> int:
+        """Return total number of courses."""
+    ...
+
+    def count_courses_grouped_by_instructor(self) -> Dict[str, int]:
+        """Return course counts grouped by instructor_id."""
+    ...
 
     # ======================================================
     # INSTRUCTORS

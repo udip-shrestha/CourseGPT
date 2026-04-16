@@ -470,7 +470,19 @@ class SQLRepository(ISQLRepository):
             RETURNING *;
         """
         return self.cm.select_one(sql, tuple(values))
-
+   
+    def count_courses(self) -> int:
+        row = self.cm.select_one("SELECT COUNT(*) AS total FROM courses;")
+        return row["total"] if row else 0
+    
+    def count_courses_grouped_by_instructor(self) -> Dict[str, int]:
+        sql = """
+            SELECT instructor_id, COUNT(*) AS count
+            FROM courses
+            GROUP BY instructor_id;
+        """
+        rows = self.cm.select_all(sql)
+        return {r["instructor_id"]: r["count"] for r in rows}
 
     # ======================================================
     # STUDENTS
@@ -1026,3 +1038,17 @@ class SQLRepository(ISQLRepository):
             "activeStudents": active or 0,
             "engagementRate": int((active / total) * 100) if total > 0 else 0,
         }
+    
+    def count_documents(self) -> int:
+        sql = "SELECT COUNT(*) AS total FROM documents;"
+        row = self.cm.select_one(sql)
+        return row["total"] if row else 0
+
+    def count_documents_grouped_by_course(self) -> Dict[str, int]:
+        sql = """
+            SELECT course_id, COUNT(*) AS count
+            FROM documents
+            GROUP BY course_id;
+        """
+        rows = self.cm.select_all(sql)
+        return {r["course_id"]: r["count"] for r in rows}

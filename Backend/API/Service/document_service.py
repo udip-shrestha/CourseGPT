@@ -131,3 +131,10 @@ class DocumentService:
 
         return doc["file_name"], doc["file_data"], doc["mime_type"] if doc["native_preview"] else "text/plain"
 
+    @clean_service
+    def count_documents(self) -> int:
+        return self.sql_repo.count_documents()
+
+    @clean_service
+    def count_documents_grouped_by_course(self) -> dict:
+        return self.sql_repo.count_documents_grouped_by_course()
