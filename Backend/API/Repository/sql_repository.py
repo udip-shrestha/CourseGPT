@@ -350,7 +350,7 @@ class SQLRepository(ISQLRepository):
         sql = """
             SELECT 
                 c.id, c.name, c.institution, c.semester_id, c.year, c.created_at,
-                c.canvas_course_id,
+                c.canvas_course_id, c.canvas_context_id,
                 i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email,
                 rs.id AS rag_strategy_id, rs.type_name AS rag_strategy_name,
                 s.name AS semester_name
