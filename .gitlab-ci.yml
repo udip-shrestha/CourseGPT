@@ -57,6 +57,7 @@ deploy_backend:
   only:
     - main
     - master
+    - 66-discord-renovations
   needs:
     - job: test_backend
       artifacts: false

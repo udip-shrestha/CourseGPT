@@ -379,8 +379,12 @@ async def announce(interaction: discord.Interaction, version: str, message: str)
 
     success = 0
     failed = 0
+    target_guild_name = "CPRE4910 - CourseGPT"    ## LINE FOR TESTING
 
     for guild in bot.guilds:
+        if guild.name != target_guild_name:       ## LINE FOR TESTING
+            continue                              ## LINE FOR TESTING
+
         try:
             # Try to find #general first
             channel = discord.utils.get(guild.text_channels, name="general")
