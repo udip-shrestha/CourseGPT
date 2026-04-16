@@ -12,6 +12,19 @@ from .cybot_service import *
 from Metrics.metrics import discord_command_count, discord_command_duration
 from prometheus_client import start_http_server
 
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)  # important for systemd
+    ]
+)
+
+logger = logging.getLogger("cybot")
+
 load_dotenv()
 
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -26,7 +39,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     start_http_server(9091, addr="0.0.0.0")  # Start Prometheus metrics server on port 9091
     await bot.tree.sync()
-    print(f"{bot.user} is online!")
+    logger.info(f"{bot.user} is online!")
     # register existing members when bot starts
     for guild in bot.guilds:
         for member in guild.members:
@@ -43,7 +56,7 @@ async def on_member_join(member):
 
 @bot.event
 async def on_guild_join(guild):
-    print(f"Bot added to guild: {guild.name}")
+    logger.info(f"Bot added to guild: {guild.name}")
     for member in guild.members:
         if not member.bot:
             await auto_register_member(member)
@@ -136,8 +149,9 @@ async def ask(interaction: discord.Interaction, question: str, image: Optional[d
                 )
             else:
                 await interaction.followup.send(chunk)
-    except Exception:
+    except Exception as e:
         outcome = "error"
+        logger.exception("Error in /ask command: {e}")
         raise
     finally:
         duration = time.time() - start
@@ -379,12 +393,8 @@ async def announce(interaction: discord.Interaction, version: str, message: str)
 
     success = 0
     failed = 0
-    target_guild_name = "CPRE4910 - CourseGPT"    ## LINE FOR TESTING
 
     for guild in bot.guilds:
-        if guild.name != target_guild_name:       ## LINE FOR TESTING
-            continue                              ## LINE FOR TESTING
-
         try:
             # Try to find #general first
             channel = discord.utils.get(guild.text_channels, name="general")
@@ -417,7 +427,7 @@ async def announce(interaction: discord.Interaction, version: str, message: str)
             await asyncio.sleep(1)
 
         except Exception as e:
-            print(f"Failed in {guild.name}: {e}")
+            logger.error(f"Failed in {guild.name}: {e}")
             failed += 1
 
     await interaction.followup.send(
@@ -437,7 +447,7 @@ async def help_command(interaction: discord.Interaction):
             "📚 **CyBot Help Menu**\n\n"
             "Here are the available commands:\n"
             "• `/register` → (Optional) Manually register yourself for this course if not auto-registered.\n"
-            "• `/ask [question]` → Ask a course-related question and get an AI-generated answer.\n"
+            "• `/ask [question] [Attach image]` → Ask a course-related question and optionally include an image to get an AI-generated answer.\n"
             "• `/status` → Check your registration status for this course.\n"
             "• `/courses` → Check which courses you are registered in.\n"
             "• `/feedback` → Share with us any feedback you have about CourseGPT.\n"
@@ -476,6 +486,11 @@ class FeedbackView(discord.ui.View):
                 await interaction.response.send_message(f"❌ {message}", ephemeral=True)
         except Exception:
             await interaction.response.send_message("❌ Error sending feedback.", ephemeral=True)
+
+        # Disable buttons after voting
+        for item in self.children:
+            item.disabled = True
+        await interaction.message.edit(view=self)
 
     @discord.ui.button(label="👍 Helpful", style=discord.ButtonStyle.success)
     async def upvote(self, interaction: discord.Interaction, button: discord.ui.Button):
