@@ -33,19 +33,20 @@ class AnnouncementModal(discord.ui.Modal, title="CourseGPT Announcement"):
             color=discord.Color.blue()
         )
 
+        embed.set_footer(text="CourseGPT • AI-powered course assistant")
         embed.timestamp = datetime.now()
 
         success = 0
         failed = 0
 
-        target_guild_name = "CPRE4910 - CourseGPT"
+        # target_guild_name = "CPRE4910 - CourseGPT"
 
         for guild in interaction.client.guilds:
-            if guild.name != target_guild_name:      
-                continue
+            # if guild.name != target_guild_name:      
+            #     continue
             try:
                 # Try to find #general first
-                channel = discord.utils.get(guild.text_channels, name="cybot-tests")
+                channel = discord.utils.get(guild.text_channels, name="general")
 
                 # Fallback: first channel bot can send messages in
                 if not channel:

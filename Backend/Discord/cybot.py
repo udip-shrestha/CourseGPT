@@ -377,10 +377,6 @@ async def unregister(interaction: discord.Interaction, course_name: str):
 
 # Announce command (admin only)
 @bot.tree.command(name="announce", description="Broadcast an announcement to all servers (admin only)")
-@app_commands.describe(
-    version="Version of the update (e.g. v1.2.0)",
-    message="Main announcement message"
-)
 async def announce(interaction: discord.Interaction, version: str, message: str):
     is_admin = await is_discord_admin(str(interaction.user.id))
 
