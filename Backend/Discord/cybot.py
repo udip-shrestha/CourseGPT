@@ -2,6 +2,9 @@ import discord
 import os
 import time
 from discord import app_commands
+import httpx
+import asyncio
+from datetime import datetime
 from discord.ext import commands
 from datetime import datetime
 from dotenv import load_dotenv
@@ -47,8 +50,8 @@ async def on_guild_join(guild):
 
 # Ask command
 @bot.tree.command(name="ask", description="Ask a question to the bot")
-@app_commands.describe(question="Your question about the course material of this course")
-async def ask(interaction: discord.Interaction, question: str):
+@app_commands.describe(question="Your question about the course material of this course", image="Optionally attach an image with your question to get more specific answers (e.g. a graph, diagram, or handwritten notes)")
+async def ask(interaction: discord.Interaction, question: str, image: Optional[discord.Attachment] = None):
     command_name = "ask"
     start = time.time()
     outcome = "success"
@@ -72,12 +75,42 @@ async def ask(interaction: discord.Interaction, question: str):
                 ephemeral=True
             )
             return
-        
-        # Defer response while we wait for LLM response
-        await interaction.response.defer(thinking=True)
 
-        # Get answer from AI model
-        answer, sources = await ask_AI_model(question, course_id)
+        # Prepare image data
+        image_bytes = None
+        image_name = None
+        image_mime = None
+
+        if image:
+            # Validate file type
+            if not image.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+                await interaction.response.send_message(
+                    "❌ Invalid file type. Please upload PNG, JPG, or JPEG.",
+                    ephemeral=True
+                )
+                return
+            
+            # Defer response while we process the image
+            await interaction.response.defer(thinking=True)
+
+            # Download image
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(image.url)
+                if resp.status_code == 200:
+                    image_bytes = resp.content
+                    image_name = image.filename
+                    image_mime = resp.headers.get("content-type")
+                else:
+                    await interaction.followup.send(
+                        "❌ Failed to download the image.",
+                        ephemeral=True
+                    )
+                    return
+        else:
+            await interaction.response.defer(thinking=True)
+            
+        # Get answer from AI model (with optional image)
+        answer, sources, query_id = await ask_AI_model(question, course_id, image_bytes, image_name, image_mime)
 
         # Format response with sources if available
         response = answer
@@ -93,7 +126,15 @@ async def ask(interaction: discord.Interaction, question: str):
         # Send response in chunks if it exceeds Discord's 2000 character limit
         message_chunks = await split_message(response)
         for i, chunk in enumerate(message_chunks):
-            if chunk.strip(): # Only send non-empty chunks
+            if not chunk.strip():
+                continue
+
+            if i == len(message_chunks) - 1 and query_id:
+                await interaction.followup.send(
+                    chunk,
+                    view=FeedbackView(course_id, student_id, query_id)
+                )
+            else:
                 await interaction.followup.send(chunk)
     except Exception:
         outcome = "error"
@@ -318,6 +359,69 @@ async def unregister(interaction: discord.Interaction, course_name: str):
         except Exception:
             pass
 
+# Announce command (admin only)
+@bot.tree.command(name="announce", description="Broadcast an announcement to all servers (admin only)")
+@app_commands.describe(
+    version="Version of the update (e.g. v1.2.0)",
+    message="Main announcement message"
+)
+async def announce(interaction: discord.Interaction, version: str, message: str):
+    is_admin = await is_discord_admin(str(interaction.user.id))
+
+    if not is_admin:
+        await interaction.response.send_message(
+            "🚫 You are not authorized to use this command.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.defer(thinking=True, ephemeral=True)
+
+    success = 0
+    failed = 0
+
+    for guild in bot.guilds:
+        try:
+            # Try to find #general first
+            channel = discord.utils.get(guild.text_channels, name="general")
+
+            # Fallback: first channel bot can send messages in
+            if not channel:
+                for ch in guild.text_channels:
+                    if ch.permissions_for(guild.me).send_messages:
+                        channel = ch
+                        break
+
+            if not channel:
+                failed += 1
+                continue
+
+            # 🔥 Embed with versioning
+            embed = discord.Embed(
+                title=f"📢 CourseGPT Update — {version}",
+                description=message,
+                color=discord.Color.blue()
+            )
+
+            embed.set_footer(text="CourseGPT • AI-powered course assistant")
+            embed.timestamp = datetime.now()
+
+            await channel.send(embed=embed)
+            success += 1
+
+            # ⏱️ Rate limiting (avoid Discord API spam)
+            await asyncio.sleep(1)
+
+        except Exception as e:
+            print(f"Failed in {guild.name}: {e}")
+            failed += 1
+
+    await interaction.followup.send(
+        f"✅ Announcement sent!\n\n"
+        f"Success: {success}\n"
+        f"Failed: {failed}"
+    )
+
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")
 async def help_command(interaction: discord.Interaction):
@@ -346,5 +450,35 @@ async def help_command(interaction: discord.Interaction):
             discord_command_duration.labels(command=command_name, outcome=outcome).observe(duration)
         except Exception:
             pass
+
+class FeedbackView(discord.ui.View):
+    def __init__(self, course_id: str, student_id: str, query_id: str):
+        super().__init__(timeout=300)
+        self.course_id = course_id
+        self.student_id = student_id
+        self.query_id = query_id
+
+    async def send_vote(self, interaction, vote: str):
+        try:
+            success, message = await submit_vote(
+                self.course_id,
+                self.student_id,
+                self.query_id,
+                vote,
+            )
+            if success:
+                await interaction.response.send_message("✅ Feedback recorded!", ephemeral=True)
+            else:
+                await interaction.response.send_message(f"❌ {message}", ephemeral=True)
+        except Exception:
+            await interaction.response.send_message("❌ Error sending feedback.", ephemeral=True)
+
+    @discord.ui.button(label="👍 Helpful", style=discord.ButtonStyle.success)
+    async def upvote(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.send_vote(interaction, "up")
+
+    @discord.ui.button(label="👎 Not Helpful", style=discord.ButtonStyle.danger)
+    async def downvote(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self.send_vote(interaction, "down")
 
 bot.run(DISCORD_TOKEN)

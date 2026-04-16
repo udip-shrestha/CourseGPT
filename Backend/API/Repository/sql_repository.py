@@ -832,6 +832,74 @@ class SQLRepository(ISQLRepository):
         results = self.cm.select_all(data_sql, (course_id, limit, offset))
         return {"total": total, "feedback": results}
 
+    def create_answer_feedback(self, course_id: str, student_id: str, query_id: str, vote: str) -> str:
+        sql = """
+            INSERT INTO answer_feedback (query_id, course_id, student_id, vote)
+            VALUES (%s, %s, %s, %s)
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (query_id, course_id, student_id, vote))
+
+    def read_course_satisfaction(self, course_id: str) -> dict:
+        sql = """
+            SELECT
+                course_id,
+                COUNT(*) FILTER (WHERE vote = 'up') AS upvotes,
+                COUNT(*) FILTER (WHERE vote = 'down') AS downvotes,
+                COUNT(*) AS total_votes,
+                (COUNT(*) FILTER (WHERE vote = 'up')::float / COUNT(*)) * 5.0 AS satisfaction_score
+            FROM answer_feedback
+            WHERE course_id = %s
+            GROUP BY course_id;
+        """
+        result = self.cm.select_one(sql, (course_id,))
+        if not result:
+            return {
+                "course_id": course_id,
+                "upvotes": 0,
+                "downvotes": 0,
+                "total_votes": 0,
+                "satisfaction_score": 0.0,
+            }
+        return result
+
+    # ======================================================
+    # DISCORD ADMINS
+    # ======================================================
+    def create_discord_admin(self, discord_id: str) -> str:
+        sql = """
+            INSERT INTO discord_admins (discord_id)
+            VALUES (%s)
+            RETURNING id;
+        """
+        return self.cm.insert_one(sql, (discord_id,))
+
+    def read_discord_admin(self, discord_id: str) -> Optional[Dict[str, Any]]:
+        sql = """
+            SELECT id, discord_id, created_at
+            FROM discord_admins
+            WHERE discord_id = %s;
+        """
+        return self.cm.select_one(sql, (discord_id,))
+
+    def read_all_discord_admins(self, limit: int = 50, offset: int = 0) -> dict:
+        count_sql = "SELECT COUNT(*) AS total FROM discord_admins;"
+        total_row = self.cm.select_one(count_sql)
+        total = total_row["total"] if total_row else 0
+
+        data_sql = """
+            SELECT id, discord_id, created_at
+            FROM discord_admins
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s;
+        """
+        results = self.cm.select_all(data_sql, (limit, offset))
+        return {"total": total, "admins": results}
+
+    def delete_discord_admin(self, discord_id: str) -> None:
+        sql = "DELETE FROM discord_admins WHERE discord_id = %s;"
+        self.cm.execute(sql, (discord_id,))
+
     # ======================================================
     # ANALYTICS
     # ======================================================

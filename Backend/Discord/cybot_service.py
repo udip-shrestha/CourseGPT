@@ -122,6 +122,31 @@ async def submit_feedback(course_id: str, feedback_text: str) -> Tuple[bool, str
         return False, f"Feedback submission error: {e}", None
 
 
+async def submit_vote(course_id: str, student_id: str, query_id: str, vote: str) -> Tuple[bool, str]:
+    """Submit an answer vote to the backend API."""
+    url = f"{API_BASE_URL.rstrip('/')}/feedback/vote"
+    payload = {
+        "course_id": course_id,
+        "student_id": student_id,
+        "query_id": query_id,
+        "vote": vote,
+    }
+    try:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            resp = await client.post(url, json=payload)
+            if resp.status_code in (200, 201):
+                data = resp.json()
+                return True, data.get("message", "Vote recorded")
+            if resp.status_code == 409:
+                return False, "You already voted on this answer."
+            try:
+                return False, resp.json().get("error", resp.text)
+            except Exception:
+                return False, resp.text
+    except httpx.HTTPError as e:
+        return False, f"Vote submission error: {e}"
+
+
 async def register_student(discord_id: str, name: str, course_id: str) -> Tuple[bool, str, Optional[str]]:
     """Register a student based on the discord_id and course_id"""
     url = f"{API_BASE_URL.rstrip('/')}/students/register"
@@ -157,25 +182,53 @@ async def is_registered_discord(discord_id: str, course_id: str) -> Tuple[bool, 
     return False, None
 
 
-async def ask_AI_model(question: str, course_id: str) -> Tuple[str, List[str]]:
-    """Ask a question about course materials using the RAG pipeline."""
+async def ask_AI_model(
+    question: str,
+    course_id: str,
+    image_bytes: bytes | None = None,
+    image_name: str | None = None,
+    image_mime_type: str | None = None,
+) -> Tuple[str, List[str], str | None]:
+    """Ask a question about course materials using the RAG pipeline.
+
+    If image_bytes is provided, the call will send multipart/form-data with
+    an `image` file field so the backend can process it.
+    """
     url = f"{API_BASE_URL.rstrip('/')}/courses/{course_id}/queries"
     params = {"question": question}
     try:
         async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
-            resp = await client.post(url, params=params)
+            if image_bytes and image_name:
+                files = {"image": (image_name, image_bytes, image_mime_type or "application/octet-stream")}
+                resp = await client.post(url, params=params, files=files)
+            else:
+                # No image; simple form post
+                resp = await client.post(url, params=params)
+
             if resp.status_code != 200:
                 return f"⚠️ Backend error ({resp.status_code}): {resp.text}", []
-            data = resp.json()
 
+            data = resp.json()
             answer = data.get("answer", "No answer available")
             sources = data.get("sources", [])
-            return answer, sources
-        
+            query_id = data.get("query_id")
+            return answer, sources, query_id
+
     except httpx.TimeoutException:
         return "⚠️ Request timed out.", []
     except httpx.HTTPError as e:
         return f"Error connecting to backend: {e}", []
+
+
+async def is_discord_admin(discord_id: str) -> bool:
+    """Check if a Discord ID is an admin."""
+    url = f"{API_BASE_URL.rstrip('/')}/discord-admins/{discord_id}"
+    try:
+        async with httpx.AsyncClient(timeout=DEFAULT_TIMEOUT) as client:
+            resp = await client.get(url)
+            return resp.status_code == 200
+    except httpx.HTTPError:
+        return False
 
 async def formatSources(raw: Optional[List[str]]) -> str:
     """

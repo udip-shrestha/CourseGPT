@@ -218,6 +218,21 @@ CREATE TABLE IF NOT EXISTS feedback (
     received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- ----------------------------------------------
+-- Answer Feedback table
+-- Stores feedback for AI-generated answers
+-- ----------------------------------------------
+CREATE TABLE IF NOT EXISTS answer_feedback (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    query_id UUID NOT NULL,
+    course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+    student_id TEXT NOT NULL,
+    vote TEXT CHECK (vote IN ('up', 'down')) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE (query_id, student_id)
+);
+
 -- -----------------------------
 -- Password Reset Codes Table
 -- -----------------------------
@@ -225,5 +240,14 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
     instructor_id UUID PRIMARY KEY REFERENCES instructors(id) ON DELETE CASCADE,
     code TEXT NOT NULL CHECK (code ~ '^[0-9]{6}$'),
     expires_at TIMESTAMP NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- -----------------------------
+-- Discord Admins Table
+-- -----------------------------
+CREATE TABLE IF NOT EXISTS discord_admins (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    discord_id TEXT UNIQUE NOT NULL,
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

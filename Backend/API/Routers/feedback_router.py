@@ -12,6 +12,12 @@ class FeedbackRequest(BaseModel):
     course_id: str
     feedback_text: str
 
+class VoteRequest(BaseModel):
+    course_id: str
+    student_id: str
+    query_id: str
+    vote: str
+
 @router.post(
     "/submit",
     status_code=status.HTTP_201_CREATED,
@@ -38,6 +44,56 @@ def submit_feedback(
             detail=f"Failed to save feedback: {str(e)}"
         )
 
+@router.post(
+    "/vote",
+    status_code=status.HTTP_201_CREATED,
+    summary="Submit an answer vote for a generated query",
+    description="Records a student's up/down vote for a generated course answer."
+)
+def submit_vote(
+    request: VoteRequest,
+    service: FeedbackService = Depends(get_feedback_service),
+):
+    if request.vote not in ("up", "down"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid vote")
+
+    try:
+        res = service.submit_vote(
+            course_id=request.course_id,
+            student_id=request.student_id,
+            query_id=request.query_id,
+            vote=request.vote,
+        )
+        return {
+            "vote_id": res.get("vote_id"),
+            "message": "Vote recorded"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to record vote: {str(e)}"
+        )
+
+@router.get(
+    "/courses/{course_id}/satisfaction",
+    status_code=status.HTTP_200_OK,
+    summary="Get course satisfaction based on answer votes",
+    description="Returns aggregated satisfaction metrics for a course based on answer feedback votes."
+)
+def get_course_satisfaction(
+    course_id: str = Path(..., description="The UUID of the course"),
+    service: FeedbackService = Depends(get_feedback_service),
+):
+    try:
+        return service.get_course_satisfaction(course_id=course_id)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve course satisfaction: {str(e)}"
+        )
+
 @router.get(
     "",
     status_code=status.HTTP_200_OK,
@@ -59,7 +115,7 @@ def get_all_feedback(
         )
 
 @router.get(
-    "/course/{course_id}",
+    "/courses/{course_id}",
     status_code=status.HTTP_200_OK,
     summary="Get feedback by course ID",
     description="Retrieve a paginated list of student feedback for a specific course."

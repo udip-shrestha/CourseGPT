@@ -214,15 +214,16 @@ class SimpleRAGStrategy(BaseRAGStrategy):
             image_context=image_context,
             image_name=image_name,
         )
-
+        query_id = None
         direct_answer = self.try_direct_answer(question, retrieved_content)
         if direct_answer:
             if not validate:
-                sql_repo.create_query(student_id, course_id, query_text=question, response_text=direct_answer)
+                query_id = sql_repo.create_query(student_id, course_id, query_text=question, response_text=direct_answer)
                 logger.info(f"[SimpleRAG] Stored direct-answer query in DB for student_id={student_id}")
 
             logger.info("[SimpleRAG] Returned direct answer from retrieved content")
             return {
+                "query_id": query_id,
                 "strategy": self.__class__.__name__,
                 "answer": direct_answer,
                 "sources": retrieved_sources,
@@ -302,14 +303,15 @@ class SimpleRAGStrategy(BaseRAGStrategy):
         # ---------------------------------------------------
         # Store query in DB
         # ---------------------------------------------------
-
+        query_id = None
         if not validate:
-            sql_repo.create_query(student_id, course_id, query_text=question, response_text=answer)
+            query_id = sql_repo.create_query(student_id, course_id, query_text=question, response_text=answer)
             logger.info(f"[SimpleRAG] Stored query in DB for student_id={student_id}")
 
 
         logger.info(f"[SimpleRAG] ---- END question ----")
         return {
+            "query_id": query_id,
             "strategy": self.__class__.__name__,
             "answer": answer,
             "sources": retrieved_sources,
@@ -437,12 +439,14 @@ class AgenticRAGStrategy(BaseRAGStrategy):
         retrieved_contents = [msg.content for msg in messages if isinstance(msg, ToolMessage) and msg.name == "tool_retrieve_chunks"]
         retrieved_sources = sorted({src for msg in messages if isinstance(msg, ToolMessage) and msg.name == "tool_retrieve_chunks" for src in (msg.artifact or [])})
 
+        query_id = None
         if not validate:
-            sql_repo.create_query(student_id, course_id, query_text=question, response_text=clean_answer)
+            query_id = sql_repo.create_query(student_id, course_id, query_text=question, response_text=clean_answer)
             logger.info(f"[AgenticRAG] Stored query in DB for student_id={student_id}")
 
         logger.info(f"[AgenticRAG] ---- END question ----")
         return {
+            "query_id": query_id,
             "strategy": self.__class__.__name__,
             "answer": clean_answer,
             "sources": retrieved_sources if clean_answer != NO_ANSWER_RESPONSE and retrieved_sources else [],
