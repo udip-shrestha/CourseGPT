@@ -2,12 +2,30 @@ import discord
 import os
 import time
 from discord import app_commands
+import httpx
+import asyncio
+from datetime import datetime
 from discord.ext import commands
 from datetime import datetime
 from dotenv import load_dotenv
 from .cybot_service import *
 from Metrics.metrics import discord_command_count, discord_command_duration
 from prometheus_client import start_http_server
+from .announcement_modal import AnnouncementModal
+from .feedback_view import FeedbackView
+
+import logging
+import sys
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] [%(name)s] %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)  # important for systemd
+    ]
+)
+
+logger = logging.getLogger("cybot")
 
 load_dotenv()
 
@@ -23,7 +41,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 async def on_ready():
     start_http_server(9091, addr="0.0.0.0")  # Start Prometheus metrics server on port 9091
     await bot.tree.sync()
-    print(f"{bot.user} is online!")
+    logger.info(f"{bot.user} is online!")
     # register existing members when bot starts
     for guild in bot.guilds:
         for member in guild.members:
@@ -40,15 +58,15 @@ async def on_member_join(member):
 
 @bot.event
 async def on_guild_join(guild):
-    print(f"Bot added to guild: {guild.name}")
+    logger.info(f"Bot added to guild: {guild.name}")
     for member in guild.members:
         if not member.bot:
             await auto_register_member(member)
 
 # Ask command
 @bot.tree.command(name="ask", description="Ask a question to the bot")
-@app_commands.describe(question="Your question about the course material of this course")
-async def ask(interaction: discord.Interaction, question: str):
+@app_commands.describe(question="Your question about the course material of this course", image="Optionally attach an image with your question to get more specific answers (e.g. a graph, diagram, or handwritten notes)")
+async def ask(interaction: discord.Interaction, question: str, image: Optional[discord.Attachment] = None):
     command_name = "ask"
     start = time.time()
     outcome = "success"
@@ -72,12 +90,42 @@ async def ask(interaction: discord.Interaction, question: str):
                 ephemeral=True
             )
             return
-        
-        # Defer response while we wait for LLM response
-        await interaction.response.defer(thinking=True)
 
-        # Get answer from AI model
-        answer, sources = await ask_AI_model(question, course_id)
+        # Prepare image data
+        image_bytes = None
+        image_name = None
+        image_mime = None
+
+        if image:
+            # Validate file type
+            if not image.filename.lower().endswith((".png", ".jpg", ".jpeg")):
+                await interaction.response.send_message(
+                    "❌ Invalid file type. Please upload PNG, JPG, or JPEG.",
+                    ephemeral=True
+                )
+                return
+            
+            # Defer response while we process the image
+            await interaction.response.defer(thinking=True)
+
+            # Download image
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                resp = await client.get(image.url)
+                if resp.status_code == 200:
+                    image_bytes = resp.content
+                    image_name = image.filename
+                    image_mime = resp.headers.get("content-type")
+                else:
+                    await interaction.followup.send(
+                        "❌ Failed to download the image.",
+                        ephemeral=True
+                    )
+                    return
+        else:
+            await interaction.response.defer(thinking=True)
+            
+        # Get answer from AI model (with optional image)
+        answer, sources, query_id = await ask_AI_model(question, course_id, image_bytes, image_name, image_mime)
 
         # Format response with sources if available
         response = answer
@@ -93,10 +141,19 @@ async def ask(interaction: discord.Interaction, question: str):
         # Send response in chunks if it exceeds Discord's 2000 character limit
         message_chunks = await split_message(response)
         for i, chunk in enumerate(message_chunks):
-            if chunk.strip(): # Only send non-empty chunks
+            if not chunk.strip():
+                continue
+
+            if i == len(message_chunks) - 1 and query_id:
+                await interaction.followup.send(
+                    chunk,
+                    view=FeedbackView(course_id, student_id, query_id)
+                )
+            else:
                 await interaction.followup.send(chunk)
-    except Exception:
+    except Exception as e:
         outcome = "error"
+        logger.exception("Error in /ask command: {e}")
         raise
     finally:
         duration = time.time() - start
@@ -318,6 +375,20 @@ async def unregister(interaction: discord.Interaction, course_name: str):
         except Exception:
             pass
 
+# Announce command (admin only)
+@bot.tree.command(name="announce", description="Broadcast an announcement to all servers (admin only)")
+async def announce(interaction: discord.Interaction, version: str, message: str):
+    is_admin = await is_discord_admin(str(interaction.user.id))
+
+    if not is_admin:
+        await interaction.response.send_message(
+            "🚫 You are not authorized to use this command.",
+            ephemeral=True
+        )
+        return
+
+    await interaction.response.send_modal(AnnouncementModal(is_discord_admin))
+
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")
 async def help_command(interaction: discord.Interaction):
@@ -329,10 +400,11 @@ async def help_command(interaction: discord.Interaction):
             "📚 **CyBot Help Menu**\n\n"
             "Here are the available commands:\n"
             "• `/register` → (Optional) Manually register yourself for this course if not auto-registered.\n"
-            "• `/ask [question]` → Ask a course-related question and get an AI-generated answer.\n"
+            "• `/ask [question] [Attach image]` → Ask a course-related question and optionally include an image to get an AI-generated answer.\n"
             "• `/status` → Check your registration status for this course.\n"
             "• `/courses` → Check which courses you are registered in.\n"
             "• `/feedback` → Share with us any feedback you have about CourseGPT.\n"
+            "• `/unregister [course name]` → Unregister from a course given the course name (Discord server name).\n"
             "• `/help` → Show this menu.\n\n"
             "⚠️ Note: You must be registered for the course before you can use `/ask`."
         )

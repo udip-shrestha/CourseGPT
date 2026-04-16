@@ -24,6 +24,7 @@ from API.Service.students_service import StudentService
 from API.Service.queries_service import QueryService
 from API.Service.feedback_service import FeedbackService
 from API.Service.analytics_service import AnalyticsService
+from API.Service.discord_admins_service import DiscordAdminsService
 from API.Service.canvas_service import CanvasService
 from API.Service.gmail_service import GmailService
 from API.Repository.i_vector_repository import IVectorRepository
@@ -351,6 +352,12 @@ def get_feedback_service(
 ) -> FeedbackService:
     """Provide a FeedbackService using the SQL repository."""
     return FeedbackService(sql_repo)    
+
+def get_discord_admins_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> DiscordAdminsService:
+    """Provide a DiscordAdminsService using the SQL repository."""
+    return DiscordAdminsService(sql_repo)
 
 def get_analytics_service(
     sql_repo: SQLRepository = Depends(get_sql_repository),

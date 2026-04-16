@@ -261,6 +261,39 @@ class ISQLRepository(Protocol):
         """Return all feedback for a specific course with pagination."""
         ...
 
+    def create_answer_feedback(
+        self,
+        course_id: str,
+        student_id: str,
+        query_id: str,
+        vote: str,
+    ) -> str:
+        """Insert an answer feedback vote and return its id."""
+        ...
+
+    def read_course_satisfaction(self, course_id: str) -> dict:
+        """Return satisfaction metrics for a course based on answer_feedback."""
+        ...
+
+    # ======================================================
+    # DISCORD ADMINS
+    # ======================================================
+    def create_discord_admin(self, discord_id: str) -> str:
+        """Insert a new Discord admin and return its id."""
+        ...
+
+    def read_discord_admin(self, discord_id: str) -> Optional[Dict[str, Any]]:
+        """Return a Discord admin by discord_id."""
+        ...
+
+    def read_all_discord_admins(self, limit: int = 50, offset: int = 0) -> dict:
+        """Return all Discord admins with pagination."""
+        ...
+
+    def delete_discord_admin(self, discord_id: str) -> None:
+        """Delete a Discord admin by discord_id."""
+        ...
+
     # ======================================================
     # ANALYTICS
     # ======================================================
