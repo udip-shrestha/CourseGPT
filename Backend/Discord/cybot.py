@@ -11,6 +11,8 @@ from dotenv import load_dotenv
 from .cybot_service import *
 from Metrics.metrics import discord_command_count, discord_command_duration
 from prometheus_client import start_http_server
+from .announcement_modal import AnnouncementModal
+from .feedback_view import FeedbackView
 
 import logging
 import sys
@@ -389,52 +391,7 @@ async def announce(interaction: discord.Interaction, version: str, message: str)
         )
         return
 
-    await interaction.response.defer(thinking=True, ephemeral=True)
-
-    success = 0
-    failed = 0
-
-    for guild in bot.guilds:
-        try:
-            # Try to find #general first
-            channel = discord.utils.get(guild.text_channels, name="general")
-
-            # Fallback: first channel bot can send messages in
-            if not channel:
-                for ch in guild.text_channels:
-                    if ch.permissions_for(guild.me).send_messages:
-                        channel = ch
-                        break
-
-            if not channel:
-                failed += 1
-                continue
-
-            # 🔥 Embed with versioning
-            embed = discord.Embed(
-                title=f"📢 CourseGPT Update — {version}",
-                description=message,
-                color=discord.Color.blue()
-            )
-
-            embed.set_footer(text="CourseGPT • AI-powered course assistant")
-            embed.timestamp = datetime.now()
-
-            await channel.send(embed=embed)
-            success += 1
-
-            # ⏱️ Rate limiting (avoid Discord API spam)
-            await asyncio.sleep(1)
-
-        except Exception as e:
-            logger.error(f"Failed in {guild.name}: {e}")
-            failed += 1
-
-    await interaction.followup.send(
-        f"✅ Announcement sent!\n\n"
-        f"Success: {success}\n"
-        f"Failed: {failed}"
-    )
+    await interaction.response.send_modal(AnnouncementModal(is_discord_admin))
 
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")
@@ -451,6 +408,7 @@ async def help_command(interaction: discord.Interaction):
             "• `/status` → Check your registration status for this course.\n"
             "• `/courses` → Check which courses you are registered in.\n"
             "• `/feedback` → Share with us any feedback you have about CourseGPT.\n"
+            "• `/unregister [course name]` → Unregister from a course given the course name (Discord server name).\n"
             "• `/help` → Show this menu.\n\n"
             "⚠️ Note: You must be registered for the course before you can use `/ask`."
         )
@@ -464,40 +422,5 @@ async def help_command(interaction: discord.Interaction):
             discord_command_duration.labels(command=command_name, outcome=outcome).observe(duration)
         except Exception:
             pass
-
-class FeedbackView(discord.ui.View):
-    def __init__(self, course_id: str, student_id: str, query_id: str):
-        super().__init__(timeout=300)
-        self.course_id = course_id
-        self.student_id = student_id
-        self.query_id = query_id
-
-    async def send_vote(self, interaction, vote: str):
-        try:
-            success, message = await submit_vote(
-                self.course_id,
-                self.student_id,
-                self.query_id,
-                vote,
-            )
-            if success:
-                await interaction.response.send_message("✅ Feedback recorded!", ephemeral=True)
-            else:
-                await interaction.response.send_message(f"❌ {message}", ephemeral=True)
-        except Exception:
-            await interaction.response.send_message("❌ Error sending feedback.", ephemeral=True)
-
-        # Disable buttons after voting
-        for item in self.children:
-            item.disabled = True
-        await interaction.message.edit(view=self)
-
-    @discord.ui.button(label="👍 Helpful", style=discord.ButtonStyle.success)
-    async def upvote(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.send_vote(interaction, "up")
-
-    @discord.ui.button(label="👎 Not Helpful", style=discord.ButtonStyle.danger)
-    async def downvote(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await self.send_vote(interaction, "down")
 
 bot.run(DISCORD_TOKEN)
