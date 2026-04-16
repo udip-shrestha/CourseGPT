@@ -80,25 +80,37 @@ async def add_course(
     )
 
 @router.get(
-    "/instructors/{instructor_id}/courses",
+    "/courses/list",
     status_code=status.HTTP_200_OK,
-    summary="Get a list of courses taught by an instructor",
+    summary="Get a list of all courses",
     description=(
-        "**Action:** Gets a list of courses taught by an instructor. "
-        "Supports filtering by institution, sorting, and pagination.\n\n"
-        "**Returns:** A JSON array of course metadata objects (ID, courseName, semester, timestamps, etc.)."
+        "**Action:** Gets a list of all courses in the system. "
+        "Supports optional filtering by instructor, institution, and status, "
+        "as well as sorting and pagination.\n\n"
+        "**Returns:** A JSON array of course metadata objects "
+        "(ID, course name, instructor, semester, timestamps, etc.)."
     ),
 )
 def get_all_courses(
-    instructor_id: str = Path(
-        ...,
-        description="UUID of the instructor.",
+    instructor_id: Optional[str] = Query(
+        None,
+        description="Optional filter by instructor UUID.",
         examples={"example": "69898770-08e8-4491-a0b1-640f23168397"},
+    ),
+    instructor_email: Optional[str] = Query(
+        None,
+        description="Optional filter by instructor email.",
+        examples={"example": "jdoe@iastate.edu"},
     ),
     institution: Optional[str] = Query(
         None,
         description="Optional filter by institution name.",
         examples={"example": "Iowa State University"},
+    ),
+    status: Optional[str] = Query(
+        None,
+        description="Optional filter by course status (`PENDING`, `ENABLED`, `DISABLED`).",
+        examples={"example": "ENABLED"},
     ),
     limit: int = Query(
         10,
@@ -114,7 +126,7 @@ def get_all_courses(
     ),
     order_by: str = Query(
         "created_at",
-        description="Field name to sort results by (e.g., `year`, `created_at`).",
+        description="Field name to sort results by (e.g., `year`, `name`, `created_at`).",
         examples={"example": "created_at"},
     ),
     order_dir: str = Query(
@@ -125,16 +137,17 @@ def get_all_courses(
     ),
     service: CourseService = Depends(get_course_service),
 ):
-    """Retrieve all courses with optional filtering and pagination."""
+    """Retrieve all courses with optional filtering, sorting, and pagination."""
     return service.read_all_courses(
         instructor_id=instructor_id,
+        instructor_email=instructor_email,
         institution=institution,
+        status=status,
         limit=limit,
         offset=offset,
         order_by=order_by,
         order_dir=order_dir,
     )
-
 
 @router.get(
     "/courses/{course_id}",

@@ -92,13 +92,11 @@ def test_add_course_instructor_not_found(
     assert response.status_code == status.HTTP_404_NOT_FOUND
     mock_sql_repo.read_instructor.assert_called_once_with("invalid-id")
 
-
 def test_get_all_courses(
     client: TestClient,
     mock_sql_repo: ISQLRepository
 ):
-    """Should retrieve all courses for an instructor."""
-    # Configure mock returns
+    """Should retrieve all courses with optional filters and pagination."""
     mock_courses = [
         {
             "id": "course-1",
@@ -115,16 +113,31 @@ def test_get_all_courses(
             "year": 2025
         }
     ]
-    mock_sql_repo.read_all_courses.return_value = mock_courses
 
-    # Make request
-    response = client.get("/instructors/inst-1/courses")
+    mock_sql_repo.read_all_courses.return_value = {
+        "total": 2,
+        "courses": mock_courses
+    }
 
-    # Assertions
+    response = client.get("/courses/list?instructor_id=inst-1")
+
     assert response.status_code == status.HTTP_200_OK
-    assert len(response.json()) == 2
-    mock_sql_repo.read_all_courses.assert_called_once()
+    body = response.json()
 
+    assert body["total"] == 2
+    assert len(body["courses"]) == 2
+    assert body["courses"] == mock_courses
+
+    mock_sql_repo.read_all_courses.assert_called_once_with(
+        instructor_id="inst-1",
+        instructor_email=None,
+        institution=None,
+        status=None,
+        limit=10,
+        offset=0,
+        order_by="created_at",
+        order_dir="desc",
+    )
 
 def test_get_course_by_id_success(
     client: TestClient,

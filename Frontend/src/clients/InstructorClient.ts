@@ -7,10 +7,6 @@ export class InstructorClient {
         this.baseClient = baseClient;
     }
 
-    async createInstructor(params: {name: string; title: string; university: string; email: string; password: string;}) {
-        return this.baseClient.request("POST", `/instructors`, {query: params, isJson: false, operationId: `instructors-create`});
-    }
-
     async getInstructor(instructorId: string) {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.baseClient.request("GET", `/instructors/${instructorId}`, { operationId: `instructor-get-${instructorId}` });
@@ -26,4 +22,24 @@ export class InstructorClient {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.baseClient.request("DELETE", `/instructors/${instructorId}`, { operationId: `instructor-delete-${instructorId}` });
     }
+
+    async listInstructors(params?: {
+        name?: string;
+        email?: string;
+        university?: string;
+        limit?: number;
+        offset?: number;
+        order_by?: string;
+        order_dir?: string;
+    }) {
+        const query = Object.fromEntries(
+            Object.entries(params ?? {}).filter(([_, v]) => v !== undefined && v !== "")
+        );
+
+        return this.baseClient.request("GET", "/instructors", {
+            query,
+            operationId: "instructor-list",
+        });
+    }
+
 }

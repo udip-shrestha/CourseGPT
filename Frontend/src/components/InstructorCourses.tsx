@@ -18,9 +18,8 @@ export interface CourseSummary {
     semester_id: number;
     year: number;
     created_at: string;
+    status?: string;
 }
-
-
 
 function semesterIdToString(id: number | undefined): string {
     if (id === undefined) return "N/A";
@@ -64,7 +63,8 @@ export function InstructorCourses() {
         setError(null);
 
 
-        const { data, errorMessage } = await courseClient.listInstructorCourses(instructorId, {
+        const { data, errorMessage } = await courseClient.listCourses({
+            instructor_id: instructorId,
             order_by: "created_at",
             order_dir: "desc"
         });
@@ -123,14 +123,16 @@ export function InstructorCourses() {
 
 
     const handleViewCourse = (course: CourseSummary) => {
-        console.log("Navigating to view course:", course.name);
+        if (course.status?.toLowerCase() !== "enabled") return;
+
+        console.log("Navigating to view course:", course.name, course.status);
         navigate(`/courses/${course.id}`, {
             state: {
                 courseName: course.name,
                 institution: course.institution,
                 semester: semesterIdToString(course.semester_id),
                 year: course.year,
-                courseCode: `CS ${course.semester_id}01` // Example, adjust as needed
+                courseCode: `CS ${course.semester_id}01`
             }
         });
     };

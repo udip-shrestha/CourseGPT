@@ -167,19 +167,19 @@ def test_update_document_processing_status_failed(repo, temp_course):
 # ==========================================================
 def test_create_instructor(repo: ISQLRepository):
     """Should create instructor and reject duplicates/invalid data."""
-    instructor_id = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "hash")
+    instructor_id = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "hash", "INSTRUCTOR")
     assert instructor_id is not None
 
     # Duplicate email → should fail (unique constraint)
-    with pytest.raises(Exception): repo.create_instructor("Copy", "Prof", "ISU", "jane.smith@isu.edu", "hash2")
+    with pytest.raises(Exception): repo.create_instructor("Copy", "Prof", "ISU", "jane.smith@isu.edu", "hash2", "INSTRUCTOR")
 
     # Empty fields → check constraints fail
-    with pytest.raises(Exception): repo.create_instructor("", "", "", "unique@isu.edu", "pw")
+    with pytest.raises(Exception): repo.create_instructor("", "", "", "unique@isu.edu", "pw", "INSTRUCTOR")
 
 
 def test_read_instructor(repo: ISQLRepository):
     """Should fetch instructor by ID and email."""
-    iid = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "hash")
+    iid = repo.create_instructor("Dr. Jane Smith", "Professor", "ISU", "jane.smith@isu.edu", "hash", "INSTRUCTOR")
 
     inst = repo.read_instructor(iid)
     assert inst and inst["name"] == "Dr. Jane Smith" and inst["role"] == "INSTRUCTOR"
@@ -198,8 +198,8 @@ def test_read_all_instructors_features(repo: ISQLRepository, temp_instructor: st
     assert isinstance(data["instructors"], list)
 
     # Filtering by role_id (INSTRUCTOR)
-    filtered = repo.read_all_instructors(role=2)["instructors"]  # 2 = INSTRUCTOR from seed
-    assert all(inst["role_id"] == 2 for inst in filtered)
+    filtered = repo.read_all_instructors(role="INSTRUCTOR")["instructors"]
+    assert all(inst["role"] == "INSTRUCTOR" for inst in filtered)
 
     # Pagination
     limited = repo.read_all_instructors(limit=1)["instructors"]
@@ -216,7 +216,7 @@ def test_read_all_instructors_features(repo: ISQLRepository, temp_instructor: st
 
 def test_update_instructor(repo: ISQLRepository):
     """Should update instructor fields dynamically."""
-    iid = repo.create_instructor("Old Name", "Old Title", "ISU", "old@isu.edu", "hash")
+    iid = repo.create_instructor("Old Name", "Old Title", "ISU", "old@isu.edu", "hash", "INSTRUCTOR")
     updated = repo.update_instructor(iid, {"name": "New Name", "title": "New Title"})
     assert updated["name"] == "New Name" and updated["title"] == "New Title"
 
@@ -226,7 +226,7 @@ def test_update_instructor(repo: ISQLRepository):
 
 def test_delete_instructor(repo: ISQLRepository):
     """Should delete an instructor safely."""
-    iid = repo.create_instructor("Dr. John Doe", "Lecturer", "MIT", "john.doe@mit.edu", "hash")
+    iid = repo.create_instructor("Dr. John Doe", "Lecturer", "MIT", "john.doe@mit.edu", "hash", "INSTRUCTOR")
     assert repo.read_instructor(iid) is not None
 
     repo.delete_instructor(iid)
@@ -330,7 +330,7 @@ def test_read_course_by_name(repo, temp_instructor):
     """Should return only the course with matching name + instructor_id."""
     
     cid = repo.create_course(temp_instructor, "Algorithms", "ISU", 1, 2025)
-    other_inst = repo.create_instructor("John Doe", "Professor", "MIT", "john@test.com", "pass")
+    other_inst = repo.create_instructor("John Doe", "Professor", "MIT", "john@test.com", "pass", "INSTRUCTOR")
     repo.create_course(other_inst, "Algorithms", "MIT", 1, 2024)
 
     course = repo.read_course_by_name("Algorithms", temp_instructor)

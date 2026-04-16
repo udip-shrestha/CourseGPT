@@ -27,6 +27,7 @@ from API.Service.analytics_service import AnalyticsService
 from API.Service.discord_admins_service import DiscordAdminsService
 from API.Service.canvas_service import CanvasService
 from API.Service.gmail_service import GmailService
+from API.Service.admin_service import AdminService
 from API.Repository.i_vector_repository import IVectorRepository
 from API.Repository.chroma_vector_repository import ChromaVectorRepository
 from API.Util.loaders import LOADER_CLASS_REGISTRY, ILoader, LoaderFactory
@@ -113,12 +114,16 @@ def authorize(
     try:
         payload = decrypt_access_token(token)
         token_instructor_id = payload["id"]
+        token_instructor_role = payload["role"]
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=f"Unauthorized: {str(e)}", headers={"WWW-Authenticate": "Bearer"})
 
     instructor = sql_repo.read_instructor(token_instructor_id)
     if not instructor:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Instructor not found")
+    
+    if instructor["role"] != token_instructor_role:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Token role does not match instructor role")
 
     return instructor
 
@@ -369,3 +374,9 @@ def get_canvas_service(
     ) -> CanvasService:
     """Provide a CanvasService instance."""
     return CanvasService()   # might allow future injection of key paths via env or args
+
+def get_admin_service(
+    sql_repo: SQLRepository = Depends(get_sql_repository),
+) -> AdminService:
+    """Provide an AdminService using the SQL repository."""
+    return AdminService(sql_repo)

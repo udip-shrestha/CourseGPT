@@ -16,19 +16,6 @@ class InstructorService:
         self.sql_repo = sql_repo
 
     # ------------------------------------------------------
-    # Create Instructor
-    # ------------------------------------------------------
-    @clean_service
-    def create_instructor(self, name: str, title: str, university: str, email: str, password: str) -> dict:
-        """Create a new instructor record in the database."""
-        existing = self.sql_repo.read_instructor_by_email(email)
-        if existing:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Instructor with email={email} already exists.")
-
-        instructor_id = self.sql_repo.create_instructor(name, title, university, email, encrypt_password(password))
-        return {"instructor_id": instructor_id}
-
-    # ------------------------------------------------------
     # Read Single Instructor
     # ------------------------------------------------------
     @clean_service

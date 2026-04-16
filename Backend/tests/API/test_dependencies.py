@@ -169,10 +169,10 @@ def test_authorize_success(monkeypatch):
     mock_sql = MagicMock()
     mock_sql.read_instructor.return_value = {"id": "abc", "role": "ADMIN"}
 
-    monkeypatch.setattr(deps, "decrypt_access_token", lambda tok: {"id": "abc"})
+    monkeypatch.setattr(deps, "decrypt_access_token", lambda tok: {"id": "abc", "role": "ADMIN"})
 
     auth = deps.authorize(token="VALID", sql_repo=mock_sql)
-    assert auth["id"] == "abc"
+    assert auth == {"id": "abc", "role": "ADMIN"}
 
 
 def test_authorize_missing_token():
