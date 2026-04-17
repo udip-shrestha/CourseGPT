@@ -60,6 +60,10 @@ class LeaveServerSelect(discord.ui.Select):
         try:
             await guild.leave()
             # optional logging
+            await interaction.followup.send(
+                f"✅ Successfully left **{name}**.",
+                ephemeral=True
+            )
             logger.info(f"Bot left guild: {name} ({guild_id})")
         except Exception as e:
             await interaction.followup.send(
