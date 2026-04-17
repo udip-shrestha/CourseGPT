@@ -10,7 +10,6 @@ import {
   Plug,
   UserCircle,
   Menu,
-  BarChart3,
   Shield,
 } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
@@ -91,24 +90,17 @@ export function Header() {
                   Courses
                 </DropdownMenuItem>
 
-                <DropdownMenuItem
-                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
-                  onClick={() =>
-                    navigate(`/instructors/${currentInstructorId}/analytics`)
-                  }
-                >
-                  System Analytics
-                </DropdownMenuItem>
-
                 {isAdmin && (
-                  <DropdownMenuItem
-                    className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
-                    onClick={() =>
-                      navigate(`/instructors/${currentInstructorId}/admin`)
-                    }
-                  >
-                    Admin
-                  </DropdownMenuItem>
+                  <>
+                    <DropdownMenuItem
+                      className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                      onClick={() =>
+                        navigate(`/instructors/${currentInstructorId}/admin`)
+                      }
+                    >
+                      Admin
+                    </DropdownMenuItem>
+                  </>
                 )}
 
                 <DropdownMenuSeparator />
@@ -142,15 +134,6 @@ export function Header() {
             >
               <Upload className="h-4 w-4" />
               Courses
-            </Button>
-
-            <Button
-              variant={path.endsWith("/analytics") ? "default" : "ghost"}
-              className="flex items-center gap-2 w-full sm:w-auto justify-center"
-              onClick={() => navigate(`/instructors/${instructorId}/analytics`)}
-            >
-              <BarChart3 className="h-4 w-4" />
-              System Analytics
             </Button>
 
             {isAdmin && (
@@ -187,16 +170,7 @@ export function Header() {
             </Button>
 
             <Button
-              variant="ghost"
-              className="flex items-center gap-2 w-full sm:w-auto justify-center"
-              onClick={() => navigate(`/instructors/${instructorId}/analytics`)}
-            >
-              <BarChart3 className="h-4 w-4" />
-              System Analytics
-            </Button>
-
-            <Button
-              variant="default"
+              variant={path.startsWith(`/instructors/${instructorId}/admin`) ? "default" : "ghost"}
               className="flex items-center gap-2 w-full sm:w-auto justify-center"
               onClick={() => navigate(`/instructors/${instructorId}/admin`)}
             >
@@ -348,24 +322,17 @@ export function Header() {
                 Courses
               </DropdownMenuItem>
 
-              <DropdownMenuItem
-                className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
-                onClick={() =>
-                  navigate(`/instructors/${currentInstructorId}/analytics`)
-                }
-              >
-                System Analytics
-              </DropdownMenuItem>
-
               {isAdmin && (
-                <DropdownMenuItem
-                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
-                  onClick={() =>
-                    navigate(`/instructors/${currentInstructorId}/admin`)
-                  }
-                >
-                  Admin
-                </DropdownMenuItem>
+                <>
+                  <DropdownMenuItem
+                    className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                    onClick={() =>
+                      navigate(`/instructors/${currentInstructorId}/admin`)
+                    }
+                  >
+                    Admin
+                  </DropdownMenuItem>
+                </>
               )}
 
               <DropdownMenuSeparator />

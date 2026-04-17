@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useParams } from "react-router-dom";
 import {
     BookOpen,
     BookText,
@@ -29,7 +29,6 @@ import {
     SelectTrigger,
     SelectValue,
 } from "./ui/select.tsx";
-import { Button } from "./ui/button.tsx";
 import { UsageTrendChart } from "./charts/UsageTrendChart.tsx";
 import { QueryDistributionPieChart } from "./charts/QueryDistributionPieChart.tsx";
 import { RankedMetricList } from "./RankedMetricList.tsx";
@@ -51,7 +50,6 @@ function formatPercentage(part: number, whole: number) {
 
 export function SystemAnalyticsPage() {
     const { instructorId } = useParams<{ instructorId: string }>();
-    const navigate = useNavigate();
     const { analyticsClient } = useApiClient();
 
     const [selectedTimeRange, setSelectedTimeRange] = useState("30d");
@@ -265,14 +263,6 @@ export function SystemAnalyticsPage() {
                                 <SelectItem value="1y">Last year</SelectItem>
                             </SelectContent>
                         </Select>
-
-                        <Button
-                            variant="outline"
-                            className="rounded-2xl bg-background/80 shadow-sm"
-                            onClick={() => navigate(`/instructors/${instructorId}/courses`)}
-                        >
-                            Back to Courses
-                        </Button>
                     </div>
                 </div>
             </div>
