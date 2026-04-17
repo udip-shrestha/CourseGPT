@@ -57,6 +57,13 @@ export function QueryDistributionPieChart({ data }: QueryDistributionPieChartPro
                         backgroundColor: "hsl(var(--card))",
                         color: "hsl(var(--foreground))"
                     }}
+                    labelStyle={{
+                        color: "hsl(var(--foreground))",
+                        fontWeight: 600,
+                    }}
+                    itemStyle={{
+                        color: "hsl(var(--foreground))",
+                    }}
                 />
                 <Legend verticalAlign="bottom" height={36}/>
             </PieChart>
