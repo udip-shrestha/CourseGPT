@@ -12,7 +12,6 @@ class SQLRepository(ISQLRepository):
     def __init__(self, cm: PostgresConnectionManager):
         self.cm = cm
 
-
     # ======================================================
     # FILE TYPES
     # ======================================================
@@ -30,7 +29,6 @@ class SQLRepository(ISQLRepository):
             FROM file_types;
         """
         return self.cm.select_all(sql)
-
 
     # ======================================================
     # RAG STRATEGIES
@@ -50,7 +48,6 @@ class SQLRepository(ISQLRepository):
             ORDER BY id;
         """
         return self.cm.select_all(sql)
-
 
     # ======================================================
     # DOCUMENTS
@@ -164,16 +161,16 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     # INSTRUCTORS
     # ======================================================
-    def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
+    def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str, role_name: str) -> str:
         sql = """
             INSERT INTO instructors (name, title, university, email, password, role_id)
             VALUES (
                 %s, %s, %s, %s, %s,
-                (SELECT id FROM instructor_roles WHERE role_name = 'INSTRUCTOR')
+                (SELECT id FROM instructor_roles WHERE role_name = %s)
             )
             RETURNING id;
         """
-        return self.cm.insert_one(sql, (name, title, university, email, encrypted_password))
+        return self.cm.insert_one(sql, (name, title, university, email, encrypted_password, role_name))
 
     def read_instructor(self, instructor_id: str) -> Optional[dict]:
         sql = """
@@ -204,7 +201,7 @@ class SQLRepository(ISQLRepository):
         offset: int = 0,
         order_by: str = "created_at",
         order_dir: str = "desc"
-    ) -> List[dict]:
+    ) -> dict:
         """Fetch instructors with optional filters, pagination, and total count."""
 
         allowed_order_by = {"created_at", "name"}
@@ -231,7 +228,7 @@ class SQLRepository(ISQLRepository):
             filters.append("i.email ILIKE %s")
             params.append(f"%{email}%")
         if role:
-            filters.append("i.role_id = %s")
+            filters.append("r.role_name = %s")
             params.append(role)
 
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
@@ -295,6 +292,17 @@ class SQLRepository(ISQLRepository):
         """
         self.cm.execute(sql, (encrypted_password, instructor_id))
 
+    def update_instructor_admin(self, instructor_id: str, is_admin: bool) -> None:
+        role_name = "ADMIN" if is_admin else "INSTRUCTOR"
+
+        sql = """
+            UPDATE instructors
+            SET role_id = (SELECT id FROM instructor_roles WHERE role_name = %s),
+                updated_at = NOW()
+            WHERE id = %s;
+        """
+        self.cm.execute(sql, (role_name, instructor_id))
+
     # ======================================================
     # PASSWORD RESET CODES
     # ======================================================
@@ -349,7 +357,7 @@ class SQLRepository(ISQLRepository):
     def read_course(self, course_id: str) -> Optional[dict]:
         sql = """
             SELECT 
-                c.id, c.name, c.institution, c.semester_id, c.year, c.created_at,
+                c.id, c.name, c.institution, c.semester_id, c.year, c.created_at, c.status,
                 c.canvas_course_id, c.canvas_context_id,
                 i.id AS instructor_id, i.name AS instructor_name, i.email AS instructor_email,
                 rs.id AS rag_strategy_id, rs.type_name AS rag_strategy_name,
@@ -365,10 +373,12 @@ class SQLRepository(ISQLRepository):
     def read_all_courses(
         self,
         instructor_id: Optional[str] = None,
+        instructor_email: Optional[str] = None,
         institution: Optional[str] = None,
         name: Optional[str] = None,
         semester_id: Optional[int] = None,
         rag_strategy_id: Optional[int] = None,
+        status: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
@@ -390,6 +400,9 @@ class SQLRepository(ISQLRepository):
         if instructor_id:
             filters.append("c.instructor_id = %s")
             params.append(instructor_id)
+        if instructor_email:
+            filters.append("i.email ILIKE %s")
+            params.append(f"%{instructor_email}%")
         if institution:
             filters.append("c.institution ILIKE %s")
             params.append(f"%{institution}%")
@@ -402,19 +415,23 @@ class SQLRepository(ISQLRepository):
         if rag_strategy_id:
             filters.append("c.rag_strategy_id = %s")
             params.append(rag_strategy_id)
+        if status and status.upper() in {"PENDING", "ENABLED", "DISABLED"}:
+            filters.append("c.status = %s")
+            params.append(status)
 
         where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
 
         # --- Count total matching records ---
-        count_sql = f"SELECT COUNT(*) AS total FROM courses c {where_clause};"
+        count_sql = f"SELECT COUNT(*) AS total FROM courses c LEFT JOIN instructors i ON c.instructor_id = i.id {where_clause};"
         total_row = self.cm.select_one(count_sql, tuple(params))
         total_count = total_row["total"] if total_row else 0
 
         # --- Fetch paginated results ---
         data_sql = f"""
             SELECT 
-                c.id, c.name, c.year, c.created_at, c.institution, 
-                c.instructor_id, i.name AS instructor_name,
+                c.id, c.name, c.year, c.created_at, c.institution, c.status,
+                c.instructor_id, i.name AS instructor_name, i.email AS instructor_email,
+                c.canvas_course_id, c.canvas_context_id,
                 c.rag_strategy_id, rs.type_name AS rag_strategy_name,
                 c.semester_id, s.name AS semester_name
             FROM courses c
@@ -454,11 +471,6 @@ class SQLRepository(ISQLRepository):
         sql = "SELECT * FROM courses WHERE canvas_course_id = %s LIMIT 1;"
         return self.cm.select_one(sql, (canvas_course_id,))
 
-    def read_student_by_canvas(self, canvas_user_id: str) -> Optional[dict]:
-        """Retrieve a student record by their Canvas user id."""
-        sql = "SELECT id, name, discord_id, canvas_user_id FROM students WHERE canvas_user_id = %s LIMIT 1;"
-        return self.cm.select_one(sql, (canvas_user_id,))
-    
     def update_course(self, course_id: str, updates: dict) -> dict:
         set_clause = ", ".join([f"{key} = %s" for key in updates.keys()])
         values = list(updates.values()) + [course_id]
@@ -483,6 +495,16 @@ class SQLRepository(ISQLRepository):
         """
         rows = self.cm.select_all(sql)
         return {r["instructor_id"]: r["count"] for r in rows}
+
+    def update_course_status(self, course_id: str, enabled: bool) -> None:
+        status = "ENABLED" if enabled else "DISABLED"
+
+        sql = """
+            UPDATE courses
+            SET status = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s;
+        """
+        self.cm.execute(sql, (status, course_id))
 
     # ======================================================
     # STUDENTS
@@ -546,6 +568,11 @@ class SQLRepository(ISQLRepository):
             WHERE s.id = %s;
         """
         return self.cm.select_one(sql, (student_id,))
+
+    def read_student_by_canvas(self, canvas_user_id: str) -> Optional[dict]:
+        """Retrieve a student record by their Canvas user id."""
+        sql = "SELECT id, name, discord_id, canvas_user_id FROM students WHERE canvas_user_id = %s LIMIT 1;"
+        return self.cm.select_one(sql, (canvas_user_id,))
 
     def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
         if course_id:
@@ -785,29 +812,6 @@ class SQLRepository(ISQLRepository):
             RETURNING id;
         """
         return self.cm.insert_one(sql, (course_id, feedback_text))
-
-    # ======================================================
-    # FEEDBACK
-    # ======================================================
-    def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
-        """
-        Insert a new feedback record for a course and return its id.
-        If `received_at` is not provided, database default NOW() will be used.
-        """
-        if received_at:
-            sql = """
-                INSERT INTO feedback (course_id, feedback_text, received_at)
-                VALUES (%s, %s, %s)
-                RETURNING id;
-            """
-            return self.cm.insert_one(sql, (course_id, feedback_text, received_at))
-
-        sql = """
-            INSERT INTO feedback (course_id, feedback_text, received_at)
-            VALUES (%s, %s, NOW())
-            RETURNING id;
-        """
-        return self.cm.insert_one(sql, (course_id, feedback_text))
     
     def read_all_feedback(self, limit: int = 50, offset: int = 0, order_by: str = "received_at", order_dir: str = "desc") -> dict:
         # Standardize sorting
@@ -915,7 +919,6 @@ class SQLRepository(ISQLRepository):
     # ======================================================
     # ANALYTICS
     # ======================================================
-
     def read_course_query_stats(self, course_id: str, days: Optional[int] = None) -> Optional[Dict[str, Any]]:
         date_filter = ""
         params: List[Any] = []

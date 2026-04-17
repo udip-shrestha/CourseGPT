@@ -1,4 +1,4 @@
-import { Routes, Route, Outlet } from "react-router-dom";
+import { Routes, Route, Outlet, Navigate } from "react-router-dom";
 import { Header } from "./components/Header.tsx";
 import { HomePage } from "./components/HomePage.tsx";
 import { LoginPage } from "./components/LoginPage.tsx";
@@ -11,6 +11,11 @@ import { CoursePage } from "./components/CoursePage.tsx";
 import { CanvasLinkPage } from "./components/CanvasLinkPage.tsx";
 import { RequestResetPage } from "./components/RequestResetPage.tsx";
 import { ResetPasswordPage } from "./components/ResetPasswordPage.tsx";
+import { AdminPage } from "./components/AdminPage.tsx";
+import { AdminCoursesPage } from "./components/AdminCoursesPage.tsx";
+import { AdminInstructorsPage } from "./components/AdminInstructorsPage.tsx";
+import { AdminAnalyticsPage } from "./components/AdminAnalyticsPage.tsx";
+import { useApiClient } from "./clients/ApiClientContext.tsx";
 
 /**
  * The main Layout component.
@@ -30,6 +35,7 @@ function Layout() {
         </div>
     );
 }
+
 
 /**
  * The main App component.
@@ -63,6 +69,13 @@ export default function App() {
                     element={<SystemAnalyticsPage />}
                 />
 
+                <Route path="/instructors/:instructorId/admin" element={<AdminLayout />}>
+                    <Route index element={<AdminPage />} />
+                    <Route path="courses" element={<AdminCoursesPage />} />
+                    <Route path="instructors" element={<AdminInstructorsPage />} />
+                    <Route path="analytics" element={<AdminAnalyticsPage />} />
+                </Route>
+
                 {/* Course Route with Nested Routing */}
                 <Route path="/courses/:courseId/*" element={<CoursePage />} />
 
@@ -71,4 +84,20 @@ export default function App() {
             </Route>
         </Routes>
     );
+}
+
+function AdminLayout() {
+    const { apiClient } = useApiClient();
+    const isAuthenticated = !!apiClient.getToken?.();
+    const instructorRole = apiClient.getInstructorRole?.();
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />;
+    }
+
+    if (instructorRole !== "ADMIN") {
+        return <Navigate to="/" replace />;
+    }
+
+    return <Outlet />;
 }

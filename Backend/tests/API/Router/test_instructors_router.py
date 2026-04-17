@@ -30,29 +30,6 @@ def client(instructor_service: InstructorService) -> TestClient:
     app.dependency_overrides[get_instructor_service] = lambda: instructor_service
     return TestClient(app)
         
-def test_add_instructor_duplicate_email(
-    client: TestClient,
-    mock_sql_repo: ISQLRepository,
-):
-    """Should return 400 if email already exists."""
-    mock_sql_repo.read_instructor_by_email.return_value = {"id": str(uuid4())}
-
-    response = client.post(
-        "/instructors",
-        params={
-            "name": "Dr. John Doe",
-            "title": "Professor",
-            "university": "Tech University",
-            "email": "john@tech.edu",
-            "password": "pass123"
-        }
-    )
-
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert "already exists" in response.json()["detail"]
-    mock_sql_repo.read_instructor_by_email.assert_called_once_with("john@tech.edu")
-    mock_sql_repo.create_instructor.assert_not_called()
-
 
 def test_get_instructor_by_id_success(
     client: TestClient,

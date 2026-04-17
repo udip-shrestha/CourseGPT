@@ -98,7 +98,9 @@ class CourseService:
     def read_all_courses(
         self,
         instructor_id: Optional[str] = None,
+        instructor_email: Optional[str] = None,
         institution: Optional[str] = None,
+        status: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
@@ -110,7 +112,9 @@ class CourseService:
         """
         return self.sql_repo.read_all_courses(
             instructor_id=instructor_id,
+            instructor_email=instructor_email,
             institution=institution,
+            status=status,
             limit=limit,
             offset=offset,
             order_by=order_by,

@@ -7,7 +7,7 @@ from API.Repository.i_sql_repository import ISQLRepository
 
 def test_login_success(auth_service: AuthService, mock_sql_repo: ISQLRepository):
     """Should authenticate instructor and return access token."""
-    mock_sql_repo.read_instructor_by_email.return_value = {"id": "inst-1", "password": "hashed-pw"}
+    mock_sql_repo.read_instructor_by_email.return_value = {"id": "inst-1", "password": "hashed-pw", "role": "INSTRUCTOR"}
 
     with patch("API.Service.auth_service.verify_password", return_value=True) as mock_verify, \
          patch("API.Service.auth_service.encrypt_access_token", return_value="mock-token") as mock_encrypt:
@@ -15,8 +15,8 @@ def test_login_success(auth_service: AuthService, mock_sql_repo: ISQLRepository)
 
     mock_sql_repo.read_instructor_by_email.assert_called_once_with("user@isu.edu")
     mock_verify.assert_called_once_with("hashed-pw", "plainpass")
-    mock_encrypt.assert_called_once_with({"id": "inst-1"})
-    assert result == {"access_token": "mock-token", "token_type": "bearer", "instructor_id": "inst-1"}
+    mock_encrypt.assert_called_once_with({"id": "inst-1", "role": "INSTRUCTOR"})
+    assert result == {"access_token": "mock-token", "token_type": "bearer", "instructor_id": "inst-1", "instructor_role": "INSTRUCTOR"}
 
 
 def test_login_email_not_found(auth_service: AuthService, mock_sql_repo: ISQLRepository):
@@ -51,11 +51,9 @@ def test_register_success(auth_service: AuthService, mock_sql_repo: ISQLReposito
 
     mock_sql_repo.read_instructor_by_email.assert_called_once_with("jane@isu.edu")
     mock_encrypt_pw.assert_called_once_with("mypw")
-    mock_sql_repo.create_instructor.assert_called_once_with(
-        name="Jane", title="Professor", university="ISU", email="jane@isu.edu", encrypted_password="hashed-pass"
-    )
-    mock_encrypt_token.assert_called_once_with({"id": "inst-3"})
-    assert result == {"access_token": "mock-token", "token_type": "bearer", "instructor_id": "inst-3"}
+    mock_sql_repo.create_instructor.assert_called_once_with(name="Jane", title="Professor", university="ISU", email="jane@isu.edu", encrypted_password="hashed-pass", role_name="INSTRUCTOR")
+    mock_encrypt_token.assert_called_once_with({"id": "inst-3", "role": "INSTRUCTOR"})
+    assert result == {"access_token": "mock-token", "token_type": "bearer", "instructor_id": "inst-3", "instructor_role": "INSTRUCTOR"}
 
 
 def test_register_duplicate_email(auth_service: AuthService, mock_sql_repo: ISQLRepository):

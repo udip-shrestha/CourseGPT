@@ -5,33 +5,6 @@ from API.Repository.i_sql_repository import ISQLRepository
 from unittest.mock import patch
 
 
-def test_create_instructor_success(instructor_service: InstructorService, mock_sql_repo: ISQLRepository):
-    """Should create an instructor when email not used."""
-    mock_sql_repo.read_instructor_by_email.return_value = None
-    mock_sql_repo.create_instructor.return_value = "inst-123"
-
-    with patch("API.Service.instructors_service.encrypt_password", return_value="hashed-pw") as mock_encrypt:
-        result = instructor_service.create_instructor("John Doe", "Professor", "ISU", "john@isu.edu", "plainpass")
-
-    mock_sql_repo.read_instructor_by_email.assert_called_once_with("john@isu.edu")
-    mock_encrypt.assert_called_once_with("plainpass")
-    mock_sql_repo.create_instructor.assert_called_once_with(
-        "John Doe", "Professor", "ISU", "john@isu.edu", "hashed-pw"
-    )
-    assert result == {"instructor_id": "inst-123"}
-
-
-def test_create_instructor_duplicate_email(instructor_service: InstructorService, mock_sql_repo: ISQLRepository):
-    """Should raise 400 if instructor email already exists."""
-    mock_sql_repo.read_instructor_by_email.return_value = {"id": "inst-1"}
-
-    with pytest.raises(HTTPException) as exc_info:
-        instructor_service.create_instructor("John", "Prof", "ISU", "john@isu.edu", "pw")
-
-    assert exc_info.value.status_code == status.HTTP_400_BAD_REQUEST
-    assert "already exists" in exc_info.value.detail
-
-
 def test_read_instructor_success(instructor_service: InstructorService, mock_sql_repo: ISQLRepository):
     """Should return instructor when found."""
     mock_sql_repo.read_instructor.return_value = {"id": "i1", "name": "John"}

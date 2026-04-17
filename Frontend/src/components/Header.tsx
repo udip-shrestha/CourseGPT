@@ -11,6 +11,7 @@ import {
   UserCircle,
   Menu,
   BarChart3,
+  Shield,
 } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -33,33 +34,31 @@ export function Header() {
   const navigate = useNavigate();
   const { apiClient } = useApiClient();
 
-  // This now works because Header is inside the Layout route in App.tsx
   const { instructorId, courseId } = useParams();
 
-  // Clean the path for reliable matching
   const path = location.pathname.endsWith("/")
     ? location.pathname.slice(0, -1)
     : location.pathname;
 
   const isAuthenticated = !!apiClient.getToken?.();
   const currentInstructorId = apiClient.getInstructorId?.();
+  const currentInstructorRole = apiClient.getInstructorRole?.();
+  const isAdmin = currentInstructorRole === "ADMIN";
+
   const handleLogout = () => {
     apiClient.logout?.();
   };
 
-  // --- Logic from 'main' branch ---
   const onInstructorRoute = path.startsWith("/instructors/");
+  const onAdminRoute = path.startsWith(`/instructors/${instructorId}/admin`);
   const onCourseRoute = path.startsWith("/courses/");
   const onLoginPage = path === "/login";
   const onRegisterPage = path === "/register";
-  // Check for root path (which can be "/" or "")
   const onHomePage = path === "" || path === "/";
-  // --- End of logic from 'main' ---
 
   function NavItems({ isMobile }: { isMobile: boolean }) {
     return (
       <>
-        {/* Uppermost Profile Icon Menu */}
         {isMobile && isAuthenticated && !isStudentRole && (
           <div className="w-full flex justify-center mb-4">
             <DropdownMenu>
@@ -101,6 +100,17 @@ export function Header() {
                   System Analytics
                 </DropdownMenuItem>
 
+                {isAdmin && (
+                  <DropdownMenuItem
+                    className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                    onClick={() =>
+                      navigate(`/instructors/${currentInstructorId}/admin`)
+                    }
+                  >
+                    Admin
+                  </DropdownMenuItem>
+                )}
+
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
@@ -114,8 +124,7 @@ export function Header() {
           </div>
         )}
 
-        {/* Instructor-level nav */}
-        {onInstructorRoute && (
+        {onInstructorRoute && !onAdminRoute && (
           <>
             <Button
               variant={path.endsWith("/profile") ? "default" : "ghost"}
@@ -143,10 +152,60 @@ export function Header() {
               <BarChart3 className="h-4 w-4" />
               System Analytics
             </Button>
+
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                onClick={() => navigate(`/instructors/${instructorId}/admin`)}
+              >
+                <Shield className="h-4 w-4" />
+                Admin
+              </Button>
+            )}
           </>
         )}
 
-        {/* Course-level nav */}
+        {onAdminRoute && (
+          <>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/profile`)}
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/courses`)}
+            >
+              <Upload className="h-4 w-4" />
+              Courses
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/analytics`)}
+            >
+              <BarChart3 className="h-4 w-4" />
+              System Analytics
+            </Button>
+
+            <Button
+              variant="default"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/admin`)}
+            >
+              <Shield className="h-4 w-4" />
+              Admin
+            </Button>
+          </>
+        )}
+
         {onCourseRoute && !isStudentRole && (
           <>
             <Button
@@ -214,35 +273,28 @@ export function Header() {
           </>
         )}
 
-        {/* Auth navigation: Login Page */}
         {onLoginPage && (
-          <>
-            <Button
-              variant={path === `/courses/${courseId}` ? "default" : "ghost"}
-              className="flex items-center gap-2 w-full sm:w-auto justify-center"
-              onClick={() => navigate("/register")}
-            >
-              <FileText className="h-4 w-4" />
-              Register
-            </Button>
-          </>
+          <Button
+            variant={path === `/courses/${courseId}` ? "default" : "ghost"}
+            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+            onClick={() => navigate("/register")}
+          >
+            <FileText className="h-4 w-4" />
+            Register
+          </Button>
         )}
 
-        {/* Auth navigation: Register Page */}
         {onRegisterPage && (
-          <>
-            <Button
-              variant={path === `/courses/${courseId}` ? "default" : "ghost"}
-              className="flex items-center gap-2 w-full sm:w-auto justify-center"
-              onClick={() => navigate("/login")}
-            >
-              <FileText className="h-4 w-4" />
-              Login
-            </Button>
-          </>
+          <Button
+            variant={path === `/courses/${courseId}` ? "default" : "ghost"}
+            className="flex items-center gap-2 w-full sm:w-auto justify-center"
+            onClick={() => navigate("/login")}
+          >
+            <FileText className="h-4 w-4" />
+            Login
+          </Button>
         )}
 
-        {/* Home page auth nav */}
         {onHomePage && !isAuthenticated && (
           <>
             <Button
@@ -265,7 +317,6 @@ export function Header() {
           </>
         )}
 
-        {/* Rightmost Profile Icon Menu on Desktop */}
         {!isMobile && isAuthenticated && !isStudentRole && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -306,6 +357,17 @@ export function Header() {
                 System Analytics
               </DropdownMenuItem>
 
+              {isAdmin && (
+                <DropdownMenuItem
+                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                  onClick={() =>
+                    navigate(`/instructors/${currentInstructorId}/admin`)
+                  }
+                >
+                  Admin
+                </DropdownMenuItem>
+              )}
+
               <DropdownMenuSeparator />
 
               <DropdownMenuItem
@@ -325,7 +387,6 @@ export function Header() {
     <header className="border-b bg-card">
       <div className="container mx-auto px-4 py-4">
         <div className="flex flex-row items-center justify-between gap-3">
-          {/* Logo */}
           <div
             className="flex items-center justify-center sm:justify-start gap-2 cursor-pointer"
             onClick={() => {
@@ -336,9 +397,7 @@ export function Header() {
             <h1 className="text-2xl font-bold text-primary">CourseGPT</h1>
           </div>
 
-          {/* Navigation */}
           <nav className="flex w-full items-center justify-end">
-            {/* MOBILE: Hamburger (visible only on small screens) */}
             <div className="sm:hidden">
               <Sheet>
                 <SheetTrigger asChild>
@@ -355,7 +414,6 @@ export function Header() {
               </Sheet>
             </div>
 
-            {/* DESKTOP NAVIGATION (hidden on mobile) */}
             <div className="hidden sm:flex flex-wrap justify-end gap-4">
               <NavItems isMobile={false} />
             </div>
