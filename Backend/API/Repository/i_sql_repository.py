@@ -326,7 +326,7 @@ class ISQLRepository(Protocol):
     # ======================================================
     # DISCORD ADMINS
     # ======================================================
-    def create_discord_admin(self, discord_id: str) -> str:
+    def create_discord_admin(self, discord_id: str, name: str) -> str:
         """Insert a new Discord admin and return its id."""
         ...
 
