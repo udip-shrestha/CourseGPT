@@ -31,6 +31,20 @@ export interface TopKeywordsItem {
     count: number;
 }
 
+// Interface matching the Swagger response for Discord feedback
+export interface CourseSatisfaction {
+    course_id: string;
+    upvotes: number;
+    downvotes: number;
+    total_votes: number;
+    satisfaction_score: number;
+}
+
+export interface EngagementDistributionItem {
+    range: string;
+    count: number;
+}
+
 function timeRangeToDays(timeRange: string): number {
     switch (timeRange) {
         case "7d": return 7;
@@ -48,10 +62,8 @@ export class AnalyticsClient {
         this.client = client;
     }
 
-
     /**
      * Get the number of students registered in a course
-     * Matches: GET /students/count?course_id={id}
      */
     async getStudentCount(courseId: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
@@ -59,6 +71,18 @@ export class AnalyticsClient {
             "GET",
             "/students/count",
             { query: { course_id: courseId } }
+        );
+    }
+
+    /**
+     * Returns aggregated satisfaction metrics based on Discord votes.
+     * Endpoint: GET /feedback/courses/{course_id}/satisfaction
+     */
+    async getCourseSatisfaction(courseId: string) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.client.request<CourseSatisfaction>(
+            "GET",
+            `/feedback/courses/${courseId}/satisfaction`
         );
     }
 
@@ -88,6 +112,17 @@ export class AnalyticsClient {
         return this.client.request("GET", `/courses/${courseId}/analytics/engagement`);
     }
 
+    /**
+     * Get distribution of queries per user (Lurkers vs Power Users)
+     */
+    async getEngagementDistribution(courseId: string) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.client.request<EngagementDistributionItem[]>(
+            "GET",
+            `/courses/${courseId}/analytics/engagement-distribution`
+        );
+    }
+
     async getOverviewSummary(courseId: string, timeRange: string) {
         return this.getCourseOverview(courseId, timeRangeToDays(timeRange));
     }
@@ -107,7 +142,7 @@ export class AnalyticsClient {
     }
 
     /**
-     * Full course Q&A history (questions and answers) via GET /courses/{id}/queries/all.
+     * Full course Q&A history
      */
     async getAllCourseQueries(
         courseId: string,
