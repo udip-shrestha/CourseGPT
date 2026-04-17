@@ -24,6 +24,7 @@ export class AuthClient {
         if (data?.access_token && data?.instructor_id) {
             this.baseClient.setToken(data.access_token);
             this.baseClient.setInstructorId(data.instructor_id);
+            this.baseClient.setInstructorRole(data.instructor_role);
             return { data, errorStatus, errorMessage };
         }
         const message = errorMessage || "Critical Error: Invalid login response structure.";
@@ -48,6 +49,7 @@ export class AuthClient {
         if (data?.access_token && data?.instructor_id) {
             this.baseClient.setToken(data.access_token);
             this.baseClient.setInstructorId(data.instructor_id);
+            this.baseClient.setInstructorRole(data.instructor_role);
             return { data, errorStatus, errorMessage };
         }
         const message = errorMessage || "Critical Error: Invalid register response structure.";

@@ -109,11 +109,13 @@ def temp_instructor(connection_manager):
 
 @pytest.fixture
 def temp_course(connection_manager, temp_instructor):
-    """Insert a temporary course record and return its UUID."""
+    """Insert a temporary ENABLED course record and return its UUID."""
     course_id = str(uuid.uuid4())
     sql = """
-        INSERT INTO courses (id, name, institution, year, semester_id, instructor_id)
-        VALUES (%s, %s, %s, %s, %s, %s)
+        INSERT INTO courses (
+            id, name, institution, year, semester_id, instructor_id, status
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, 'ENABLED')
     """
     connection_manager.execute(
         sql,

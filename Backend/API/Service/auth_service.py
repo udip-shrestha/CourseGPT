@@ -24,8 +24,9 @@ class AuthService:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Incorrect password")
 
         instructor_id = instructor["id"]
-        access_token = encrypt_access_token({"id": instructor_id})
-        return {"access_token": access_token, "token_type": "bearer", "instructor_id": instructor_id}
+        instructor_role = instructor["role"]
+        access_token = encrypt_access_token({"id": instructor_id, "role": instructor_role})
+        return {"access_token": access_token, "token_type": "bearer", "instructor_id": instructor_id, "instructor_role": instructor_role}
 
     @clean_service
     def register(self, name: str, title: str, university: str, email: str, password: str) -> dict:
@@ -33,12 +34,13 @@ class AuthService:
         existing = self.sql_repo.read_instructor_by_email(email)
         if existing:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Email already registered")
+        
+        instructor_role = "INSTRUCTOR"
+        instructor_id = self.sql_repo.create_instructor(name=name, title=title, university=university, email=email, encrypted_password=encrypt_password(password), role_name=instructor_role)
 
-        instructor_id = self.sql_repo.create_instructor(name=name, title=title, university=university, email=email, encrypted_password=encrypt_password(password))
+        access_token = encrypt_access_token({"id": instructor_id, "role": instructor_role})
+        return {"access_token": access_token, "token_type": "bearer", "instructor_id": instructor_id, "instructor_role": instructor_role}
 
-        access_token = encrypt_access_token({"id": instructor_id})
-        return {"access_token": access_token, "token_type": "bearer", "instructor_id": instructor_id}
-    
     @clean_service
     def request_password_reset(self, instructor_email: str) -> dict:
         """Generate and email a 6-digit password reset code."""

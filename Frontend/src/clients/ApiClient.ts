@@ -3,6 +3,7 @@ export class APIClient {
     private readonly baseUrl: string;
     private readonly storageKey = "coursegpt_token";
     private readonly instructorKey = "coursegpt_instructor_id";
+    private readonly instructorRoleKey = "coursegpt_instructor_role";
     private controllers = new Map<string, AbortController>();
 
     constructor(baseUrl: string) {
@@ -43,10 +44,20 @@ export class APIClient {
         return localStorage.getItem(this.instructorKey);
     }
 
+    // ===== INSTRUCTOR ROLE MANAGEMENT =====
+    setInstructorRole(instructorRole: string) {
+        localStorage.setItem(this.instructorRoleKey, instructorRole);
+    }
+
+    getInstructorRole(): string | null {
+        return localStorage.getItem(this.instructorRoleKey);
+    }
+
     // ===== LOGOUT =====
     logout(): void {
         this.clearToken();
         localStorage.removeItem(this.instructorKey);
+        localStorage.removeItem(this.instructorRoleKey);
         for (const c of this.controllers.values()) c.abort();
         this.controllers.clear();
         window.location.href = "/login"; // main branch improvement

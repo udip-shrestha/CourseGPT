@@ -5,10 +5,13 @@ export class CourseClient {
   constructor(baseClient: APIClient) {
     this.baseClient = baseClient;
   }
-  async listInstructorCourses(
-    instructorId: string,
+
+  async listCourses(
     options?: {
+      instructor_id?: string;
+      instructor_email?: string;
       institution?: string;
+      status?: "PENDING" | "ENABLED" | "DISABLED";
       limit?: number;
       offset?: number;
       order_by?: string;
@@ -18,11 +21,10 @@ export class CourseClient {
     const query = Object.fromEntries(
       Object.entries(options || {}).filter(([_, v]) => v !== undefined),
     );
-    return this.baseClient.request(
-      "GET",
-      `/instructors/${instructorId}/courses`,
-      { query, operationId: `instructor-courses-${instructorId}` },
-    );
+    return this.baseClient.request("GET", `/courses/list`, {
+      query,
+      operationId: "courses-list",
+    });
   }
 
   async getCourse(courseId: string) {

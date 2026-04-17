@@ -31,6 +31,7 @@ interface CourseCardProps {
 
 export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: CourseCardProps) {
     const semesterString: SemesterName | "Unknown" = semesterIdToName(course.semester_id);
+    const isDisabled = course.status?.toLowerCase() !== "enabled";
 
     const [isSettingsOpen, setIsSettingsOpen] = useState(false);
     const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -60,11 +61,35 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
         onCourseUpdated();
     };
 
-    const handleCardClick = () => { onViewCourse(); };
+    const handleCardClick = () => {
+        if (isDisabled) return;
+        onViewCourse();
+    };
+
     const handleButtonClick = (e: React.MouseEvent) => e.stopPropagation();
 
     return (
-        <Card className="hover:shadow-md transition-shadow relative cursor-pointer" onClick={handleCardClick}>
+        <Card
+            className={`transition-shadow relative overflow-hidden ${isDisabled ? "cursor-not-allowed opacity-60" : "hover:shadow-md cursor-pointer"}`}
+            onClick={handleCardClick}
+        >
+           {isDisabled && (
+                <>
+                    <div
+                        className="absolute inset-0 z-0 pointer-events-none"
+                        style={{
+                            backgroundImage:
+                                "repeating-linear-gradient(135deg, rgba(0,0,0,0.12) 0px, rgba(0,0,0,0.12) 8px, transparent 8px, transparent 16px)",
+                        }}
+                    />
+                    <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none">
+                        <div className="bg-background/90 border rounded-md px-3 py-2 text-sm font-medium shadow">
+                            Contact admin to enable
+                        </div>
+                    </div>
+                </>
+            )}
+
             <div className="absolute top-2 right-2 z-10" onClick={handleButtonClick}>
                 <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                     <PopoverTrigger asChild>
@@ -79,6 +104,7 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                                     <Button
                                         variant="ghost"
                                         className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10 text-sm h-8"
+                                        disabled={isDisabled}
                                     >
                                         <Trash2 className="mr-2 h-4 w-4" /> Delete Course
                                     </Button>
@@ -117,18 +143,19 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                                     </DialogFooter>
                                 </DialogContent>
                             </Dialog>
-                                    {/* Update Course */}
+
                             <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button
                                         variant="ghost"
                                         className="w-full justify-start text-sm h-8"
+                                        disabled={isDisabled}
                                     >
                                         <Pencil className="mr-2 h-4 w-4" /> Edit Course
                                     </Button>
                                 </DialogTrigger>
 
-                                <CourseUpdateDialog 
+                                <CourseUpdateDialog
                                     course={course}
                                     onCourseUpdated={handleUpdated}
                                     onClose={() => setIsUpdateDialogOpen(false)}
@@ -139,7 +166,7 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                 </Popover>
             </div>
 
-            <CardHeader className="pb-3 pr-10">
+            <CardHeader className="pb-3 pr-10 relative z-10">
                 <div className="space-y-1">
                     <h3 className="font-semibold leading-tight text-lg">{course.name}</h3>
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -150,6 +177,6 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                     </div>
                 </div>
             </CardHeader>
-        </Card> 
+        </Card>
     );
 }

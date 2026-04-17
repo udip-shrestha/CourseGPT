@@ -10,6 +10,7 @@ import {
   Plug,
   UserCircle,
   Menu,
+  Shield,
 } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -42,12 +43,16 @@ export function Header() {
 
   const isAuthenticated = !!apiClient.getToken?.();
   const currentInstructorId = apiClient.getInstructorId?.();
+  const currentInstructorRole = apiClient.getInstructorRole?.();
+  const isAdmin = currentInstructorRole === "ADMIN";
+
   const handleLogout = () => {
     apiClient.logout?.();
   };
 
   // --- Logic from 'main' branch ---
   const onInstructorRoute = path.startsWith("/instructors/");
+  const onAdminRoute = path.startsWith(`/instructors/${instructorId}/admin`);
   const onCourseRoute = path.startsWith("/courses/");
   const onLoginPage = path === "/login";
   const onRegisterPage = path === "/register";
@@ -91,6 +96,16 @@ export function Header() {
                   Courses
                 </DropdownMenuItem>
 
+                {isAdmin && (
+                  <DropdownMenuItem
+                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                  onClick={() =>
+                    navigate(`/instructors/${currentInstructorId}/admin`)
+                  }
+                >
+                  Admin
+                </DropdownMenuItem>)}
+
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
@@ -105,7 +120,7 @@ export function Header() {
         )}
 
         {/* Instructor-level nav */}
-        {onInstructorRoute && (
+        {onInstructorRoute && !onAdminRoute && (
           <>
             <Button
               variant={path.endsWith("/profile") ? "default" : "ghost"}
@@ -123,6 +138,48 @@ export function Header() {
             >
               <Upload className="h-4 w-4" />
               Courses
+            </Button>
+
+            {isAdmin && (
+              <Button
+                variant="ghost"
+                className="flex items-center gap-2 w-full sm:w-auto justify-center"
+                onClick={() => navigate(`/instructors/${instructorId}/admin`)}
+              >
+                <Shield className="h-4 w-4" />
+                Admin
+              </Button>
+            )}
+          </>
+        )}
+
+        {onAdminRoute && (
+          <>
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/profile`)}
+            >
+              <User className="h-4 w-4" />
+              Profile
+            </Button>
+
+            <Button
+              variant="ghost"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/courses`)}
+            >
+              <Upload className="h-4 w-4" />
+              Courses
+            </Button>
+
+            <Button
+              variant="default"
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/admin`)}
+            >
+              <Shield className="h-4 w-4" />
+              Admin
             </Button>
           </>
         )}
@@ -277,6 +334,16 @@ export function Header() {
               >
                 Courses
               </DropdownMenuItem>
+
+              {isAdmin && (
+                <DropdownMenuItem
+                className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                onClick={() =>
+                  navigate(`/instructors/${currentInstructorId}/admin`)
+                }
+              >
+                Admin
+              </DropdownMenuItem>)}
 
               <DropdownMenuSeparator />
 
