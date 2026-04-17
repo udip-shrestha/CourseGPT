@@ -276,13 +276,6 @@ export function AdminCoursesPage() {
                       <p className="text-xs text-muted-foreground">
                         Created: {new Date(course.created_at).toLocaleString()}
                       </p>
-
-                      {(course.canvas_course_id || course.canvas_context_id) && (
-                        <p className="text-xs text-muted-foreground">
-                          Canvas Course ID: {course.canvas_course_id || "N/A"} •
-                          Canvas Context ID: {course.canvas_context_id || "N/A"}
-                        </p>
-                      )}
                     </div>
 
                     <div className="flex justify-start md:justify-end">
