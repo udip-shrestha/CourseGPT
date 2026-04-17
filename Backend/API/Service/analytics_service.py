@@ -52,3 +52,52 @@ class AnalyticsService:
     @clean_service
     def get_engagement_metrics(self, course_id: str) -> dict:
         return self.sql_repo.read_engagement_stats(course_id)
+
+    # ------------------------------------------------------
+    # Course usage trend
+    # ------------------------------------------------------
+    @clean_service
+    def get_course_usage_trend(self, course_id: str, days: int = 7) -> list[dict]:
+        return self.sql_repo.read_course_usage_trend(course_id, days)
+
+    # ------------------------------------------------------
+    # Instructor query distribution
+    # ------------------------------------------------------
+    @clean_service
+    def get_instructor_query_distribution(
+        self, instructor_id: str, days: Optional[int] = None
+    ) -> list[dict]:
+        return self.sql_repo.read_instructor_query_distribution(instructor_id, days)
+
+    # ------------------------------------------------------
+    # System overview
+    # ------------------------------------------------------
+    @clean_service
+    def get_system_overview(self) -> dict:
+        return self.sql_repo.read_system_overview()
+
+    # ------------------------------------------------------
+    # System query trend
+    # ------------------------------------------------------
+    @clean_service
+    def get_system_query_trend(self, days: int = 30) -> list[dict]:
+        return self.sql_repo.read_system_query_trend(days)
+
+    # ------------------------------------------------------
+    # System chart data
+    # ------------------------------------------------------
+    @clean_service
+    def get_documents_per_course(self) -> list[dict]:
+        return self.sql_repo.read_documents_per_course()
+
+    @clean_service
+    def get_documents_per_instructor(self) -> list[dict]:
+        return self.sql_repo.read_documents_per_instructor()
+
+    @clean_service
+    def get_courses_per_instructor(self) -> list[dict]:
+        return self.sql_repo.read_courses_per_instructor()
+
+    @clean_service
+    def get_queries_per_course(self, days: Optional[int] = None) -> list[dict]:
+        return self.sql_repo.read_queries_per_course(days)

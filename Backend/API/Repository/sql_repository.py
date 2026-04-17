@@ -1041,6 +1041,181 @@ class SQLRepository(ISQLRepository):
             "activeStudents": active or 0,
             "engagementRate": int((active / total) * 100) if total > 0 else 0,
         }
+
+    def read_course_usage_trend(self, course_id: str, days: int) -> List[Dict[str, Any]]:
+        sql = """
+            WITH date_series AS (
+                SELECT generate_series(
+                    CURRENT_DATE - (%s::int - 1),
+                    CURRENT_DATE,
+                    INTERVAL '1 day'
+                )::date AS day
+            ),
+            daily_queries AS (
+                SELECT
+                    DATE(q.asked_at) AS day,
+                    COUNT(*) AS queries,
+                    COUNT(DISTINCT q.student_id) AS unique_users
+                FROM queries q
+                WHERE q.course_id = %s
+                  AND q.asked_at >= CURRENT_DATE - (%s::int - 1)
+                GROUP BY DATE(q.asked_at)
+            )
+            SELECT
+                TO_CHAR(ds.day, 'YYYY-MM-DD') AS date,
+                COALESCE(dq.queries, 0) AS queries,
+                COALESCE(dq.unique_users, 0) AS "uniqueUsers"
+            FROM date_series ds
+            LEFT JOIN daily_queries dq ON dq.day = ds.day
+            ORDER BY ds.day;
+        """
+        return self.cm.select_all(sql, (days, course_id, days))
+
+    def read_instructor_query_distribution(
+        self, instructor_id: str, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        filters = ["c.instructor_id = %s"]
+        params: List[Any] = [instructor_id]
+
+        if days:
+            filters.append("q.asked_at >= NOW() - (%s * INTERVAL '1 day')")
+            params.append(days)
+
+        where_clause = f"WHERE {' AND '.join(filters)}"
+        sql = f"""
+            SELECT
+                c.name AS "courseName",
+                COUNT(q.id) AS count
+            FROM courses c
+            LEFT JOIN queries q ON q.course_id = c.id
+            {where_clause}
+            GROUP BY c.id, c.name
+            HAVING COUNT(q.id) > 0
+            ORDER BY count DESC, c.name ASC;
+        """
+        return self.cm.select_all(sql, tuple(params))
+
+    def read_system_overview(self) -> Dict[str, Any]:
+        sql = """
+            SELECT
+                (SELECT COUNT(*) FROM documents) AS "totalDocuments",
+                (SELECT COUNT(*) FROM courses) AS "totalCourses",
+                (SELECT COUNT(*) FROM instructors) AS "totalInstructors",
+                (SELECT COUNT(*) FROM students) AS "totalStudents",
+                (SELECT COUNT(*) FROM queries) AS "totalQueries",
+                (SELECT COUNT(*) FROM feedback) AS "totalFeedback";
+        """
+        row = self.cm.select_one(sql)
+
+        total_documents = row["totalDocuments"] if row else 0
+        total_courses = row["totalCourses"] if row else 0
+        total_instructors = row["totalInstructors"] if row else 0
+        total_queries = row["totalQueries"] if row else 0
+
+        return {
+            "totalDocuments": total_documents or 0,
+            "totalCourses": total_courses or 0,
+            "totalInstructors": total_instructors or 0,
+            "totalStudents": row["totalStudents"] if row else 0,
+            "totalQueries": total_queries or 0,
+            "totalFeedback": row["totalFeedback"] if row else 0,
+            "averageDocumentsPerCourse": round((total_documents / total_courses), 2) if total_courses else 0,
+            "averageCoursesPerInstructor": round((total_courses / total_instructors), 2) if total_instructors else 0,
+            "averageQueriesPerCourse": round((total_queries / total_courses), 2) if total_courses else 0,
+        }
+
+    def read_system_query_trend(self, days: int) -> List[Dict[str, Any]]:
+        sql = """
+            WITH date_series AS (
+                SELECT generate_series(
+                    CURRENT_DATE - (%s::int - 1),
+                    CURRENT_DATE,
+                    INTERVAL '1 day'
+                )::date AS day
+            ),
+            daily_queries AS (
+                SELECT
+                    DATE(q.asked_at) AS day,
+                    COUNT(*) AS queries,
+                    COUNT(DISTINCT q.student_id) AS unique_users
+                FROM queries q
+                WHERE q.asked_at >= CURRENT_DATE - (%s::int - 1)
+                GROUP BY DATE(q.asked_at)
+            )
+            SELECT
+                TO_CHAR(ds.day, 'YYYY-MM-DD') AS date,
+                COALESCE(dq.queries, 0) AS queries,
+                COALESCE(dq.unique_users, 0) AS "uniqueUsers"
+            FROM date_series ds
+            LEFT JOIN daily_queries dq ON dq.day = ds.day
+            ORDER BY ds.day;
+        """
+        return self.cm.select_all(sql, (days, days))
+
+    def read_documents_per_course(self) -> List[Dict[str, Any]]:
+        sql = """
+            SELECT
+                c.id AS "courseId",
+                c.name AS "courseName",
+                i.name AS "instructorName",
+                COUNT(d.id) AS count
+            FROM courses c
+            LEFT JOIN instructors i ON i.id = c.instructor_id
+            LEFT JOIN documents d ON d.course_id = c.id
+            GROUP BY c.id, c.name, i.name
+            ORDER BY count DESC, c.name ASC;
+        """
+        return self.cm.select_all(sql)
+
+    def read_documents_per_instructor(self) -> List[Dict[str, Any]]:
+        sql = """
+            SELECT
+                i.id AS "instructorId",
+                i.name AS "instructorName",
+                COUNT(d.id) AS count
+            FROM instructors i
+            LEFT JOIN courses c ON c.instructor_id = i.id
+            LEFT JOIN documents d ON d.course_id = c.id
+            GROUP BY i.id, i.name
+            ORDER BY count DESC, i.name ASC;
+        """
+        return self.cm.select_all(sql)
+
+    def read_courses_per_instructor(self) -> List[Dict[str, Any]]:
+        sql = """
+            SELECT
+                i.id AS "instructorId",
+                i.name AS "instructorName",
+                COUNT(c.id) AS count
+            FROM instructors i
+            LEFT JOIN courses c ON c.instructor_id = i.id
+            GROUP BY i.id, i.name
+            ORDER BY count DESC, i.name ASC;
+        """
+        return self.cm.select_all(sql)
+
+    def read_queries_per_course(self, days: Optional[int] = None) -> List[Dict[str, Any]]:
+        filters: List[str] = []
+        params: List[Any] = []
+
+        if days:
+            filters.append("q.asked_at >= NOW() - (%s * INTERVAL '1 day')")
+            params.append(days)
+
+        where_clause = f"WHERE {' AND '.join(filters)}" if filters else ""
+        sql = f"""
+            SELECT
+                c.id AS "courseId",
+                c.name AS "courseName",
+                COUNT(q.id) AS count
+            FROM courses c
+            LEFT JOIN queries q ON q.course_id = c.id
+            {where_clause}
+            GROUP BY c.id, c.name
+            HAVING COUNT(q.id) > 0
+            ORDER BY count DESC, c.name ASC;
+        """
+        return self.cm.select_all(sql, tuple(params))
     
     def count_documents(self) -> int:
         sql = "SELECT COUNT(*) AS total FROM documents;"
