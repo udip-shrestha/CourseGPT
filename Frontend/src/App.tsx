@@ -81,7 +81,6 @@ export default function App() {
     );
 }
 
-
 function AdminLayout() {
     const { apiClient } = useApiClient();
     const isAuthenticated = !!apiClient.getToken?.();

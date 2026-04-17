@@ -9,6 +9,18 @@ export interface OverviewSummary {
     averageSatisfaction?: number;
 }
 
+export interface SystemOverview {
+    totalDocuments: number;
+    totalCourses: number;
+    totalInstructors: number;
+    totalStudents: number;
+    totalQueries: number;
+    totalFeedback: number;
+    averageDocumentsPerCourse: number;
+    averageCoursesPerInstructor: number;
+    averageQueriesPerCourse: number;
+}
+
 export interface UsageTrendPoint {
     date: string;
     queries: number;
@@ -18,6 +30,14 @@ export interface UsageTrendPoint {
 export interface QueryDistributionItem {
     courseName: string;
     count: number;
+}
+
+export interface MetricBreakdownItem {
+    count: number;
+    courseId?: string;
+    courseName?: string;
+    instructorId?: string;
+    instructorName?: string;
 }
 
 export interface TopQuestionsItem {
@@ -137,6 +157,40 @@ export class AnalyticsClient {
     async getQueryDistribution(instructorId: string, timeRange: string) {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<QueryDistributionItem[]>("GET", `/instructors/${instructorId}/analytics/query-distribution`, {
+            query: { days: timeRangeToDays(timeRange) }
+        });
+    }
+
+    async getSystemOverview(instructorId: string) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.client.request<SystemOverview>("GET", `/instructors/${instructorId}/analytics/system-overview`);
+    }
+
+    async getSystemQueryTrend(instructorId: string, timeRange: string) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.client.request<UsageTrendPoint[]>("GET", `/instructors/${instructorId}/analytics/system-query-trend`, {
+            query: { days: timeRangeToDays(timeRange) }
+        });
+    }
+
+    async getDocumentsByCourse(instructorId: string) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/documents-by-course`);
+    }
+
+    async getDocumentsByInstructor(instructorId: string) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/documents-by-instructor`);
+    }
+
+    async getCoursesByInstructor(instructorId: string) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/courses-by-instructor`);
+    }
+
+    async getQueriesByCourse(instructorId: string, timeRange: string) {
+        if (!instructorId) return { errorMessage: "Instructor ID is required." };
+        return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/queries-by-course`, {
             query: { days: timeRangeToDays(timeRange) }
         });
     }
