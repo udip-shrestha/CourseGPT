@@ -1,5 +1,8 @@
 import discord
+import logging
 from .cybot_service import is_discord_admin
+
+logger = logging.getLogger(__name__)
 
 class LeaveServerView(discord.ui.View):
     def __init__(self, guilds):
@@ -28,7 +31,7 @@ class LeaveServerSelect(discord.ui.Select):
         )
 
     async def callback(self, interaction: discord.Interaction):
-        # 🔒 Re-check admin (important!)
+        # Re-check admin
         is_admin = await is_discord_admin(str(interaction.user.id))
         if not is_admin:
             await interaction.response.send_message(
@@ -57,7 +60,7 @@ class LeaveServerSelect(discord.ui.Select):
         try:
             await guild.leave()
             # optional logging
-            print(f"Bot left guild: {name} ({guild_id})")
+            logger.info(f"Bot left guild: {name} ({guild_id})")
         except Exception as e:
             await interaction.followup.send(
                 f"❌ Failed to leave server: {e}",

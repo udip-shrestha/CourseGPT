@@ -383,9 +383,10 @@ async def announce(interaction: discord.Interaction):
 
     if not is_admin:
         await interaction.response.send_message(
-            "🚫 You are not authorized to use this command.",
+            "🚫 You are not authorized to use this command. This will be reported to the Admin team",
             ephemeral=True
         )
+        logger.warning(f"Unauthorized announce attempt by user ID {interaction.user.id}")
         return
 
     await interaction.response.send_modal(AnnouncementModal(is_discord_admin))
@@ -396,9 +397,10 @@ async def leave_server(interaction: discord.Interaction):
 
     if not is_admin:
         await interaction.response.send_message(
-            "🚫 You are not authorized to use this command.",
+            "🚫 You are not authorized to use this command. This will be reported to the Admin team",
             ephemeral=True
         )
+        logger.warning(f"Unauthorized leave_server attempt by user ID {interaction.user.id}")
         return
 
     guilds = interaction.client.guilds
