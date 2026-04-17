@@ -10,6 +10,7 @@ import {
   Plug,
   UserCircle,
   Menu,
+  BarChart3,
 } from "lucide-react";
 import { useLocation, useParams, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
@@ -91,6 +92,15 @@ export function Header() {
                   Courses
                 </DropdownMenuItem>
 
+                <DropdownMenuItem
+                  className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                  onClick={() =>
+                    navigate(`/instructors/${currentInstructorId}/analytics`)
+                  }
+                >
+                  System Analytics
+                </DropdownMenuItem>
+
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
@@ -123,6 +133,15 @@ export function Header() {
             >
               <Upload className="h-4 w-4" />
               Courses
+            </Button>
+
+            <Button
+              variant={path.endsWith("/analytics") ? "default" : "ghost"}
+              className="flex items-center gap-2 w-full sm:w-auto justify-center"
+              onClick={() => navigate(`/instructors/${instructorId}/analytics`)}
+            >
+              <BarChart3 className="h-4 w-4" />
+              System Analytics
             </Button>
           </>
         )}
@@ -276,6 +295,15 @@ export function Header() {
                 }
               >
                 Courses
+              </DropdownMenuItem>
+
+              <DropdownMenuItem
+                className="cursor-pointer px-3 py-2 text-sm hover:bg-accent rounded-md"
+                onClick={() =>
+                  navigate(`/instructors/${currentInstructorId}/analytics`)
+                }
+              >
+                System Analytics
               </DropdownMenuItem>
 
               <DropdownMenuSeparator />

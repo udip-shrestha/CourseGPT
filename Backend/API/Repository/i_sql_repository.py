@@ -317,3 +317,35 @@ class ISQLRepository(Protocol):
         self, course_id: str
     ) -> Dict[str, Any]:
         ...
+
+    def read_course_usage_trend(
+        self, course_id: str, days: int
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_instructor_query_distribution(
+        self, instructor_id: str, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_system_overview(self) -> Dict[str, Any]:
+        ...
+
+    def read_system_query_trend(
+        self, days: int
+    ) -> List[Dict[str, Any]]:
+        ...
+
+    def read_documents_per_course(self) -> List[Dict[str, Any]]:
+        ...
+
+    def read_documents_per_instructor(self) -> List[Dict[str, Any]]:
+        ...
+
+    def read_courses_per_instructor(self) -> List[Dict[str, Any]]:
+        ...
+
+    def read_queries_per_course(
+        self, days: Optional[int] = None
+    ) -> List[Dict[str, Any]]:
+        ...

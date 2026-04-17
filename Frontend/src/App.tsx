@@ -5,6 +5,7 @@ import { LoginPage } from "./components/LoginPage.tsx";
 import { RegisterPage } from "./components/RegisterPage.tsx";
 import { InstructorProfile } from "./components/InstructorProfile.tsx";
 import { InstructorCourses } from "./components/InstructorCourses.tsx";
+import { SystemAnalyticsPage } from "./components/SystemAnalyticsPage.tsx";
 import { NotFoundPage } from "./components/NotFoundPage.tsx";
 import { CoursePage } from "./components/CoursePage.tsx";
 import { CanvasLinkPage } from "./components/CanvasLinkPage.tsx";
@@ -56,6 +57,10 @@ export default function App() {
                 <Route
                     path="/instructors/:instructorId/courses"
                     element={<InstructorCourses />}
+                />
+                <Route
+                    path="/instructors/:instructorId/analytics"
+                    element={<SystemAnalyticsPage />}
                 />
 
                 {/* Course Route with Nested Routing */}
