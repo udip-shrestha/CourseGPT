@@ -249,5 +249,6 @@ CREATE TABLE IF NOT EXISTS password_reset_codes (
 CREATE TABLE IF NOT EXISTS discord_admins (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     discord_id TEXT UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL CHECK (trim(name) <> ''),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );

@@ -17,12 +17,12 @@ class DiscordAdminsService:
     # Create Discord Admin
     # ------------------------------------------------------
     @clean_service
-    def create_discord_admin(self, discord_id: str) -> dict:
+    def create_discord_admin(self, discord_id: str, name: str) -> dict:
         """
         Persist a Discord admin record.
         Returns a dict containing the new admin id.
         """
-        admin_id = self.sql_repo.create_discord_admin(discord_id=discord_id)
+        admin_id = self.sql_repo.create_discord_admin(discord_id=discord_id, name=name)
         return {"admin_id": admin_id}
 
     # ------------------------------------------------------

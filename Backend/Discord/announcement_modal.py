@@ -38,6 +38,7 @@ class AnnouncementModal(discord.ui.Modal, title="CourseGPT Announcement"):
 
         success = 0
         failed = 0
+        sent_channels = []
 
         # target_guild_name = "CPRE4910 - CourseGPT"
 
@@ -58,6 +59,7 @@ class AnnouncementModal(discord.ui.Modal, title="CourseGPT Announcement"):
                 if channel:
                     await channel.send(embed=embed)
                     success += 1
+                    sent_channels.append(f"{guild.name}: #{channel.name}")
                     await asyncio.sleep(1)
                 else:
                     failed += 1
@@ -65,6 +67,8 @@ class AnnouncementModal(discord.ui.Modal, title="CourseGPT Announcement"):
             except Exception:
                 failed += 1
 
-        await interaction.followup.send(
-            f"✅ Announcement sent!\nSuccess: {success}\nFailed: {failed}"
-        )
+        followup_message = f"✅ Announcement sent!\nSuccess: {success}\nFailed: {failed}"
+        if sent_channels:
+            followup_message += "\n\nSent to channels:\n" + "\n".join(sent_channels)
+
+        await interaction.followup.send(followup_message)
