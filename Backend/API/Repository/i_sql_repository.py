@@ -63,11 +63,77 @@ class ISQLRepository(Protocol):
 
     def count_documents(self) -> int:
         """Return total number of documents."""
-    ...
+        ...
 
     def count_documents_grouped_by_course(self) -> Dict[str, int]:
         """Return document counts grouped by course_id."""
-    ...
+        ...
+
+    # ======================================================
+    # INSTRUCTORS
+    # ======================================================
+    def create_instructor(
+        self,
+        name: str,
+        title: str,
+        university: str,
+        email: str,
+        encrypted_password: str,
+        role_name: str = "INSTRUCTOR"
+    ) -> str:
+        """Create a new instructor."""
+        ...
+
+    def read_instructor(self, instructor_id: str) -> Optional[dict]:
+        """Read an instructor by ID."""
+        ...
+
+    def read_instructor_by_email(self, email: str) -> Optional[dict]:
+        """Read an instructor by email."""
+        ...
+
+    def read_all_instructors(
+        self,
+        name: Optional[str] = None,
+        title: Optional[str] = None,
+        university: Optional[str] = None,
+        email: Optional[str] = None,
+        role: Optional[int] = None,
+        limit: int = 10,
+        offset: int = 0,
+        order_by: str = "created_at",
+        order_dir: str = "desc"
+    ) -> dict:
+        """Return all instructors with filtering + pagination."""
+        ...
+
+    def delete_instructor(self, instructor_id: str) -> None:
+        """Delete an instructor by ID."""
+        ...
+
+    def update_instructor(self, instructor_id: str, updates: dict) -> dict:
+        """Update instructor fields."""
+        ...
+
+    def update_instructor_password(self, instructor_id: str, encrypted_password: str) -> None:
+        """Update an instructor password."""
+        ...
+
+    def update_instructor_admin(self, instructor_id: str, is_admin: bool) -> None:
+        """Toggle an instructor admin role."""
+        ...
+
+    # ======================================================
+    # PASSWORD RESET CODES
+    # ======================================================
+    def create_password_reset_code(self, instructor_id: str, code: str) -> None:
+        """Create or replace a password reset code."""
+        ...
+
+    def read_password_reset_code(self, instructor_id: str) -> Optional[dict]:
+        """Read a valid password reset code for an instructor."""
+        ...
+
     # ======================================================
     # COURSES
     # ======================================================
@@ -94,10 +160,12 @@ class ISQLRepository(Protocol):
     def read_all_courses(
         self,
         instructor_id: Optional[str] = None,
+        instructor_email: Optional[str] = None,
         institution: Optional[str] = None,
         name: Optional[str] = None,
         semester_id: Optional[int] = None,
         rag_strategy_id: Optional[int] = None,
+        status: Optional[str] = None,
         limit: int = 10,
         offset: int = 0,
         order_by: str = "created_at",
@@ -114,65 +182,45 @@ class ISQLRepository(Protocol):
         """Return a course by its exact name."""
         ...
 
+    def read_course_by_canvas_id(self, canvas_course_id: str) -> Optional[dict]:
+        """Find a course by its linked Canvas course identifier."""
+        ...
+
     def update_course(self, course_id: str, updates: dict) -> dict:
         """Update course fields."""
         ...
 
     def count_courses(self) -> int:
         """Return total number of courses."""
-    ...
+        ...
 
     def count_courses_grouped_by_instructor(self) -> Dict[str, int]:
         """Return course counts grouped by instructor_id."""
-    ...
-
-    # ======================================================
-    # INSTRUCTORS
-    # ======================================================
-    def create_instructor(self, name: str, title: str, university: str, email: str, encrypted_password: str) -> str:
-        """Create a new instructor."""
         ...
 
-    def read_instructor(self, instructor_id: str) -> Optional[dict]:
-        """Read an instructor by ID."""
-        ...
-
-    def read_instructor_by_email(self, email: str) -> Optional[dict]:
-        """Read an instructor by email."""
-        ...
-
-    def read_all_instructors(
-        self,
-        name: Optional[str] = None,
-        title: Optional[str] = None,
-        university: Optional[str] = None,
-        email: Optional[str] = None,
-        role: Optional[str] = None,
-        limit: int = 10,
-        offset: int = 0,
-        order_by: str = "created_at",
-        order_dir: str = "desc"
-    ) -> dict:
-        """Return all instructors with filtering + pagination."""
-        ...
-
-    def delete_instructor(self, instructor_id: str) -> None:
-        """Delete an instructor by ID."""
-        ...
-
-    def update_instructor(self, instructor_id: str, updates: dict) -> dict:
-        """Update instructor fields."""
+    def update_course_status(self, course_id: str, enabled: bool) -> None:
+        """Update a course status to ENABLED or DISABLED."""
         ...
 
     # ======================================================
     # STUDENTS
     # ======================================================
-    def create_student(self, name: str, discord_id: str, course_id: str) -> str:
+    def create_student(
+        self,
+        name: str,
+        discord_id: Optional[str],
+        course_id: str,
+        canvas_user_id: Optional[str] = None,
+    ) -> str:
         """Create a student and register them for a course."""
         ...
 
     def read_student(self, student_id: str) -> Optional[dict]:
         """Read a student record by ID."""
+        ...
+
+    def read_student_by_canvas(self, canvas_user_id: str) -> Optional[dict]:
+        """Retrieve a student record by their Canvas user id."""
         ...
 
     def read_all_students(self, course_id: Optional[str] = None) -> List[dict]:
@@ -233,7 +281,7 @@ class ISQLRepository(Protocol):
         """Delete a query by ID."""
         ...
 
-   # ======================================================
+    # ======================================================
     # FEEDBACK
     # ======================================================
     def create_feedback(self, course_id: str, feedback_text: str, received_at: Optional[str] = None) -> str:
@@ -317,3 +365,4 @@ class ISQLRepository(Protocol):
         self, course_id: str
     ) -> Dict[str, Any]:
         ...
+

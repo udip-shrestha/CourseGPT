@@ -39,7 +39,7 @@ export function CanvasLinkPage() {
 
     (async () => {
       try {
-        const resp = await courseClient.listInstructorCourses(instructorId);
+        const resp = await courseClient.listCourses({ instructor_id: instructorId });
         if (resp.errorMessage) throw new Error(resp.errorMessage);
         const list = resp.data?.courses || resp.data || [];
         setCourses(list);

@@ -7,6 +7,7 @@ import { InstructorClient } from "./InstructorClient.ts";
 import { QueryClient } from "./QueryClient.ts";
 import { AnalyticsClient } from "./AnalyticsClient.ts";
 import { CanvasStudentClient } from "./CanvasStudentClient.ts";
+import { AdminClient } from "./AdminClient.ts";
 
 interface APIClients {
   apiClient: APIClient;
@@ -14,6 +15,7 @@ interface APIClients {
   documentClient: DocumentClient;
   courseClient: CourseClient;
   instructorClient: InstructorClient;
+  adminClient: AdminClient;
   queryClient: QueryClient;
   analyticsClient: AnalyticsClient;
   canvasStudentClient: CanvasStudentClient;
@@ -35,6 +37,7 @@ export const ApiClientProvider: React.FC<{
       documentClient: new DocumentClient(apiClient),
       courseClient: new CourseClient(apiClient),
       instructorClient: new InstructorClient(apiClient),
+      adminClient: new AdminClient(apiClient),
       queryClient: new QueryClient(apiClient),
       analyticsClient: new AnalyticsClient(apiClient),
       canvasStudentClient: new CanvasStudentClient(apiClient),

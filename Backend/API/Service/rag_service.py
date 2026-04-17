@@ -10,7 +10,7 @@ from API.Repository.i_sql_repository import ISQLRepository
 from API.Util.decorators import clean_service
 
 from uuid import uuid4
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 class RAGService:
@@ -65,7 +65,7 @@ class RAGService:
                 "course_id": str(course_id),     # Helpful for filtering
                 "title": file_name,              # REQUIRED FOR SOURCES
                 "source_type": mime_type,        # Optional but recommended
-                "date": datetime.utcnow().isoformat()
+                "date": datetime.now(timezone.utc).isoformat()
             })
 
         # 3. Delete old vectors for this document (if any)

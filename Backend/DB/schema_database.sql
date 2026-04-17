@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS instructors (
     title VARCHAR(100) NOT NULL CHECK (trim(title) <> ''),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    role_id INTEGER REFERENCES instructor_roles(id) ON DELETE SET NULL
+    role_id INTEGER REFERENCES instructor_roles(id) ON DELETE RESTRICT
 );
 
 -- -----------------------------
@@ -65,17 +65,24 @@ ON CONFLICT (type_name) DO NOTHING;
 -- -----------------------------
 -- Courses Table
 -- -----------------------------
+DO $$
+BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'course_status') THEN
+        CREATE TYPE course_status AS ENUM ('PENDING', 'ENABLED', 'DISABLED');
+    END IF;
+END$$;
+
 CREATE TABLE IF NOT EXISTS courses (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(150) NOT NULL CHECK (trim(name) <> ''),
     institution VARCHAR(150) NOT NULL CHECK (trim(institution) <> ''),
     year INTEGER NOT NULL CHECK (year >= 0),
+    status course_status NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     instructor_id UUID NOT NULL REFERENCES instructors(id) ON DELETE CASCADE,
     semester_id INTEGER NOT NULL REFERENCES semesters(id) ON DELETE RESTRICT,
     rag_strategy_id INT REFERENCES rag_strategies(id) ON DELETE SET NULL,
-    -- Canvas integration
     canvas_course_id VARCHAR(100) UNIQUE,
     canvas_context_id VARCHAR(255) UNIQUE
 );
@@ -252,3 +259,34 @@ CREATE TABLE IF NOT EXISTS discord_admins (
     name VARCHAR(100) NOT NULL CHECK (trim(name) <> ''),
     created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+-- -----------------------------
+-- Triggers
+-- -----------------------------
+CREATE OR REPLACE FUNCTION enforce_enabled_course()
+RETURNS trigger AS $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM courses
+        WHERE id = NEW.course_id AND status = 'ENABLED'
+        FOR SHARE
+    ) THEN
+        RAISE EXCEPTION 'course_id %% does not reference an enabled course', NEW.course_id;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_documents_enforce_enabled_course ON documents; 
+CREATE TRIGGER trg_documents_enforce_enabled_course BEFORE INSERT OR UPDATE OF course_id ON documents FOR EACH ROW EXECUTE FUNCTION enforce_enabled_course();
+
+DROP TRIGGER IF EXISTS trg_student_courses_enforce_enabled_course ON student_courses; 
+CREATE TRIGGER trg_student_courses_enforce_enabled_course BEFORE INSERT OR UPDATE OF course_id ON student_courses FOR EACH ROW EXECUTE FUNCTION enforce_enabled_course();
+
+DROP TRIGGER IF EXISTS trg_queries_enforce_enabled_course ON queries;
+CREATE TRIGGER trg_queries_enforce_enabled_course BEFORE INSERT OR UPDATE OF course_id ON queries FOR EACH ROW EXECUTE FUNCTION enforce_enabled_course();
+
+DROP TRIGGER IF EXISTS trg_feedback_enforce_enabled_course ON feedback; 
+CREATE TRIGGER trg_feedback_enforce_enabled_course BEFORE INSERT OR UPDATE OF course_id ON feedback FOR EACH ROW EXECUTE FUNCTION enforce_enabled_course();
+

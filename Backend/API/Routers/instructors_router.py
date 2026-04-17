@@ -8,53 +8,6 @@ from typing import Optional
 router = APIRouter(tags=["Instructors"], route_class=MetricsRoute)
 
 
-@router.post(
-    "/instructors",
-    status_code=status.HTTP_201_CREATED,
-    summary="Add a new instructor",
-    description=(
-        "**Action:** Adds a new instructor to the system.\n\n"
-        "**Returns:** JSON containing the created instructor's ID."
-    ),
-)
-def add_instructor(
-    name: str = Query(
-        ...,
-        description="Full name of the instructor.",
-        examples={"example": "Dr. Sarah Johnson"},
-    ),
-    title: str = Query(
-        ...,
-        description="Job title of the instructor.",
-        examples={"example": "Associate Professor of Computer Science"},
-    ),
-    university: str = Query(
-        ...,
-        description="University where the instructor works.",
-        examples={"example": "Tech University"},
-    ),
-    email: str = Query(
-        ...,
-        description="Instructor's email address.",
-        examples={"example": "sarah.johnson@techuni.edu"},
-    ),
-    password: str = Query(
-        ...,
-        description="Instructor's password.",
-        examples={"example": "cold-palmer"},
-    ),
-    service: InstructorService = Depends(get_instructor_service),
-):
-    """Creates a new instructor record."""
-    return service.create_instructor(
-        name=name,
-        title=title,
-        university=university,
-        email=email,
-        password=password,
-    )
-
-
 @router.get(
     "/instructors/{instructor_id}",
     status_code=status.HTTP_200_OK,
