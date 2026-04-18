@@ -51,7 +51,6 @@ export interface TopKeywordsItem {
     count: number;
 }
 
-// Interface matching the Swagger response for Discord feedback
 export interface CourseSatisfaction {
     course_id: string;
     upvotes: number;
@@ -65,11 +64,10 @@ export interface EngagementDistributionItem {
     count: number;
 }
 
-// NEW: Document Usage and Trend Insight Interfaces
 export interface DocumentUsageItem {
     documentName: string;
-    studentCount: number; // How many unique students queried this doc
-    usagePercentage: number; // studentCount / totalStudents
+    studentCount: number;
+    usagePercentage: number;
 }
 
 export interface CourseTrendInsights {
@@ -98,8 +96,24 @@ export class AnalyticsClient {
     }
 
     /**
-     * Get the number of students registered in a course
+     * Get specific document count for a course by parsing the grouped document map.
      */
+    async getDocumentCount(courseId: string) {
+        if (!courseId) return { data: 0 };
+
+        const res = await this.client.request<Record<string, number>>(
+            "GET",
+            "/documents/count",
+            { query: { group_by_course: true } }
+        );
+
+        if (res.data) {
+            return { data: res.data[courseId] ?? 0 };
+        }
+
+        return { data: 0, errorMessage: res.errorMessage };
+    }
+
     async getStudentCount(courseId: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request<{ course_id: string; student_count: number }>(
@@ -109,9 +123,6 @@ export class AnalyticsClient {
         );
     }
 
-    /**
-     * Returns aggregated satisfaction metrics based on Discord votes.
-     */
     async getCourseSatisfaction(courseId: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request<CourseSatisfaction>(
@@ -120,9 +131,6 @@ export class AnalyticsClient {
         );
     }
 
-    /**
-     * Get document utilization metrics for a specific course
-     */
     async getCourseDocumentUsage(courseId: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request<DocumentUsageItem[]>(
@@ -157,18 +165,6 @@ export class AnalyticsClient {
         return this.client.request("GET", `/courses/${courseId}/analytics/engagement`);
     }
 
-    async getEngagementDistribution(courseId: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request<EngagementDistributionItem[]>(
-            "GET",
-            `/courses/${courseId}/analytics/engagement-distribution`
-        );
-    }
-
-    async getOverviewSummary(courseId: string, timeRange: string) {
-        return this.getCourseOverview(courseId, timeRangeToDays(timeRange));
-    }
-
     async getUsageTrend(courseId: string, timeRange: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request<UsageTrendPoint[]>("GET", `/courses/${courseId}/analytics/usage-trend`, {
@@ -183,7 +179,7 @@ export class AnalyticsClient {
         });
     }
 
-    // --- System / Admin Level Methods ---
+    // --- SYSTEM / ADMIN LEVEL METHODS (Restored for SystemAnalyticsPage) ---
 
     async getSystemOverview(instructorId: string) {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };
