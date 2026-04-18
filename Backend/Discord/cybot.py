@@ -13,6 +13,7 @@ from Metrics.metrics import discord_command_count, discord_command_duration
 from prometheus_client import start_http_server
 from .announcement_modal import AnnouncementModal
 from .feedback_view import FeedbackView
+from .leave_server_view import LeaveServerView
 
 import logging
 import sys
@@ -382,12 +383,40 @@ async def announce(interaction: discord.Interaction):
 
     if not is_admin:
         await interaction.response.send_message(
-            "🚫 You are not authorized to use this command.",
+            "🚫 You are not authorized to use this command. This will be reported to the Admin team",
+            ephemeral=True
+        )
+        logger.warning(f"Unauthorized announce attempt by user ID {interaction.user.id}")
+        return
+
+    await interaction.response.send_modal(AnnouncementModal(is_discord_admin))
+
+@bot.tree.command(name="leave_server", description="Remove bot from a server (admin only)")
+async def leave_server(interaction: discord.Interaction):
+    is_admin = await is_discord_admin(str(interaction.user.id))
+
+    if not is_admin:
+        await interaction.response.send_message(
+            "🚫 You are not authorized to use this command. This will be reported to the Admin team",
+            ephemeral=True
+        )
+        logger.warning(f"Unauthorized leave_server attempt by user ID {interaction.user.id}")
+        return
+
+    guilds = interaction.client.guilds
+
+    if not guilds:
+        await interaction.response.send_message(
+            "Bot is not in any servers.",
             ephemeral=True
         )
         return
 
-    await interaction.response.send_modal(AnnouncementModal(is_discord_admin))
+    await interaction.response.send_message(
+        "Select a server to remove the bot from:",
+        view=LeaveServerView(guilds),
+        ephemeral=True
+    )
 
 # Help command
 @bot.tree.command(name="help", description="Get help about the bot commands")

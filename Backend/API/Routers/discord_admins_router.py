@@ -10,6 +10,7 @@ router = APIRouter(prefix="/discord-admins", tags=["Discord Admins"], route_clas
 
 class DiscordAdminRequest(BaseModel):
     discord_id: str
+    name: str
 
 
 @router.post(
@@ -24,7 +25,7 @@ def create_discord_admin(
 ) -> Dict[str, str]:
     """Creates and persists a new Discord admin."""
     try:
-        res = service.create_discord_admin(discord_id=request.discord_id)
+        res = service.create_discord_admin(discord_id=request.discord_id, name=request.name)
         return {
             "admin_id": res.get("admin_id"),
             "message": "Discord admin created successfully."
