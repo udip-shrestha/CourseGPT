@@ -65,6 +65,21 @@ export interface EngagementDistributionItem {
     count: number;
 }
 
+// NEW: Document Usage and Trend Insight Interfaces
+export interface DocumentUsageItem {
+    documentName: string;
+    studentCount: number; // How many unique students queried this doc
+    usagePercentage: number; // studentCount / totalStudents
+}
+
+export interface CourseTrendInsights {
+    peakDate: string;
+    peakQueries: number;
+    averageDailyQueries: number;
+    averageDailyUsers: number;
+    activeQueryDays: number;
+}
+
 function timeRangeToDays(timeRange: string): number {
     switch (timeRange) {
         case "7d": return 7;
@@ -96,7 +111,6 @@ export class AnalyticsClient {
 
     /**
      * Returns aggregated satisfaction metrics based on Discord votes.
-     * Endpoint: GET /feedback/courses/{course_id}/satisfaction
      */
     async getCourseSatisfaction(courseId: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
@@ -106,23 +120,34 @@ export class AnalyticsClient {
         );
     }
 
+    /**
+     * Get document utilization metrics for a specific course
+     */
+    async getCourseDocumentUsage(courseId: string) {
+        if (!courseId) return { errorMessage: "Course ID is required." };
+        return this.client.request<DocumentUsageItem[]>(
+            "GET",
+            `/courses/${courseId}/analytics/document-usage`
+        );
+    }
+
     async getCourseOverview(courseId: string, days?: number) {
         if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/overview`, {
+        return this.client.request<any>("GET", `/courses/${courseId}/analytics/overview`, {
             query: days ? { days } : undefined
         });
     }
 
     async getTopQuestions(courseId: string, limit: number = 10, _timeRange?: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/top-questions`, {
+        return this.client.request<TopQuestionsItem[]>("GET", `/courses/${courseId}/analytics/top-questions`, {
             query: { limit }
         });
     }
 
     async getTopKeywords(courseId: string, limit: number = 20, _timeRange?: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/top-keywords`, {
+        return this.client.request<TopKeywordsItem[]>("GET", `/courses/${courseId}/analytics/top-keywords`, {
             query: { limit }
         });
     }
@@ -132,9 +157,6 @@ export class AnalyticsClient {
         return this.client.request("GET", `/courses/${courseId}/analytics/engagement`);
     }
 
-    /**
-     * Get distribution of queries per user (Lurkers vs Power Users)
-     */
     async getEngagementDistribution(courseId: string) {
         if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request<EngagementDistributionItem[]>(
@@ -160,6 +182,8 @@ export class AnalyticsClient {
             query: { days: timeRangeToDays(timeRange) }
         });
     }
+
+    // --- System / Admin Level Methods ---
 
     async getSystemOverview(instructorId: string) {
         if (!instructorId) return { errorMessage: "Instructor ID is required." };

@@ -1,239 +1,251 @@
 import { useState, useEffect, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import {
-    Card,
-    CardContent,
-    CardDescription,
-    CardHeader,
-    CardTitle,
-} from "./ui/card.tsx";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "./ui/select.tsx";
-import { Button } from "./ui/button.tsx";
-import { Users, MessageSquare, TrendingUp, Activity, HelpCircle } from "lucide-react";
-import { useNavigate, useParams } from "react-router-dom";
+    MessageSquare, TrendingUp, Activity, HelpCircle,
+    FileText, BrainCircuit, LineChart as LineChartIcon, BookText,
+    GraduationCap, MessagesSquare, Sparkles
+} from "lucide-react";
+
 import { useApiClient } from "../clients/ApiClientContext.tsx";
 import type {
-    OverviewSummary,
     UsageTrendPoint,
-    QueryDistributionItem,
     TopQuestionsItem,
-    TopKeywordsItem
+    CourseSatisfaction,
+    DocumentUsageItem
 } from "../clients/AnalyticsClient";
+
 import { StatCard } from "./StatCard.tsx";
-import { CourseBarChart } from "./charts/CoursebarChart.tsx";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card.tsx";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select.tsx";
+import { Button } from "./ui/button.tsx";
 import { UsageTrendChart } from "./charts/UsageTrendChart.tsx";
-import { QueryDistributionPieChart } from "./charts/QueryDistributionPieChart.tsx";
-
-const CHART_COLORS = ["#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"];
-
-// Filler words to filter out of the Top Keywords display
-const STOPWORDS = new Set([
-    "the", "a", "an", "and", "or", "but", "is", "are", "was", "were",
-    "what", "who", "where", "when", "why", "how", "to", "of", "in",
-    "for", "on", "with", "at", "by", "from", "up", "about", "into",
-    "over", "after", "your", "mine", "my", "me", "you", "they", "them",
-    "this", "that", "these", "those", "it", "its", "it's"
-]);
 
 interface CourseAnalyticsPageProps {
     course: { name: string; id?: string; instructor_id?: string };
 }
 
 export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
-    const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
-    const [loading, setLoading] = useState(true);
-    const [overviewSummary, setOverviewSummary] = useState<OverviewSummary | null>(null);
-    const [usageTrend, setUsageTrend] = useState<UsageTrendPoint[]>([]);
-    const [topQuestions, setTopQuestions] = useState<TopQuestionsItem[]>([]);
-    const [queryDistribution, setQueryDistribution] = useState<QueryDistributionItem[]>([]);
-    const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
-    const [totalCount, setTotalCount] = useState<number | null>(null);
-    const [enrolledCount, setEnrolledCount] = useState<number>(0);
-
-    const { analyticsClient, queryClient } = useApiClient();
-    const navigate = useNavigate();
     const { courseId: routeCourseId } = useParams();
     const courseId = course.id ?? routeCourseId ?? "";
-    const instructorId = course.instructor_id;
+    const { analyticsClient } = useApiClient();
+    const navigate = useNavigate();
 
-    // Filtered keywords logic
-    const filteredKeywords = useMemo(() => {
-        return topKeywords.filter(
-            (item) => !STOPWORDS.has(item.keyword.toLowerCase())
-        );
-    }, [topKeywords]);
+    const [selectedTimeRange, setSelectedTimeRange] = useState("7d");
+    const [loading, setLoading] = useState(true);
 
-    const engagementScore = useMemo(() => {
-        const activeUsers = overviewSummary?.activeUsers ?? 0;
-        const queries = totalCount ?? overviewSummary?.totalQueries ?? 0;
-        if (enrolledCount === 0) return 0;
-        const reach = activeUsers / enrolledCount;
-        const intensity = Math.min((queries / enrolledCount) / 10, 1);
-        return Math.round((reach * 0.7 + intensity * 0.3) * 100);
-    }, [overviewSummary, totalCount, enrolledCount]);
+    const [usageTrend, setUsageTrend] = useState<UsageTrendPoint[]>([]);
+    const [topQuestions, setTopQuestions] = useState<TopQuestionsItem[]>([]);
+    const [satisfactionData, setSatisfactionData] = useState<CourseSatisfaction | null>(null);
+    const [enrolledCount, setEnrolledCount] = useState(0);
+    const [docUsage, setDocUsage] = useState<DocumentUsageItem[]>([]);
+    const [totalDocs, setTotalDocs] = useState(0);
 
-    const totalChatbotQueries = totalCount ?? overviewSummary?.totalQueries ?? 0;
+    const peakTrendPoint = useMemo(() =>
+        [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
 
-    // Memoize the data for the Bar Chart
-    const courseUsageData = useMemo(() => [{
-        courseName: course.name,
-        chatbotQueries: totalChatbotQueries,
-    }], [course.name, totalChatbotQueries]);
+    const averageDailyQueries = useMemo(() =>
+        usageTrend.length > 0 ? Math.round(usageTrend.reduce((sum, p) => sum + p.queries, 0) / usageTrend.length) : 0, [usageTrend]);
+
+    const averageDailyUsers = useMemo(() =>
+        usageTrend.length > 0 ? Math.round(usageTrend.reduce((sum, p) => sum + p.uniqueUsers, 0) / usageTrend.length) : 0, [usageTrend]);
 
     useEffect(() => {
         if (!courseId) return;
         let cancelled = false;
         setLoading(true);
+
         (async () => {
-            const [ovRes, trendRes, qRes, distRes, keyRes, queriesRes, sCountRes] = await Promise.all([
-                analyticsClient.getOverviewSummary(courseId, selectedTimeRange),
+            const [trendRes, qRes, sCountRes, satRes, docUsageRes, overviewRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
-                analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
-                instructorId ? analyticsClient.getQueryDistribution(instructorId, selectedTimeRange) : Promise.resolve({ data: undefined }),
-                analyticsClient.topKeywords(courseId, 5, selectedTimeRange),
-                queryClient.getCourseQueries(courseId, { limit: 1, offset: 0 }),
-                analyticsClient.getStudentCount(courseId)
+                analyticsClient.getTopQuestions(courseId, 5, selectedTimeRange),
+                analyticsClient.getStudentCount(courseId),
+                analyticsClient.getCourseSatisfaction(courseId),
+                analyticsClient.getCourseDocumentUsage(courseId),
+                analyticsClient.getCourseOverview(courseId)
             ]);
 
             if (cancelled) return;
-            if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count ?? 0);
-            if (ovRes.data) setOverviewSummary(ovRes.data);
+
             if (trendRes.data) setUsageTrend(trendRes.data);
             if (qRes.data) setTopQuestions(qRes.data);
-            if (distRes.data) setQueryDistribution(distRes.data);
-            if (keyRes.data) setTopKeywords(keyRes.data);
-            if (queriesRes.data) setTotalCount(queriesRes.data.total ?? null);
+            if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
+            if (satRes.data) setSatisfactionData(satRes.data);
+            if (docUsageRes.data) setDocUsage(docUsageRes.data);
+            if (overviewRes.data) setTotalDocs(overviewRes.data.totalDocuments ?? 0);
+
             setLoading(false);
         })();
         return () => { cancelled = true; };
-    }, [courseId, instructorId, selectedTimeRange, analyticsClient, queryClient]);
-
-    // Memoize the data for the Pie Chart
-    const courseDistributionData = useMemo(() => {
-        if (queryDistribution.length > 0) {
-            return queryDistribution.map((d, i) => ({
-                name: d.courseName,
-                value: d.count,
-                color: CHART_COLORS[i % CHART_COLORS.length]
-            }));
-        }
-        return [{ name: course.name, value: totalChatbotQueries || 1, color: CHART_COLORS[0] }];
-    }, [queryDistribution, course.name, totalChatbotQueries]);
+    }, [courseId, selectedTimeRange, analyticsClient]);
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8">
             {/* Header */}
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                    <h1 className="text-2xl font-bold">Analytics Dashboard</h1>
-                    <p className="text-muted-foreground">Course engagement and chatbot usage insights for {course.name}</p>
-                </div>
-                <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                    <SelectTrigger className="w-40"><SelectValue placeholder="Time range" /></SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="7d">Last 7 days</SelectItem>
-                        <SelectItem value="30d">Last 30 days</SelectItem>
-                        <SelectItem value="90d">Last 90 days</SelectItem>
-                        <SelectItem value="1y">Last year</SelectItem>
-                    </SelectContent>
-                </Select>
-            </div>
-
-            {/* Stat Cards */}
-            <div>
-                <h2 className="text-lg font-semibold mb-3">Platform Engagement</h2>
-                <p className="text-sm text-muted-foreground mb-4">Key metrics for course engagement and chatbot usage in the selected time range.</p>
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Users" icon={Users} />
-                    <StatCard value={loading ? "—" : totalChatbotQueries.toLocaleString()} label="Chatbot Queries" icon={MessageSquare} />
-                    <StatCard value={loading ? "—" : (overviewSummary?.averageSatisfaction ? `${overviewSummary.averageSatisfaction} / 5.0` : "— / 5.0")} label="Avg. Satisfaction" icon={TrendingUp} />
-                    <StatCard value={loading ? "—" : `${engagementScore}%`} label="Engagement Rate" icon={Activity} />
-                </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* FAQ List */}
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between gap-2">
-                        <div>
-                            <CardTitle className="flex items-center gap-2"><HelpCircle className="h-5 w-5" /> Frequently Asked Questions</CardTitle>
-                            <CardDescription>Top questions students asked in this course (by count)</CardDescription>
+            <div className="rounded-[2rem] border bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.1),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.9),_rgba(255,255,255,1))] p-8 shadow-sm dark:bg-slate-950">
+                <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs">
+                            <Sparkles className="h-4 w-4" /> Course Intelligence
                         </div>
-                        <Button variant="outline" size="sm" onClick={() => navigate(`/courses/${courseId}/questions`)}>See All</Button>
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : topQuestions.length === 0 ? <p className="text-sm text-muted-foreground italic">No questions recorded yet.</p> : (
-                            <ul className="space-y-3">
-                                {topQuestions.map((item, i) => (
-                                    <li key={i} className="border-b border-border pb-2 last:border-0"><div className="flex justify-between gap-4"><span className="text-sm font-medium">{item.queryText}</span><span className="text-sm text-muted-foreground">{item.count}×</span></div></li>
-                                ))}
-                            </ul>
-                        )}
-                    </CardContent>
-                </Card>
-
-                {/* Filtered Keywords */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Top Keywords</CardTitle>
-                        <CardDescription>Most common keywords in student questions</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        {loading ? <p className="text-sm text-muted-foreground">Loading…</p> : filteredKeywords.length === 0 ? (
-                            <p className="text-sm text-muted-foreground italic">No keywords recorded yet.</p>
-                        ) : (
-                            <ul className="space-y-3">
-                                {filteredKeywords.map((item, i) => (
-                                    <li key={i} className="flex justify-between border-b border-border pb-2 last:border-0">
-                                        <span className="text-sm font-medium">{item.keyword}</span>
-                                        <span className="text-sm font-medium text-muted-foreground shrink-0">{item.count} times</span>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
-                    </CardContent>
-                </Card>
+                        <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">{course.name}</h1>
+                        <p className="text-lg text-muted-foreground max-w-2xl">
+                            Analyzing AI interactions, document utility, and student satisfaction metrics.
+                        </p>
+                    </div>
+                    <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
+                        <SelectTrigger className="w-44 rounded-2xl bg-background/80 shadow-sm backdrop-blur">
+                            <SelectValue placeholder="Range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="7d">Last 7 days</SelectItem>
+                            <SelectItem value="30d">Last 30 days</SelectItem>
+                            <SelectItem value="90d">Last 90 days</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
             </div>
 
-            {/* Trend Chart Component */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Chatbot Usage Trend</CardTitle>
-                    <CardDescription>Daily chatbot queries and unique users over time</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <UsageTrendChart data={usageTrend} />
-                </CardContent>
-            </Card>
+            {/* Stats */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
+                <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
+                <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Total Documents" icon={FileText} />
+                <StatCard
+                    value={loading ? "—" : satisfactionData?.total_votes ? `${satisfactionData.satisfaction_score.toFixed(1)} / 5.0` : "No votes"}
+                    label="Avg. Satisfaction"
+                    icon={TrendingUp}
+                />
+            </div>
 
+            {/* Insight Cards (Using BrainCircuit here) */}
+            <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
+                <InsightCard
+                    label="Peak AI Demand"
+                    value={peakTrendPoint ? new Date(peakTrendPoint.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "N/A"}
+                    subtext={peakTrendPoint ? `${peakTrendPoint.queries} queries on busiest day` : "No trend data"}
+                    icon={Activity}
+                />
+                <InsightCard
+                    label="Leading Document"
+                    value={docUsage[0]?.documentName ?? "None"}
+                    subtext={docUsage[0] ? `Answered ${docUsage[0].studentCount} students` : "No retrieval data"}
+                    icon={BookText}
+                />
+                <InsightCard
+                    label="Daily Momentum"
+                    value={averageDailyQueries}
+                    subtext="Avg. Questions per day"
+                    icon={BrainCircuit}
+                />
+                <InsightCard
+                    label="Total Feedback"
+                    value={satisfactionData?.total_votes ?? 0}
+                    subtext="Discord reactions received"
+                    icon={MessagesSquare}
+                />
+            </div>
+
+            {/* Chart + Summary */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_0.5fr]">
+                <Card className="shadow-sm border-slate-200/60">
+                    <CardHeader>
+                        <CardTitle>Usage Trend</CardTitle>
+                        <CardDescription>Visualizing query volume vs unique student engagement</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <UsageTrendChart data={usageTrend} height={300} />
+                    </CardContent>
+                </Card>
+
+                <div className="space-y-4">
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-1">Trend Summary</h3>
+                    <SummaryRow label="Daily Active Students" value={averageDailyUsers} />
+                    <SummaryRow label="Days with Activity" value={usageTrend.filter(p => p.queries > 0).length} />
+                    <div className="rounded-[1.5rem] border bg-primary/5 p-5 border-primary/10">
+                        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
+                            <LineChartIcon className="h-4 w-4" /> Busiest Day
+                        </p>
+                        <p className="mt-2 text-xl font-bold">
+                            {peakTrendPoint ? `${peakTrendPoint.queries} Queries` : "—"}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bottom Row (Using HelpCircle here) */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                {/* Bar Chart Component */}
-                <Card>
+                <Card className="shadow-sm">
                     <CardHeader>
-                        <CardTitle>Chatbot Usage by Course</CardTitle>
-                        <CardDescription>Total queries per course</CardDescription>
+                        <CardTitle>Knowledge Base Utilization</CardTitle>
+                        <CardDescription>Documents answering the most student queries</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <CourseBarChart data={courseUsageData} />
+                    <CardContent className="space-y-4">
+                        {loading ? <p>Loading...</p> : docUsage.length === 0 ? <p className="italic text-muted-foreground text-sm">No data available.</p> : (
+                            docUsage.map((doc, i) => (
+                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50/50 dark:bg-slate-900/50">
+                                    <div className="flex items-center gap-4 min-w-0">
+                                        <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold">{i + 1}</div>
+                                        <div className="truncate">
+                                            <p className="font-semibold text-sm truncate">{doc.documentName}</p>
+                                            <p className="text-xs text-muted-foreground">{doc.usagePercentage}% reach</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold">{doc.studentCount}</p>
+                                        <p className="text-[10px] uppercase text-muted-foreground">Students</p>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </CardContent>
                 </Card>
 
-                {/* Pie Chart Component */}
-                <Card>
-                    <CardHeader>
-                        <CardTitle>Query Distribution</CardTitle>
-                        <CardDescription>Percentage breakdown by course</CardDescription>
+                <Card className="shadow-sm">
+                    <CardHeader className="flex flex-row items-center justify-between">
+                        <div>
+                            <CardTitle className="flex items-center gap-2">
+                                <HelpCircle className="h-5 w-5 text-primary" /> Frequently Asked Questions
+                            </CardTitle>
+                            <CardDescription>Common student inquiries</CardDescription>
+                        </div>
+                        <Button variant="ghost" size="sm" onClick={() => navigate(`/courses/${courseId}/questions`)}>View All</Button>
                     </CardHeader>
                     <CardContent>
-                        <QueryDistributionPieChart data={courseDistributionData} />
+                        <ul className="space-y-4">
+                            {topQuestions.map((q, i) => (
+                                <li key={i} className="flex justify-between items-start gap-4 pb-3 border-b last:border-0 border-slate-100">
+                                    <span className="text-sm font-medium leading-relaxed">{q.queryText}</span>
+                                    <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded-md shrink-0">{q.count}×</span>
+                                </li>
+                            ))}
+                        </ul>
                     </CardContent>
                 </Card>
             </div>
+        </div>
+    );
+}
+
+function InsightCard({ label, value, subtext, icon: Icon }: any) {
+    return (
+        <Card className="overflow-hidden border shadow-none hover:border-primary/30 transition-colors">
+            <CardContent className="pt-6">
+                <div className="flex justify-between items-start mb-4">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
+                    <div className="p-2 bg-primary/5 rounded-lg text-primary"><Icon className="h-4 w-4" /></div>
+                </div>
+                <p className="text-2xl font-bold truncate">{value}</p>
+                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{subtext}</p>
+            </CardContent>
+        </Card>
+    );
+}
+
+function SummaryRow({ label, value }: { label: string, value: any }) {
+    return (
+        <div className="rounded-[1.5rem] border bg-background p-5 shadow-sm">
+            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">{label}</p>
+            <p className="mt-1 text-2xl font-bold">{value}</p>
         </div>
     );
 }
