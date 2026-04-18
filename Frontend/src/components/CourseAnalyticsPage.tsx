@@ -3,13 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
     MessageSquare, TrendingUp, Activity, HelpCircle,
     FileText, BrainCircuit, LineChart as LineChartIcon, BookText,
-    GraduationCap, MessagesSquare, Sparkles
+    GraduationCap, MessagesSquare, Sparkles, Tags
 } from "lucide-react";
 
 import { useApiClient } from "../clients/ApiClientContext.tsx";
 import type {
     UsageTrendPoint,
     TopQuestionsItem,
+    TopKeywordsItem,
     CourseSatisfaction,
     DocumentUsageItem
 } from "../clients/AnalyticsClient";
@@ -19,6 +20,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select.tsx";
 import { Button } from "./ui/button.tsx";
 import { UsageTrendChart } from "./charts/UsageTrendChart.tsx";
+
+// Filler words to filter out of the Top Keywords display
+const STOPWORDS = new Set([
+    "the", "a", "an", "and", "or", "but", "is", "are", "was", "were",
+    "what", "who", "where", "when", "why", "how", "to", "of", "in",
+    "for", "on", "with", "at", "by", "from", "up", "about", "into",
+    "over", "after", "your", "mine", "my", "me", "you", "they", "them",
+    "this", "that", "these", "those", "it", "its", "it's"
+]);
 
 interface CourseAnalyticsPageProps {
     course: { name: string; id?: string; instructor_id?: string };
@@ -35,10 +45,18 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     const [usageTrend, setUsageTrend] = useState<UsageTrendPoint[]>([]);
     const [topQuestions, setTopQuestions] = useState<TopQuestionsItem[]>([]);
+    const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
     const [satisfactionData, setSatisfactionData] = useState<CourseSatisfaction | null>(null);
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [docUsage, setDocUsage] = useState<DocumentUsageItem[]>([]);
     const [totalDocs, setTotalDocs] = useState(0);
+
+    // Filtered keywords logic
+    const filteredKeywords = useMemo(() => {
+        return topKeywords.filter(
+            (item) => !STOPWORDS.has(item.keyword.toLowerCase())
+        );
+    }, [topKeywords]);
 
     const peakTrendPoint = useMemo(() =>
         [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
@@ -55,9 +73,10 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         setLoading(true);
 
         (async () => {
-            const [trendRes, qRes, sCountRes, satRes, docUsageRes, overviewRes] = await Promise.all([
+            const [trendRes, qRes, keyRes, sCountRes, satRes, docUsageRes, overviewRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
                 analyticsClient.getTopQuestions(courseId, 5, selectedTimeRange),
+                analyticsClient.getTopKeywords(courseId, 12, selectedTimeRange),
                 analyticsClient.getStudentCount(courseId),
                 analyticsClient.getCourseSatisfaction(courseId),
                 analyticsClient.getCourseDocumentUsage(courseId),
@@ -68,6 +87,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
             if (trendRes.data) setUsageTrend(trendRes.data);
             if (qRes.data) setTopQuestions(qRes.data);
+            if (keyRes.data) setTopKeywords(keyRes.data);
             if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
             if (satRes.data) setSatisfactionData(satRes.data);
             if (docUsageRes.data) setDocUsage(docUsageRes.data);
@@ -80,7 +100,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
+            {/* 1. PREMIUM HEADER */}
             <div className="rounded-[2rem] border bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.1),_transparent_40%),linear-gradient(135deg,_rgba(248,250,252,0.9),_rgba(255,255,255,1))] p-8 shadow-sm dark:bg-slate-950">
                 <div className="flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
                     <div className="space-y-2">
@@ -105,7 +125,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* Stats */}
+            {/* 2. STAT CARDS */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
@@ -117,7 +137,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 />
             </div>
 
-            {/* Insight Cards (Using BrainCircuit here) */}
+            {/* 3. INSIGHT CARDS */}
             <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
                 <InsightCard
                     label="Peak AI Demand"
@@ -145,8 +165,8 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 />
             </div>
 
-            {/* Chart + Summary */}
-            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.5fr_0.5fr]">
+            {/* 4. TREND CHART + SUMMARY */}
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
                 <Card className="shadow-sm border-slate-200/60">
                     <CardHeader>
                         <CardTitle>Usage Trend</CardTitle>
@@ -168,34 +188,32 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <p className="mt-2 text-xl font-bold">
                             {peakTrendPoint ? `${peakTrendPoint.queries} Queries` : "—"}
                         </p>
+                        <p className="text-xs text-primary/70">{peakTrendPoint ? new Date(peakTrendPoint.date).toLocaleDateString() : ""}</p>
                     </div>
                 </div>
             </div>
 
-            {/* Bottom Row (Using HelpCircle here) */}
+            {/* 5. TOP KEYWORDS & FAQ SECTION */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Card className="shadow-sm">
+                <Card className="shadow-sm border-slate-200/60">
                     <CardHeader>
-                        <CardTitle>Knowledge Base Utilization</CardTitle>
-                        <CardDescription>Documents answering the most student queries</CardDescription>
+                        <CardTitle className="flex items-center gap-2">
+                            <Tags className="h-5 w-5 text-primary" /> Top Keywords
+                        </CardTitle>
+                        <CardDescription>Most common topics in student questions</CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        {loading ? <p>Loading...</p> : docUsage.length === 0 ? <p className="italic text-muted-foreground text-sm">No data available.</p> : (
-                            docUsage.map((doc, i) => (
-                                <div key={i} className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50/50 dark:bg-slate-900/50">
-                                    <div className="flex items-center gap-4 min-w-0">
-                                        <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold">{i + 1}</div>
-                                        <div className="truncate">
-                                            <p className="font-semibold text-sm truncate">{doc.documentName}</p>
-                                            <p className="text-xs text-muted-foreground">{doc.usagePercentage}% reach</p>
-                                        </div>
+                    <CardContent>
+                        {loading ? <p className="text-sm text-muted-foreground">Loading...</p> : filteredKeywords.length === 0 ? (
+                            <p className="text-sm italic text-muted-foreground">No keyword data yet.</p>
+                        ) : (
+                            <div className="flex flex-wrap gap-2">
+                                {filteredKeywords.map((item, i) => (
+                                    <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border bg-slate-50 dark:bg-slate-900 text-sm">
+                                        <span className="font-semibold text-primary">{item.keyword}</span>
+                                        <span className="text-[10px] bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-md font-bold">{item.count}×</span>
                                     </div>
-                                    <div className="text-right">
-                                        <p className="text-sm font-bold">{doc.studentCount}</p>
-                                        <p className="text-[10px] uppercase text-muted-foreground">Students</p>
-                                    </div>
-                                </div>
-                            ))
+                                ))}
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -206,22 +224,49 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                             <CardTitle className="flex items-center gap-2">
                                 <HelpCircle className="h-5 w-5 text-primary" /> Frequently Asked Questions
                             </CardTitle>
-                            <CardDescription>Common student inquiries</CardDescription>
+                            <CardDescription>Common student inquiries by count</CardDescription>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => navigate(`/courses/${courseId}/questions`)}>View All</Button>
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-4">
                             {topQuestions.map((q, i) => (
-                                <li key={i} className="flex justify-between items-start gap-4 pb-3 border-b last:border-0 border-slate-100">
+                                <li key={i} className="flex justify-between items-start gap-4 pb-3 border-b last:border-0 border-slate-100 dark:border-slate-800">
                                     <span className="text-sm font-medium leading-relaxed">{q.queryText}</span>
-                                    <span className="text-xs font-bold px-2 py-1 bg-slate-100 rounded-md shrink-0">{q.count}×</span>
+                                    <span className="text-xs font-bold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md shrink-0">{q.count}×</span>
                                 </li>
                             ))}
                         </ul>
                     </CardContent>
                 </Card>
             </div>
+
+            {/* 6. KNOWLEDGE BASE UTILIZATION */}
+            <Card className="shadow-sm">
+                <CardHeader>
+                    <CardTitle>Knowledge Base Utilization</CardTitle>
+                    <CardDescription>Documents answering the most student queries</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    {loading ? <p className="text-sm text-muted-foreground">Loading...</p> : docUsage.length === 0 ? <p className="italic text-muted-foreground text-sm">No retrieval data available yet.</p> : (
+                        docUsage.map((doc, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl border bg-slate-50/50 dark:bg-slate-900/50">
+                                <div className="flex items-center gap-4 min-w-0">
+                                    <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold">{i + 1}</div>
+                                    <div className="truncate">
+                                        <p className="font-semibold text-sm truncate">{doc.documentName}</p>
+                                        <p className="text-xs text-muted-foreground">{doc.usagePercentage}% student reach</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm font-bold">{doc.studentCount}</p>
+                                    <p className="text-[10px] uppercase text-muted-foreground">Students</p>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </CardContent>
+            </Card>
         </div>
     );
 }
