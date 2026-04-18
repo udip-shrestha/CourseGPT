@@ -25,11 +25,12 @@ export class AdminClient {
         });
     }
 
-    async createDiscordAdmin(discordId: string) {
+    async createDiscordAdmin(discordId: string, name: string) {
         if (!discordId) return { errorMessage: "Discord ID is required." };
+        if ((!name) || (name.trim() === "")) return { errorMessage: "Name is required." };
 
         return this.baseClient.request("POST", `/discord-admins`, {
-            body: { discord_id: discordId },
+            body: { discord_id: discordId, name: name.trim() },
             operationId: `discord-admin-create-${discordId}`,
         });
     }
@@ -47,18 +48,16 @@ export class AdminClient {
     async getDiscordAdmin(discordId: string) {
         if (!discordId) return { errorMessage: "Discord ID is required." };
 
-        const id = encodeURIComponent(discordId);
-        return this.baseClient.request("GET", `/discord-admins/${id}`, {
-            operationId: `discord-admin-get-${id}`,
+        return this.baseClient.request("GET", `/discord-admins/${discordId}`, {
+            operationId: `discord-admin-get-${discordId}`,
         });
     }
 
     async deleteDiscordAdmin(discordId: string) {
         if (!discordId) return { errorMessage: "Discord ID is required." };
 
-        const id = encodeURIComponent(discordId);
-        return this.baseClient.request("DELETE", `/discord-admins/${id}`, {
-            operationId: `discord-admin-delete-${id}`,
+        return this.baseClient.request("DELETE", `/discord-admins/${discordId}`, {
+            operationId: `discord-admin-delete-${discordId}`,
         });
     }
 }
