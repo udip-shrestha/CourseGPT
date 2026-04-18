@@ -12,6 +12,7 @@
 
 # Ignore all virtual environments
 **/.venv/
+**/venv/
 
 # Ignore all pycaches
 **/__pycache__/
