@@ -21,7 +21,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Button } from "./ui/button.tsx";
 import { UsageTrendChart } from "./charts/UsageTrendChart.tsx";
 
-// Filler words to filter out of the Top Keywords display
+// Filter out generic filler words for cleaner keyword visualization
 const STOPWORDS = new Set([
     "the", "a", "an", "and", "or", "but", "is", "are", "was", "were",
     "what", "who", "where", "when", "why", "how", "to", "of", "in",
@@ -72,14 +72,14 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         setLoading(true);
 
         (async () => {
-            const [trendRes, qRes, keyRes, sCountRes, satRes, docUsageRes, overviewRes] = await Promise.all([
+            const [trendRes, qRes, keyRes, sCountRes, satRes, docUsageRes, docCountRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
                 analyticsClient.getTopQuestions(courseId, 5, selectedTimeRange),
                 analyticsClient.getTopKeywords(courseId, 12, selectedTimeRange),
                 analyticsClient.getStudentCount(courseId),
                 analyticsClient.getCourseSatisfaction(courseId),
                 analyticsClient.getCourseDocumentUsage(courseId),
-                analyticsClient.getCourseOverview(courseId)
+                analyticsClient.getDocumentCount(courseId) // Fetches specifically for this course
             ]);
 
             if (cancelled) return;
@@ -90,7 +90,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
             if (satRes.data) setSatisfactionData(satRes.data);
             if (docUsageRes.data) setDocUsage(docUsageRes.data);
-            if (overviewRes.data) setTotalDocs(overviewRes.data.totalDocuments ?? 0);
+            if (docCountRes.data !== undefined) setTotalDocs(docCountRes.data);
 
             setLoading(false);
         })();
@@ -134,7 +134,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
-                <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Total Documents" icon={FileText} />
+                <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Course Documents" icon={FileText} />
                 <StatCard
                     value={loading ? "—" : satisfactionData?.total_votes ? `${satisfactionData.satisfaction_score.toFixed(1)} / 5.0` : "No votes"}
                     label="Avg. Satisfaction"
@@ -172,10 +172,10 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
             {/* 4. TREND CHART + SUMMARY */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
-                <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
                         <CardTitle>Usage Trend</CardTitle>
-                        <CardDescription>Visualizing query volume vs unique student engagement</CardDescription>
+                        <CardDescription>Query volume and unique student engagement</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <UsageTrendChart data={usageTrend} height={300} />
@@ -198,9 +198,9 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* 5. TOP KEYWORDS & FAQ */}
+            {/* 5. TOP KEYWORDS & FAQ SECTION */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Tags className="h-5 w-5 text-primary" /> Top Keywords
@@ -223,7 +223,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     </CardContent>
                 </Card>
 
-                <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader className="flex flex-row items-center justify-between">
                         <div>
                             <CardTitle className="flex items-center gap-2">
@@ -237,7 +237,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <ul className="space-y-4">
                             {topQuestions.map((q, i) => (
                                 <li key={i} className="flex justify-between items-start gap-4 pb-3 border-b last:border-0 border-slate-100 dark:border-slate-800">
-                                    <span className="text-sm font-medium leading-relaxed">{q.queryText}</span>
+                                    <span className="text-sm font-medium leading-relaxed text-slate-900 dark:text-slate-100">{q.queryText}</span>
                                     <span className="text-xs font-bold px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded-md shrink-0">{q.count}×</span>
                                 </li>
                             ))}
@@ -247,7 +247,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             </div>
 
             {/* 6. KNOWLEDGE BASE UTILIZATION */}
-            <Card className="shadow-sm border-slate-200 dark:border-slate-800">
+            <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                 <CardHeader>
                     <CardTitle>Knowledge Base Utilization</CardTitle>
                     <CardDescription>Documents answering the most student queries</CardDescription>
@@ -264,7 +264,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                                     </div>
                                 </div>
                                 <div className="text-right">
-                                    <p className="text-sm font-bold">{doc.studentCount}</p>
+                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{doc.studentCount}</p>
                                     <p className="text-[10px] uppercase text-muted-foreground font-semibold">Students</p>
                                 </div>
                             </div>
@@ -276,7 +276,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     );
 }
 
-// Internal Helper Components for the "Admin" Look
+// Internal Helper Components for the "Intelligence" Dashboard Feel
 function InsightCard({ label, value, subtext, icon: Icon }: any) {
     return (
         <Card className="overflow-hidden border border-slate-200 dark:border-slate-800 shadow-none hover:border-primary/30 transition-colors bg-white dark:bg-slate-950">
