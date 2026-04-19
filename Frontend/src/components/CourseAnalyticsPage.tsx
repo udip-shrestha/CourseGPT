@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     MessageSquare, TrendingUp, Activity, HelpCircle,
-    FileText, BrainCircuit, LineChart as LineChartIcon, BookText,
+    LineChart as LineChartIcon, BookText,
     GraduationCap, Sparkles, Tags
 } from "lucide-react";
 
@@ -49,23 +49,26 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [satisfactionData, setSatisfactionData] = useState<CourseSatisfaction | null>(null);
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [docUsage, setDocUsage] = useState<DocumentUsageItem[]>([]);
-    const [totalDocs, setTotalDocs] = useState(0);
 
     const filteredKeywords = useMemo(() => {
         return topKeywords.filter(item => !STOPWORDS.has(item.keyword.toLowerCase()));
     }, [topKeywords]);
+
+    // DERIVED METRICS
+    const peakTrendPoint = useMemo(() =>
+        [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
+
+    const averageDailyQueries = useMemo(() =>
+        usageTrend.length > 0 ? Math.round(usageTrend.reduce((sum, p) => sum + p.queries, 0) / usageTrend.length) : 0, [usageTrend]);
+
+    const averageDailyUsers = useMemo(() =>
+        usageTrend.length > 0 ? Math.round(usageTrend.reduce((sum, p) => sum + p.uniqueUsers, 0) / usageTrend.length) : 0, [usageTrend]);
 
     const engagementRate = useMemo(() => {
         if (enrolledCount === 0 || usageTrend.length === 0) return 0;
         const maxActive = Math.max(...usageTrend.map(p => p.uniqueUsers), 0);
         return Math.round((maxActive / enrolledCount) * 100);
     }, [usageTrend, enrolledCount]);
-
-    const peakTrendPoint = useMemo(() =>
-        [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
-
-    const averageDailyQueries = useMemo(() =>
-        usageTrend.length > 0 ? Math.round(usageTrend.reduce((sum, p) => sum + p.queries, 0) / usageTrend.length) : 0, [usageTrend]);
 
     const topicUsageData = useMemo(() => {
         return filteredKeywords.slice(0, 5).map(item => ({
@@ -80,14 +83,13 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         setLoading(true);
 
         (async () => {
-            const [trendRes, qRes, keyRes, sCountRes, satRes, docUsageRes, docCountRes] = await Promise.all([
+            const [trendRes, qRes, keyRes, sCountRes, satRes, docUsageRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
                 analyticsClient.getTopQuestions(courseId, 5, selectedTimeRange),
                 analyticsClient.getTopKeywords(courseId, 12, selectedTimeRange),
                 analyticsClient.getStudentCount(courseId),
                 analyticsClient.getCourseSatisfaction(courseId),
-                analyticsClient.getCourseDocumentUsage(courseId),
-                analyticsClient.getDocumentCount(courseId)
+                analyticsClient.getCourseDocumentUsage(courseId)
             ]);
 
             if (cancelled) return;
@@ -98,7 +100,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
             if (satRes.data) setSatisfactionData(satRes.data);
             if (docUsageRes.data) setDocUsage(docUsageRes.data);
-            if (docCountRes.data !== undefined) setTotalDocs(docCountRes.data);
 
             setLoading(false);
         })();
@@ -107,7 +108,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
+            {/* 1. HEADER */}
             <div className="rounded-[2.5rem] border bg-white dark:bg-slate-950 overflow-hidden relative shadow-sm border-slate-200 dark:border-slate-800 transition-colors">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.07),_transparent_40%)] pointer-events-none" />
                 <div className="relative p-8 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -117,7 +118,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         </div>
                         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl text-slate-900 dark:text-white">{course.name}</h1>
                         <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                            Analyzing AI interactions, document utility, and Discord student satisfaction.
+                            Analyzing AI interactions and Discord student satisfaction.
                         </p>
                     </div>
 
@@ -128,23 +129,21 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             <SelectItem value="7d">Last 7 days</SelectItem>
                             <SelectItem value="30d">Last 30 days</SelectItem>
-                            <SelectItem value="90d">Last 90 days</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            {/* STAT CARDS ROW */}
+            {/* 2. STAT CARDS */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
                 <StatCard value={loading ? "—" : `${engagementRate}%`} label="Engagement Rate" icon={Activity} />
 
-                {/* UPGRADED SATISFACTION CARD WITH SENTIMENT BAR */}
                 <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-none">
                     <CardContent className="pt-6">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Discord Sentiment</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Discord Feedback</p>
                             <TrendingUp className="h-4 w-4 text-primary" />
                         </div>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -173,31 +172,34 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
-            {/* INSIGHT CARDS ROW */}
-            <div className="grid grid-cols-1 gap-4 xl:grid-cols-4">
-                <InsightCard label="Peak AI Demand" value={peakTrendPoint ? new Date(peakTrendPoint.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "N/A"} subtext={peakTrendPoint ? `${peakTrendPoint.queries} queries on peak day` : "No trend data"} icon={Activity} />
-                <InsightCard label="Leading Document" value={docUsage[0]?.documentName ?? "None"} subtext={docUsage[0] ? `Answered ${docUsage[0].studentCount} students` : "No retrieval data"} icon={BookText} />
-                <InsightCard label="Daily Momentum" value={averageDailyQueries} subtext="Avg. Questions per day" icon={BrainCircuit} />
-                <InsightCard label="Total Documents" value={loading ? "—" : totalDocs.toLocaleString()} subtext="Knowledge files available" icon={FileText} />
-            </div>
-
-            {/* TREND SECTION */}
+            {/* 3. TREND AND SUMMARY */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Usage Trend</CardTitle></CardHeader>
-                    <CardContent><UsageTrendChart data={usageTrend} height={300} /></CardContent>
+                    <CardContent><UsageTrendChart data={usageTrend} height={320} /></CardContent>
                 </Card>
+
                 <div className="space-y-4">
-                    <SummaryRow label="Active Window Students" value={usageTrend.reduce((sum, p) => sum + p.uniqueUsers, 0)} />
-                    <SummaryRow label="Days with Activity" value={usageTrend.filter(p => p.queries > 0).length} />
-                    <div className="rounded-[1.5rem] border border-primary/20 bg-primary/5 p-5">
-                        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary"><LineChartIcon className="h-4 w-4" /> Peak Queries</p>
-                        <p className="mt-2 text-xl font-bold">{peakTrendPoint ? `${peakTrendPoint.queries} Queries` : "—"}</p>
+                    <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-1">Trend Summary</h3>
+                    <SummaryRow label="Avg. Daily Queries" value={averageDailyQueries} />
+                    <SummaryRow label="Avg. Daily Active Students" value={averageDailyUsers} />
+                    <SummaryRow label="Days with Query Activity" value={usageTrend.filter(p => p.queries > 0).length} />
+
+                    <div className="rounded-[1.5rem] border border-primary/20 bg-primary/5 p-5 shadow-sm">
+                        <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
+                            <LineChartIcon className="h-4 w-4" /> Busiest Day
+                        </p>
+                        <p className="mt-2 text-xl font-bold">
+                            {peakTrendPoint ? `${peakTrendPoint.queries} Queries` : "—"}
+                        </p>
+                        <p className="text-[10px] font-semibold text-primary/70 uppercase">
+                            {peakTrendPoint ? new Date(peakTrendPoint.date).toLocaleDateString("en-US", { weekday: 'short', month: 'short', day: 'numeric' }) : ""}
+                        </p>
                     </div>
                 </div>
             </div>
 
-            {/* TOPIC BAR CHART & KNOWLEDGE BASE */}
+            {/* 4. TOPICS AND KNOWLEDGE BASE */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
@@ -237,7 +239,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
-            {/* TOPIC CLOUD & FAQ */}
+            {/* 5. TOPIC CLOUD & FAQ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Topic Cloud</CardTitle></CardHeader>
@@ -273,22 +275,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
         </div>
-    );
-}
-
-// Internal Helper Components
-function InsightCard({ label, value, subtext, icon: Icon }: any) {
-    return (
-        <Card className="overflow-hidden border border-slate-200 dark:border-slate-800 shadow-none hover:border-primary/30 transition-all bg-white dark:bg-slate-950">
-            <CardContent className="pt-6">
-                <div className="flex justify-between items-start mb-4">
-                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground">{label}</p>
-                    <div className="p-2 bg-primary/5 rounded-lg text-primary"><Icon className="h-4 w-4" /></div>
-                </div>
-                <p className="text-2xl font-bold truncate text-slate-900 dark:text-white">{value}</p>
-                <p className="text-xs text-muted-foreground mt-1 line-clamp-1">{subtext}</p>
-            </CardContent>
-        </Card>
     );
 }
 
