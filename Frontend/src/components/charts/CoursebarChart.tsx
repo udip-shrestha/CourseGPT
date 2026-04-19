@@ -8,16 +8,13 @@ import {
     ResponsiveContainer,
 } from "recharts";
 
-interface CourseUsageData {
-    courseName: string;
-    chatbotQueries: number;
-}
-
 interface CourseBarChartProps {
-    data: CourseUsageData[];
+    data: any[]; // Changed to any[] to allow flexible topic/query data
+    xKey?: string;
+    yKey?: string;
 }
 
-export function CourseBarChart({ data }: CourseBarChartProps) {
+export function CourseBarChart({ data, xKey = "courseName", yKey = "chatbotQueries" }: CourseBarChartProps) {
     return (
         <ResponsiveContainer width="100%" height={300}>
             <BarChart data={data}>
@@ -26,12 +23,12 @@ export function CourseBarChart({ data }: CourseBarChartProps) {
                     vertical={false}
                 />
                 <XAxis
-                    dataKey="courseName"
-                    stroke="#008000" // green color
+                    dataKey={xKey} // Use the dynamic key
+                    stroke="#008000"
                     tick={{ fill: "#008000" }}
                 />
                 <YAxis
-                    stroke="#008000" // green color
+                    stroke="#008000"
                     tick={{ fill: "#008000" }}
                 />
                 <Tooltip
@@ -42,9 +39,10 @@ export function CourseBarChart({ data }: CourseBarChartProps) {
                     }}
                 />
                 <Bar
-                    dataKey="chatbotQueries"
+                    dataKey={yKey} // Use the dynamic key
                     fill="#3b82f6"
                     name="Queries"
+                    radius={[4, 4, 0, 0]}
                 />
             </BarChart>
         </ResponsiveContainer>
