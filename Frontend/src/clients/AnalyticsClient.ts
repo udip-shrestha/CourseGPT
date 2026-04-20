@@ -1,12 +1,19 @@
 import { APIClient } from "./ApiClient.ts";
 import type { CourseQueriesResponse } from "./QueryClient";
 
-export interface OverviewSummary {
-    activeUsers?: number;
-    totalEnrolled?: number;
-    totalQueries?: number;
-    engagementRate?: number;
-    averageSatisfaction?: number;
+export interface AnswerFeedbackItem {
+    id: string;
+    query_id: string;
+    course_id: string;
+    student_id: string;
+    vote: number;
+    created_at: string;
+}
+
+export interface UsageTrendPoint {
+    date: string;
+    queries: number;
+    uniqueUsers: number;
 }
 
 export interface SystemOverview {
@@ -21,15 +28,23 @@ export interface SystemOverview {
     averageQueriesPerCourse: number;
 }
 
-export interface UsageTrendPoint {
-    date: string;
-    queries: number;
-    uniqueUsers: number;
+export interface TopQuestionsItem {
+    queryText: string;
+    count: number;
+    answer?: string;
 }
 
-export interface QueryDistributionItem {
-    courseName: string;
+export interface TopKeywordsItem {
+    keyword: string;
     count: number;
+}
+
+export interface CourseSatisfaction {
+    course_id: string;
+    upvotes: number;
+    downvotes: number;
+    total_votes: number;
+    satisfaction_score: number;
 }
 
 export interface MetricBreakdownItem {
@@ -40,14 +55,8 @@ export interface MetricBreakdownItem {
     instructorName?: string;
 }
 
-export interface TopQuestionsItem {
-    queryText: string;
-    count: number;
-    answer?: string;
-}
-
-export interface TopKeywordsItem {
-    keyword: string;
+export interface QueryDistributionItem {
+    courseName: string;
     count: number;
 }
 
@@ -68,111 +77,81 @@ export class AnalyticsClient {
         this.client = client;
     }
 
+    async getDocumentCount(courseId: string) {
+        if (!courseId) return { data: 0 };
+        const res = await this.client.request<Record<string, number>>("GET", "/documents/count", { query: { group_by_course: true } });
+        return { data: res.data ? (res.data[courseId] ?? 0) : 0 };
+    }
 
-    /**
-     * Get the number of students registered in a course
-     * Matches: GET /students/count?course_id={id}
-     */
     async getStudentCount(courseId: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request<{ course_id: string; student_count: number }>(
+        return this.client.request<{ course_id: string; student_count: number }>("GET", "/students/count", { query: { course_id: courseId } });
+    }
+
+    async getCourseSatisfaction(courseId: string) {
+        return this.client.request<CourseSatisfaction>("GET", `/feedback/courses/${courseId}/satisfaction`);
+    }
+
+    async getCourseAnswerFeedbacks(courseId: string, limit: number = 100, offset: number = 0) {
+        return this.client.request<{ total: number; answer_feedbacks: AnswerFeedbackItem[] }>(
             "GET",
-            "/students/count",
-            { query: { course_id: courseId } }
+            `/feedback/courses/${courseId}/answer-feedbacks`,
+            { query: { limit, offset } }
         );
     }
 
-    async getCourseOverview(courseId: string, days?: number) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/overview`, {
-            query: days ? { days } : undefined
-        });
-    }
-
-    async getTopQuestions(courseId: string, limit: number = 10, _timeRange?: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/top-questions`, {
-            query: { limit }
-        });
-    }
-
-    async getTopKeywords(courseId: string, limit: number = 20, _timeRange?: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/top-keywords`, {
-            query: { limit }
-        });
-    }
-
-    async getEngagementMetrics(courseId: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
-        return this.client.request("GET", `/courses/${courseId}/analytics/engagement`);
-    }
-
-    async getOverviewSummary(courseId: string, timeRange: string) {
-        return this.getCourseOverview(courseId, timeRangeToDays(timeRange));
-    }
-
     async getUsageTrend(courseId: string, timeRange: string) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
         return this.client.request<UsageTrendPoint[]>("GET", `/courses/${courseId}/analytics/usage-trend`, {
             query: { days: timeRangeToDays(timeRange) }
         });
     }
 
-    async getQueryDistribution(instructorId: string, timeRange: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
-        return this.client.request<QueryDistributionItem[]>("GET", `/instructors/${instructorId}/analytics/query-distribution`, {
-            query: { days: timeRangeToDays(timeRange) }
+    // Updated to accept timeRange to fix TS2554
+    async getTopQuestions(courseId: string, limit: number = 10, timeRange?: string) {
+        return this.client.request<TopQuestionsItem[]>("GET", `/courses/${courseId}/analytics/top-questions`, {
+            query: { limit, days: timeRange ? timeRangeToDays(timeRange) : undefined }
         });
     }
 
+    // Updated to accept timeRange to fix TS2554
+    async getTopKeywords(courseId: string, limit: number = 20, timeRange?: string) {
+        return this.client.request<TopKeywordsItem[]>("GET", `/courses/${courseId}/analytics/top-keywords`, {
+            query: { limit, days: timeRange ? timeRangeToDays(timeRange) : undefined }
+        });
+    }
+
+    // --- SYSTEM / ADMIN LEVEL METHODS (RESTORED) ---
+
     async getSystemOverview(instructorId: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<SystemOverview>("GET", `/instructors/${instructorId}/analytics/system-overview`);
     }
 
     async getSystemQueryTrend(instructorId: string, timeRange: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<UsageTrendPoint[]>("GET", `/instructors/${instructorId}/analytics/system-query-trend`, {
             query: { days: timeRangeToDays(timeRange) }
         });
     }
 
     async getDocumentsByCourse(instructorId: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/documents-by-course`);
     }
 
     async getDocumentsByInstructor(instructorId: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/documents-by-instructor`);
     }
 
     async getCoursesByInstructor(instructorId: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/courses-by-instructor`);
     }
 
     async getQueriesByCourse(instructorId: string, timeRange: string) {
-        if (!instructorId) return { errorMessage: "Instructor ID is required." };
         return this.client.request<MetricBreakdownItem[]>("GET", `/instructors/${instructorId}/analytics/queries-by-course`, {
             query: { days: timeRangeToDays(timeRange) }
         });
     }
 
-    /**
-     * Full course Q&A history (questions and answers) via GET /courses/{id}/queries/all.
-     */
-    async getAllCourseQueries(
-        courseId: string,
-        options?: { orderBy?: string; orderDir?: "asc" | "desc" }
-    ) {
-        if (!courseId) return { errorMessage: "Course ID is required." };
+    async getAllCourseQueries(courseId: string, options?: { orderBy?: string; orderDir?: "asc" | "desc" }) {
         return this.client.request<CourseQueriesResponse>("GET", `/courses/${courseId}/queries/all`, {
-            query: {
-                order_by: options?.orderBy ?? "asked_at",
-                order_dir: options?.orderDir ?? "desc",
-            },
+            query: { order_by: options?.orderBy ?? "asked_at", order_dir: options?.orderDir ?? "desc" },
         });
     }
 
