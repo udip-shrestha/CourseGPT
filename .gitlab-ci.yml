@@ -72,7 +72,7 @@ deploy_frontend:
   only:
     - main
     - master
-
+    - 67-frontend-analytics-satisfacation
   needs:
     - job: build_frontend
       artifacts: true
