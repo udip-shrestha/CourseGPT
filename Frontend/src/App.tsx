@@ -14,6 +14,7 @@ import { AdminPage } from "./components/AdminPage.tsx";
 import { AdminCoursesPage } from "./components/AdminCoursesPage.tsx";
 import { AdminInstructorsPage } from "./components/AdminInstructorsPage.tsx";
 import { AdminAnalyticsPage } from "./components/AdminAnalyticsPage.tsx";
+import { AdminDiscordAdminsPage } from "./components/AdminDiscordAdminsPage.tsx";
 import { useApiClient } from "./clients/ApiClientContext.tsx";
 
 /**
@@ -69,6 +70,7 @@ export default function App() {
                     <Route path="courses" element={<AdminCoursesPage />} />
                     <Route path="instructors" element={<AdminInstructorsPage />} />
                     <Route path="analytics" element={<AdminAnalyticsPage />} />
+                    <Route path="discord-admins" element={<AdminDiscordAdminsPage />} />
                 </Route>
 
                 {/* Course Route with Nested Routing */}
