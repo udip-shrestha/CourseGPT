@@ -106,7 +106,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     return (
         <div className="space-y-8">
-            {/* Header */}
+            {/* 1. HEADER */}
             <div className="rounded-[2.5rem] border bg-white dark:bg-slate-950 overflow-hidden relative shadow-sm border-slate-200 dark:border-slate-800 transition-colors">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.07),_transparent_40%)] pointer-events-none" />
                 <div className="relative p-8 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -127,20 +127,20 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             <SelectItem value="7d">Last 7 days</SelectItem>
                             <SelectItem value="30d">Last 30 days</SelectItem>
+                            {/* RESTORED: 90 days */}
+                            <SelectItem value="90d">Last 90 days</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            {/* STAT CARDS */}
+            {/* 2. STAT CARDS (5-column layout for desktop) */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
                 <StatCard value={loading ? "—" : `${engagementRate}%`} label="Engagement Rate" icon={Activity} />
-                {/* RESTORED: Total Documents */}
                 <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Total Documents" icon={FileText} />
 
-                {/* COMBINED: Discord Feedback with Avg Satisfaction Score */}
                 <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-none">
                     <CardContent className="pt-6">
                         <div className="flex justify-between items-start mb-2">
@@ -173,7 +173,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
-            {/* TREND AND SUMMARY */}
+            {/* 3. TREND AND SUMMARY */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Usage Trend</CardTitle></CardHeader>
@@ -200,7 +200,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* TOPICS */}
+            {/* 4. TOPICS */}
             <div className="grid grid-cols-1 gap-6">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
@@ -217,7 +217,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
-            {/* TOPIC CLOUD & FAQ */}
+            {/* 5. TOPIC CLOUD & FAQ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Topic Cloud</CardTitle></CardHeader>
