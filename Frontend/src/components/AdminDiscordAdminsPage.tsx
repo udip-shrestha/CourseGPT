@@ -10,6 +10,15 @@ import {
   CardHeader,
   CardTitle,
 } from "./ui/card";
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "./ui/alert-dialog";
 
 interface DiscordAdminRow {
   id: string;
@@ -35,6 +44,9 @@ export function AdminDiscordAdminsPage() {
   const [newName, setNewName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [deletingDiscordId, setDeletingDiscordId] = useState<string | null>(
+    null,
+  );
+  const [pendingDelete, setPendingDelete] = useState<DiscordAdminRow | null>(
     null,
   );
 
@@ -98,15 +110,11 @@ export function AdminDiscordAdminsPage() {
     setIsCreating(false);
   }
 
-  async function handleDelete(discordId: string) {
-    if (
-      !window.confirm(
-        "Remove this Discord user from bot admins? They will lose access to admin-only bot commands.",
-      )
-    ) {
-      return;
-    }
+  async function confirmDelete() {
+    if (!pendingDelete) return;
 
+    const discordId = pendingDelete.discord_id;
+    setPendingDelete(null);
     setDeletingDiscordId(discordId);
     setError(null);
 
@@ -148,7 +156,7 @@ export function AdminDiscordAdminsPage() {
         <div>
           <h1 className="text-3xl font-bold flex items-center gap-2">
             <Bot className="h-7 w-7" />
-            Discord bot admins
+            Discord Bot Admins
           </h1>
           <p className="text-muted-foreground mt-1">
             Users listed here can use admin-only Discord bot commands (for
@@ -312,7 +320,7 @@ export function AdminDiscordAdminsPage() {
                     <Button
                       type="button"
                       variant="destructive"
-                      onClick={() => handleDelete(row.discord_id)}
+                      onClick={() => setPendingDelete(row)}
                       disabled={isDeleting}
                       className="w-full lg:w-auto"
                     >
@@ -326,6 +334,42 @@ export function AdminDiscordAdminsPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={!!pendingDelete}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Discord admin?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete ? (
+                <>
+                  This will remove{" "}
+                  <span className="font-medium text-foreground">
+                    {pendingDelete.name}
+                  </span>{" "}
+                  (<span className="font-mono">{pendingDelete.discord_id}</span>)
+                  from bot admins. They will lose access to admin-only Discord
+                  bot commands.
+                </>
+              ) : null}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel type="button">Cancel</AlertDialogCancel>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => void confirmDelete()}
+            >
+              Remove admin
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
