@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     MessageSquare, TrendingUp, Activity, HelpCircle,
-    LineChart as LineChartIcon, BookText,
+    LineChart as LineChartIcon,
     GraduationCap, Sparkles, Tags
 } from "lucide-react";
 
@@ -11,8 +11,7 @@ import type {
     UsageTrendPoint,
     TopQuestionsItem,
     TopKeywordsItem,
-    CourseSatisfaction,
-    DocumentUsageItem
+    CourseSatisfaction
 } from "../clients/AnalyticsClient";
 
 import { StatCard } from "./StatCard.tsx";
@@ -48,7 +47,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
     const [satisfactionData, setSatisfactionData] = useState<CourseSatisfaction | null>(null);
     const [enrolledCount, setEnrolledCount] = useState(0);
-    const [docUsage, setDocUsage] = useState<DocumentUsageItem[]>([]);
 
     const filteredKeywords = useMemo(() => {
         return topKeywords.filter(item => !STOPWORDS.has(item.keyword.toLowerCase()));
@@ -83,13 +81,12 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         setLoading(true);
 
         (async () => {
-            const [trendRes, qRes, keyRes, sCountRes, satRes, docUsageRes] = await Promise.all([
+            const [trendRes, qRes, keyRes, sCountRes, satRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
                 analyticsClient.getTopQuestions(courseId, 5, selectedTimeRange),
                 analyticsClient.getTopKeywords(courseId, 12, selectedTimeRange),
                 analyticsClient.getStudentCount(courseId),
                 analyticsClient.getCourseSatisfaction(courseId),
-                analyticsClient.getCourseDocumentUsage(courseId)
             ]);
 
             if (cancelled) return;
@@ -99,7 +96,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             if (keyRes.data) setTopKeywords(keyRes.data);
             if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
             if (satRes.data) setSatisfactionData(satRes.data);
-            if (docUsageRes.data) setDocUsage(docUsageRes.data);
 
             setLoading(false);
         })();
@@ -199,8 +195,8 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* 4. TOPICS AND KNOWLEDGE BASE */}
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+            {/* 4. TOPICS (FULL WIDTH) */}
+            <div className="grid grid-cols-1 gap-6">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2"><Tags className="h-5 w-5 text-primary" /> Usage by Topic</CardTitle>
@@ -212,29 +208,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         ) : (
                             <p className="text-sm italic text-muted-foreground text-center py-10">No topic data recorded.</p>
                         )}
-                    </CardContent>
-                </Card>
-
-                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><BookText className="h-5 w-5 text-primary" /> Knowledge Base Utilization</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {docUsage.length > 0 ? docUsage.map((doc, i) => (
-                            <div key={i} className="flex items-center justify-between p-4 rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 transition-colors">
-                                <div className="flex items-center gap-4 min-w-0">
-                                    <div className="h-10 w-10 shrink-0 flex items-center justify-center rounded-full bg-primary/10 text-primary font-bold">{i + 1}</div>
-                                    <div className="truncate">
-                                        <p className="font-semibold text-sm truncate">{doc.documentName}</p>
-                                        <p className="text-xs text-muted-foreground">{doc.usagePercentage}% student reach</p>
-                                    </div>
-                                </div>
-                                <div className="text-right">
-                                    <p className="text-sm font-bold text-slate-900 dark:text-slate-100">{doc.studentCount}</p>
-                                    <p className="text-[10px] uppercase text-muted-foreground font-semibold">Hits</p>
-                                </div>
-                            </div>
-                        )) : <p className="italic text-muted-foreground text-sm text-center py-10">No retrieval data available yet.</p>}
                     </CardContent>
                 </Card>
             </div>
