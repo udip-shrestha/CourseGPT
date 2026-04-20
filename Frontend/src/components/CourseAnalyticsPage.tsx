@@ -77,9 +77,16 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             .slice(0, 5);
     }, [filteredKeywords]);
 
+    // FIXED: Now correctly handles string "down" votes and maps to queryText for the gaps card
     const unhelpfulQuestions = useMemo(() => {
-        const unhelpfulIds = new Set(feedbacks.filter(f => f.vote === 0).map(f => f.query_id));
-        return topQuestions.filter(q => unhelpfulIds.has(q.queryText));
+        const unhelpfulQueryIds = new Set(
+            feedbacks
+                .filter(f => String(f.vote).toLowerCase() === "down")
+                .map(f => f.query_id)
+        );
+
+        // Return top questions where students gave negative feedback
+        return topQuestions.filter(q => unhelpfulQueryIds.has(q.queryText));
     }, [feedbacks, topQuestions]);
 
     const engagementRate = useMemo(() => {
@@ -112,7 +119,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             if (satRes.data) setSatisfactionData(satRes.data);
             if (docCountRes.data !== undefined) setTotalDocs(docCountRes.data);
 
-            if (feedRes.data) {
+            if (feedRes.data && feedRes.data.answer_feedbacks) {
                 setFeedbacks(feedRes.data.answer_feedbacks);
                 const uniqueIds = new Set(feedRes.data.answer_feedbacks.map(f => f.student_id));
                 setUniqueActiveCount(uniqueIds.size);
@@ -125,6 +132,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     return (
         <div className="space-y-8">
+            {/* 1. HEADER */}
             <div className="rounded-[2.5rem] border bg-white dark:bg-slate-950 overflow-hidden relative shadow-sm border-slate-200 dark:border-slate-800 transition-colors">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.07),_transparent_40%)] pointer-events-none" />
                 <div className="relative p-8 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -150,6 +158,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
+            {/* 2. STAT CARDS */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
@@ -181,6 +190,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
+            {/* 3. TREND AND SUMMARY */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Interaction Trend</CardTitle></CardHeader>
@@ -194,6 +204,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
+            {/* 4. TOPICS (Concept Clusters) */}
             <div className="grid grid-cols-1 gap-6">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
@@ -210,6 +221,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
+            {/* 5. GAPS & FAQ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="shadow-sm border-red-200 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10">
                     <CardHeader>
