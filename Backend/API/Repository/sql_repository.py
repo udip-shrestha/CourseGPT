@@ -879,6 +879,21 @@ class SQLRepository(ISQLRepository):
             }
         return result
 
+    def read_all_answer_feedbacks_for_course(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
+        count_sql = "SELECT COUNT(*) AS total FROM answer_feedback WHERE course_id = %s;"
+        total_row = self.cm.select_one(count_sql, (course_id,))
+        total = total_row["total"] if total_row else 0
+
+        data_sql = """
+            SELECT id, query_id, course_id, student_id, vote, created_at
+            FROM answer_feedback
+            WHERE course_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s;
+        """
+        results = self.cm.select_all(data_sql, (course_id, limit, offset))
+        return {"total": total, "answer_feedbacks": results}
+
     # ======================================================
     # DISCORD ADMINS
     # ======================================================

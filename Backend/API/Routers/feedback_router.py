@@ -113,7 +113,26 @@ def get_all_feedback(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to retrieve feedback: {str(e)}"
         )
-
+@router.get(
+    "/courses/{course_id}/answer-feedbacks",
+    status_code=status.HTTP_200_OK,
+    summary="Get answer feedbacks by course ID",
+    description="Retrieve a paginated list of all answer feedbacks (votes) for a specific course."
+)
+def get_course_answer_feedbacks(
+    course_id: str = Path(..., description="The UUID of the course"),
+    limit: int = Query(50, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+    service: FeedbackService = Depends(get_feedback_service),
+):
+    """Returns all answer feedbacks (votes) for a specific course ID."""
+    try:
+        return service.get_course_answer_feedbacks(course_id=course_id, limit=limit, offset=offset)
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve course answer feedbacks: {str(e)}"
+        )
 @router.get(
     "/courses/{course_id}",
     status_code=status.HTTP_200_OK,
