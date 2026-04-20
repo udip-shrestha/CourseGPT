@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
     MessageSquare, TrendingUp, Activity, HelpCircle,
-    LineChart as LineChartIcon,
+    FileText, LineChart as LineChartIcon,
     GraduationCap, Sparkles, Tags
 } from "lucide-react";
 
@@ -47,12 +47,12 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
     const [satisfactionData, setSatisfactionData] = useState<CourseSatisfaction | null>(null);
     const [enrolledCount, setEnrolledCount] = useState(0);
+    const [totalDocs, setTotalDocs] = useState(0);
 
     const filteredKeywords = useMemo(() => {
         return topKeywords.filter(item => !STOPWORDS.has(item.keyword.toLowerCase()));
     }, [topKeywords]);
 
-    // DERIVED METRICS
     const peakTrendPoint = useMemo(() =>
         [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
 
@@ -81,12 +81,13 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         setLoading(true);
 
         (async () => {
-            const [trendRes, qRes, keyRes, sCountRes, satRes] = await Promise.all([
+            const [trendRes, qRes, keyRes, sCountRes, satRes, docCountRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
                 analyticsClient.getTopQuestions(courseId, 5, selectedTimeRange),
                 analyticsClient.getTopKeywords(courseId, 12, selectedTimeRange),
                 analyticsClient.getStudentCount(courseId),
                 analyticsClient.getCourseSatisfaction(courseId),
+                analyticsClient.getDocumentCount(courseId)
             ]);
 
             if (cancelled) return;
@@ -96,6 +97,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             if (keyRes.data) setTopKeywords(keyRes.data);
             if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
             if (satRes.data) setSatisfactionData(satRes.data);
+            if (docCountRes.data !== undefined) setTotalDocs(docCountRes.data);
 
             setLoading(false);
         })();
@@ -104,7 +106,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     return (
         <div className="space-y-8">
-            {/* 1. HEADER */}
+            {/* Header */}
             <div className="rounded-[2.5rem] border bg-white dark:bg-slate-950 overflow-hidden relative shadow-sm border-slate-200 dark:border-slate-800 transition-colors">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.07),_transparent_40%)] pointer-events-none" />
                 <div className="relative p-8 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -130,12 +132,15 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* 2. STAT CARDS */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {/* STAT CARDS */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
                 <StatCard value={loading ? "—" : `${engagementRate}%`} label="Engagement Rate" icon={Activity} />
+                {/* RESTORED: Total Documents */}
+                <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Total Documents" icon={FileText} />
 
+                {/* COMBINED: Discord Feedback with Avg Satisfaction Score */}
                 <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-none">
                     <CardContent className="pt-6">
                         <div className="flex justify-between items-start mb-2">
@@ -168,7 +173,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
-            {/* 3. TREND AND SUMMARY */}
+            {/* TREND AND SUMMARY */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Usage Trend</CardTitle></CardHeader>
@@ -195,7 +200,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </div>
             </div>
 
-            {/* 4. TOPICS (FULL WIDTH) */}
+            {/* TOPICS */}
             <div className="grid grid-cols-1 gap-6">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
@@ -212,14 +217,14 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 </Card>
             </div>
 
-            {/* 5. TOPIC CLOUD & FAQ */}
+            {/* TOPIC CLOUD & FAQ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader><CardTitle>Topic Cloud</CardTitle></CardHeader>
                     <CardContent>
                         <div className="flex flex-wrap gap-2">
                             {filteredKeywords.map((item, i) => (
-                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm hover:border-primary/50 transition-colors cursor-default">
+                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm">
                                     <span className="font-semibold text-primary">{item.keyword}</span>
                                     <span className="text-[10px] bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-md font-bold text-slate-700 dark:text-slate-300">{item.count}×</span>
                                 </div>
