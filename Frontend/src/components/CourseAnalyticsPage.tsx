@@ -29,6 +29,28 @@ const STOPWORDS = new Set([
     "this", "that", "these", "those", "it", "its", "it's"
 ]);
 
+// CONCEPT_MAP: Groups specific keywords into high-level instructional clusters
+const CONCEPT_MAP: Record<string, string> = {
+    "iptables": "Networking",
+    "routing": "Networking",
+    "ip": "Networking",
+    "port": "Networking",
+    "tcp": "Networking",
+    "mutex": "Concurrency",
+    "semaphore": "Concurrency",
+    "goroutine": "Concurrency",
+    "threads": "Concurrency",
+    "pointer": "Memory Management",
+    "memory": "Memory Management",
+    "address": "Memory Management",
+    "malloc": "Memory Management",
+    "aliasing": "Memory Management",
+    "kafka": "Distributed Systems",
+    "distributed": "Distributed Systems",
+    "microservices": "Distributed Systems",
+    "docker": "DevOps/Cloud"
+};
+
 interface CourseAnalyticsPageProps {
     course: { name: string; id?: string; instructor_id?: string };
 }
@@ -53,6 +75,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         return topKeywords.filter(item => !STOPWORDS.has(item.keyword.toLowerCase()));
     }, [topKeywords]);
 
+    // DERIVED METRICS
     const peakTrendPoint = useMemo(() =>
         [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
 
@@ -68,11 +91,20 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         return Math.round((maxActive / enrolledCount) * 100);
     }, [usageTrend, enrolledCount]);
 
+    // Topic Usage Data - Clustering keywords into Concepts for the Bar Chart
     const topicUsageData = useMemo(() => {
-        return filteredKeywords.slice(0, 5).map(item => ({
-            topic: item.keyword,
-            queries: item.count
-        }));
+        const clusters: Record<string, number> = {};
+
+        filteredKeywords.forEach(item => {
+            const keyword = item.keyword.toLowerCase();
+            const clusterName = CONCEPT_MAP[keyword] || (keyword.charAt(0).toUpperCase() + keyword.slice(1));
+            clusters[clusterName] = (clusters[clusterName] || 0) + item.count;
+        });
+
+        return Object.entries(clusters)
+            .map(([topic, queries]) => ({ topic, queries }))
+            .sort((a, b) => b.queries - a.queries)
+            .slice(0, 5);
     }, [filteredKeywords]);
 
     useEffect(() => {
@@ -116,7 +148,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         </div>
                         <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl text-slate-900 dark:text-white">{course.name}</h1>
                         <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
-                            Analyzing AI interactions and Discord student satisfaction.
+                            Analyzing instructional activity, engagement, and student satisfaction.
                         </p>
                     </div>
 
@@ -127,24 +159,23 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
                             <SelectItem value="7d">Last 7 days</SelectItem>
                             <SelectItem value="30d">Last 30 days</SelectItem>
-                            {/* RESTORED: 90 days */}
                             <SelectItem value="90d">Last 90 days</SelectItem>
                         </SelectContent>
                     </Select>
                 </div>
             </div>
 
-            {/* 2. STAT CARDS (5-column layout for desktop) */}
+            {/* 2. STAT CARDS */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
                 <StatCard value={loading ? "—" : enrolledCount.toLocaleString()} label="Enrolled Students" icon={GraduationCap} />
                 <StatCard value={loading ? "—" : usageTrend.reduce((s, p) => s + p.queries, 0).toLocaleString()} label="Total Queries" icon={MessageSquare} />
                 <StatCard value={loading ? "—" : `${engagementRate}%`} label="Engagement Rate" icon={Activity} />
-                <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Total Documents" icon={FileText} />
+                <StatCard value={loading ? "—" : totalDocs.toLocaleString()} label="Knowledge Base Files" icon={FileText} />
 
                 <Card className="border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 shadow-none">
                     <CardContent className="pt-6">
                         <div className="flex justify-between items-start mb-2">
-                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Discord Feedback</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Discord Sentiment</p>
                             <TrendingUp className="h-4 w-4 text-primary" />
                         </div>
                         <p className="text-2xl font-bold text-slate-900 dark:text-white">
@@ -176,7 +207,10 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             {/* 3. TREND AND SUMMARY */}
             <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.45fr_0.55fr]">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                    <CardHeader><CardTitle>Usage Trend</CardTitle></CardHeader>
+                    <CardHeader>
+                        <CardTitle>Interaction Trend</CardTitle>
+                        <CardDescription>Visualizing query volume vs unique student participation</CardDescription>
+                    </CardHeader>
                     <CardContent><UsageTrendChart data={usageTrend} height={320} /></CardContent>
                 </Card>
 
@@ -184,11 +218,11 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground px-1">Trend Summary</h3>
                     <SummaryRow label="Avg. Daily Queries" value={averageDailyQueries} />
                     <SummaryRow label="Avg. Daily Active Students" value={averageDailyUsers} />
-                    <SummaryRow label="Days with Query Activity" value={usageTrend.filter(p => p.queries > 0).length} />
+                    <SummaryRow label="Days with Activity" value={usageTrend.filter(p => p.queries > 0).length} />
 
                     <div className="rounded-[1.5rem] border border-primary/20 bg-primary/5 p-5 shadow-sm">
                         <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-primary">
-                            <LineChartIcon className="h-4 w-4" /> Busiest Day
+                            <LineChartIcon className="h-4 w-4" /> Busiest Interaction Day
                         </p>
                         <p className="mt-2 text-xl font-bold">
                             {peakTrendPoint ? `${peakTrendPoint.queries} Queries` : "—"}
@@ -204,14 +238,14 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             <div className="grid grid-cols-1 gap-6">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2"><Tags className="h-5 w-5 text-primary" /> Usage by Topic</CardTitle>
-                        <CardDescription>Most frequent query keywords in this period</CardDescription>
+                        <CardTitle className="flex items-center gap-2"><Tags className="h-5 w-5 text-primary" /> Concept Clusters</CardTitle>
+                        <CardDescription>Aggregating related keywords into parent instructional concepts</CardDescription>
                     </CardHeader>
                     <CardContent>
                         {topicUsageData.length > 0 ? (
                             <CourseBarChart data={topicUsageData} xKey="topic" yKey="queries" />
                         ) : (
-                            <p className="text-sm italic text-muted-foreground text-center py-10">No topic data recorded.</p>
+                            <p className="text-sm italic text-muted-foreground text-center py-10">No instructional data recorded.</p>
                         )}
                     </CardContent>
                 </Card>
@@ -220,11 +254,14 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             {/* 5. TOPIC CLOUD & FAQ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
-                    <CardHeader><CardTitle>Topic Cloud</CardTitle></CardHeader>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2"><Sparkles className="h-5 w-5 text-primary" /> Keyword Distribution</CardTitle>
+                        <CardDescription>Granular student terminology used in questions</CardDescription>
+                    </CardHeader>
                     <CardContent>
                         <div className="flex flex-wrap gap-2">
                             {filteredKeywords.map((item, i) => (
-                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm">
+                                <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-sm hover:border-primary/50 transition-colors cursor-default">
                                     <span className="font-semibold text-primary">{item.keyword}</span>
                                     <span className="text-[10px] bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded-md font-bold text-slate-700 dark:text-slate-300">{item.count}×</span>
                                 </div>
