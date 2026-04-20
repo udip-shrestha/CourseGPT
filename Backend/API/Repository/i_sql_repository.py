@@ -323,6 +323,10 @@ class ISQLRepository(Protocol):
         """Return satisfaction metrics for a course based on answer_feedback."""
         ...
 
+    def read_all_answer_feedbacks_for_course(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
+        """Return all answer feedbacks (votes) for a specific course with pagination."""
+        ...
+
     # ======================================================
     # DISCORD ADMINS
     # ======================================================

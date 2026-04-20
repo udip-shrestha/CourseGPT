@@ -58,3 +58,9 @@ class FeedbackService:
     def get_course_feedback(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
         """Retrieve feedback specifically for one course."""
         return self.sql_repo.read_all_feedback_for_course(course_id=course_id, limit=limit, offset=offset)
+
+    @clean_service
+    def get_course_answer_feedbacks(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
+        """Retrieve all answer feedbacks (votes) for a specific course."""
+        return self.sql_repo.read_all_answer_feedbacks_for_course(course_id=course_id, limit=limit, offset=offset)
+
