@@ -29,7 +29,6 @@ const STOPWORDS = new Set([
     "this", "that", "these", "those", "it", "its", "it's"
 ]);
 
-// CONCEPT_MAP: Groups specific keywords into high-level instructional clusters
 const CONCEPT_MAP: Record<string, string> = {
     "iptables": "Networking",
     "routing": "Networking",
@@ -75,7 +74,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         return topKeywords.filter(item => !STOPWORDS.has(item.keyword.toLowerCase()));
     }, [topKeywords]);
 
-    // DERIVED METRICS
     const peakTrendPoint = useMemo(() =>
         [...usageTrend].sort((a, b) => b.queries - a.queries)[0], [usageTrend]);
 
@@ -91,16 +89,13 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         return Math.round((maxActive / enrolledCount) * 100);
     }, [usageTrend, enrolledCount]);
 
-    // Topic Usage Data - Clustering keywords into Concepts for the Bar Chart
     const topicUsageData = useMemo(() => {
         const clusters: Record<string, number> = {};
-
         filteredKeywords.forEach(item => {
             const keyword = item.keyword.toLowerCase();
             const clusterName = CONCEPT_MAP[keyword] || (keyword.charAt(0).toUpperCase() + keyword.slice(1));
             clusters[clusterName] = (clusters[clusterName] || 0) + item.count;
         });
-
         return Object.entries(clusters)
             .map(([topic, queries]) => ({ topic, queries }))
             .sort((a, b) => b.queries - a.queries)
@@ -111,7 +106,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         if (!courseId) return;
         let cancelled = false;
         setLoading(true);
-
         (async () => {
             const [trendRes, qRes, keyRes, sCountRes, satRes, docCountRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
@@ -121,16 +115,13 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                 analyticsClient.getCourseSatisfaction(courseId),
                 analyticsClient.getDocumentCount(courseId)
             ]);
-
             if (cancelled) return;
-
             if (trendRes.data) setUsageTrend(trendRes.data);
             if (qRes.data) setTopQuestions(qRes.data);
             if (keyRes.data) setTopKeywords(keyRes.data);
             if (sCountRes.data) setEnrolledCount(sCountRes.data.student_count);
             if (satRes.data) setSatisfactionData(satRes.data);
             if (docCountRes.data !== undefined) setTotalDocs(docCountRes.data);
-
             setLoading(false);
         })();
         return () => { cancelled = true; };
@@ -138,7 +129,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
     return (
         <div className="space-y-8">
-            {/* 1. HEADER */}
+            {/* 1. HEADER - course.name removed here as it is redundant */}
             <div className="rounded-[2.5rem] border bg-white dark:bg-slate-950 overflow-hidden relative shadow-sm border-slate-200 dark:border-slate-800 transition-colors">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(37,99,235,0.07),_transparent_40%)] pointer-events-none" />
                 <div className="relative p-8 flex flex-col gap-6 xl:flex-row xl:items-center xl:justify-between">
@@ -146,7 +137,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                         <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-widest text-xs">
                             <Sparkles className="h-4 w-4" /> Course Intelligence
                         </div>
-                        <h1 className="text-4xl font-extrabold tracking-tight sm:text-5xl text-slate-900 dark:text-white">{course.name}</h1>
                         <p className="text-lg text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
                             Analyzing instructional activity, engagement, and student satisfaction.
                         </p>
