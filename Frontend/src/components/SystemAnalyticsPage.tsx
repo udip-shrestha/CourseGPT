@@ -352,7 +352,7 @@ export function SystemAnalyticsPage() {
                     </Card>
                     <Card className="shadow-sm">
                         <CardHeader className="pb-3">
-                            <CardTitle className="text-base">Avg. Documents per Active Instructor</CardTitle>
+                            <CardTitle className="text-base">Average Documents per Active Instructor</CardTitle>
                             <CardDescription>Content depth among instructors who uploaded material</CardDescription>
                         </CardHeader>
                         <CardContent>
