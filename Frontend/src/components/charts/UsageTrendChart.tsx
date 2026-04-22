@@ -18,6 +18,15 @@ interface UsageTrendChartProps {
     height?: number;
 }
 
+function parseLocalDate(dateString: string) {
+    const [year, month, day] = dateString.split("-").map(Number);
+    return new Date(year, (month ?? 1) - 1, day ?? 1);
+}
+
+function formatTrendDate(dateString: string, options: Intl.DateTimeFormatOptions) {
+    return parseLocalDate(dateString).toLocaleDateString("en-US", options);
+}
+
 export function UsageTrendChart({ data, height = 220 }: UsageTrendChartProps) {
     const queryTrendColor = useMemo(() => {
         if (!data || data.length < 2) return "#2563eb";
@@ -51,9 +60,7 @@ export function UsageTrendChart({ data, height = 220 }: UsageTrendChartProps) {
                     stroke="hsl(var(--muted-foreground))"
                     fontSize={12}
                     tickFormatter={(str) => {
-                        // Optional: Format "2024-02-03" to "Feb 03" for cleaner look
-                        const date = new Date(str);
-                        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        return formatTrendDate(str, { month: "short", day: "numeric" });
                     }}
                 >
                     <Label value="Date" position="insideBottom" offset={-10} style={{ fill: "hsl(var(--muted-foreground))", fontSize: 12 }} />
@@ -77,7 +84,7 @@ export function UsageTrendChart({ data, height = 220 }: UsageTrendChartProps) {
                         boxShadow: "0 10px 30px rgba(15, 23, 42, 0.12)",
                     }}
                     labelFormatter={(label) =>
-                        new Date(label).toLocaleDateString("en-US", {
+                        formatTrendDate(label, {
                             month: "short",
                             day: "numeric",
                             year: "numeric",

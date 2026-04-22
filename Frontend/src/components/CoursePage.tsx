@@ -33,10 +33,12 @@ export function CoursePage() {
   const roleParam = searchParams.get("role");
   const needsReg = searchParams.get("needs_registration");
   const canvasUserId = searchParams.get("canvas_user_id");
+  const studentIdParam = searchParams.get("student_id");
   const [showStudentReg, setShowStudentReg] = useState(false);
   const [studentName, setStudentName] = useState("");
   const [studentError, setStudentError] = useState<string | null>(null);
   const [studentLoading, setStudentLoading] = useState(false);
+  const [studentId, setStudentId] = useState<string | null>(studentIdParam);
 
   const fetchCourse = useCallback(async () => {
     if (!courseId) return;
@@ -66,6 +68,53 @@ export function CoursePage() {
       setShowStudentReg(true);
     }
   }, [roleParam, needsReg, canvasUserId]);
+
+  useEffect(() => {
+    setStudentId(studentIdParam);
+  }, [studentIdParam]);
+
+  useEffect(() => {
+    if (roleParam !== "student" || !courseId || !canvasUserId || studentIdParam) {
+      return;
+    }
+
+    let cancelled = false;
+
+    (async () => {
+      const { data, errorMessage } = await canvasStudentClient.lookupByCanvas(
+        canvasUserId,
+        courseId,
+      );
+
+      if (cancelled || errorMessage || !data?.registered || !data.student_id) {
+        return;
+      }
+
+      const resolvedStudentId = String(data.student_id);
+      setStudentId(resolvedStudentId);
+
+      const nextParams = new URLSearchParams(location.search);
+      nextParams.set("role", "student");
+      nextParams.set("canvas_user_id", canvasUserId);
+      nextParams.set("student_id", resolvedStudentId);
+      navigate(`${location.pathname}?${nextParams.toString()}`, {
+        replace: true,
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    roleParam,
+    courseId,
+    canvasUserId,
+    studentIdParam,
+    canvasStudentClient,
+    location.pathname,
+    location.search,
+    navigate,
+  ]);
 
   if (loading) {
     return (
@@ -117,8 +166,16 @@ export function CoursePage() {
       );
       if (errorMessage) throw new Error(errorMessage);
       // registration succeeded, close dialog and navigate to clean url
-      if (data) setShowStudentReg(false);
-      navigate(`/courses/${courseId}/chats?role=student`);
+      if (data) {
+        setShowStudentReg(false);
+        const registeredStudentId = String(data.student_id);
+        setStudentId(registeredStudentId);
+        const nextParams = new URLSearchParams();
+        nextParams.set("role", "student");
+        nextParams.set("student_id", registeredStudentId);
+        if (canvasUserId) nextParams.set("canvas_user_id", canvasUserId);
+        navigate(`/courses/${courseId}/chats?${nextParams.toString()}`);
+      }
     } catch (err: any) {
       setStudentError(err.message || "Registration failed");
     } finally {
@@ -193,7 +250,10 @@ export function CoursePage() {
       {/* Nested Routes */}
       <Routes>
         <Route index element={<CourseDocPage course={course} />} />
-        <Route path="chats" element={<CourseChatPage course={course} />} />
+        <Route
+          path="chats"
+          element={<CourseChatPage course={course} studentId={studentId} />}
+        />
         <Route
           path="questions"
           element={<CourseAllQuestionsPage course={course} />}

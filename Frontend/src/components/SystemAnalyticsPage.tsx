@@ -36,6 +36,15 @@ import { RankedMetricList } from "./RankedMetricList.tsx";
 
 const CHART_COLORS = ["#2563eb", "#14b8a6", "#f59e0b", "#ef4444", "#8b5cf6", "#0ea5e9"];
 
+function parseLocalDate(dateString: string) {
+    const [year, month, day] = dateString.split("-").map(Number);
+    return new Date(year, (month ?? 1) - 1, day ?? 1);
+}
+
+function formatLocalDate(dateString: string, options: Intl.DateTimeFormatOptions) {
+    return parseLocalDate(dateString).toLocaleDateString("en-US", options);
+}
+
 function topItems(items: MetricBreakdownItem[], count = 8) {
     return [...items]
         .filter((item) => item.count > 0)
@@ -201,7 +210,7 @@ export function SystemAnalyticsPage() {
         },
         {
             label: "Peak Daily AI Demand",
-            value: peakTrendPoint ? new Date(peakTrendPoint.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "No trend yet",
+            value: peakTrendPoint ? formatLocalDate(peakTrendPoint.date, { month: "short", day: "numeric" }) : "No trend yet",
             subtext: peakTrendPoint ? `${peakTrendPoint.queries.toLocaleString()} queries on the busiest day` : "Waiting for daily usage data",
             icon: TrendingUp,
         },
@@ -410,7 +419,7 @@ export function SystemAnalyticsPage() {
                                     {loading
                                         ? "—"
                                         : peakTrendPoint
-                                            ? `${new Date(peakTrendPoint.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })} · ${peakTrendPoint.queries} queries`
+                                            ? `${formatLocalDate(peakTrendPoint.date, { month: "short", day: "numeric" })} · ${peakTrendPoint.queries} queries`
                                             : "No usage yet"}
                                 </p>
                             </div>
