@@ -15,7 +15,13 @@ interface Message {
   imagePreviewUrl?: string;
 }
 
-export function CourseChatPage({ course }: { course: any }) {
+export function CourseChatPage({
+  course,
+  studentId,
+}: {
+  course: any;
+  studentId?: string | null;
+}) {
   const { queryClient } = useApiClient();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
@@ -189,7 +195,8 @@ export function CourseChatPage({ course }: { course: any }) {
       const { data, errorMessage } = await queryClient.queryCourse(
         course.id,
         questionText,
-        imageToSend
+        imageToSend,
+        studentId
       );
 
       if (errorMessage) {
