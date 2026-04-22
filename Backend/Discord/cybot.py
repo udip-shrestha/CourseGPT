@@ -84,13 +84,13 @@ async def ask(interaction: discord.Interaction, question: str, image: Optional[d
             return
 
         # Check if student is registered
-        registered, student_id = await is_registered_discord(str(interaction.user.id), course_id)
-        if not registered:
-            await interaction.response.send_message(
-                f"🚫 You are not registered for this course. Please try registering using the /register command first.",
-                ephemeral=True
-            )
-            return
+        # registered, student_id = await is_registered_discord(str(interaction.user.id), course_id)
+        # if not registered:
+        #     await interaction.response.send_message(
+        #         f"🚫 You are not registered for this course. Please try registering using the /register command first.",
+        #         ephemeral=True
+        #     )
+        #     return
 
         # Prepare image data
         image_bytes = None
