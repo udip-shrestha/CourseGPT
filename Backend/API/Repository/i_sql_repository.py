@@ -323,10 +323,14 @@ class ISQLRepository(Protocol):
         """Return satisfaction metrics for a course based on answer_feedback."""
         ...
 
+    def read_all_answer_feedbacks_for_course(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
+        """Return all answer feedbacks (votes) for a specific course with pagination."""
+        ...
+
     # ======================================================
     # DISCORD ADMINS
     # ======================================================
-    def create_discord_admin(self, discord_id: str) -> str:
+    def create_discord_admin(self, discord_id: str, name: str) -> str:
         """Insert a new Discord admin and return its id."""
         ...
 

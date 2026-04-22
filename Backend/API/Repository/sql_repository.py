@@ -879,20 +879,35 @@ class SQLRepository(ISQLRepository):
             }
         return result
 
+    def read_all_answer_feedbacks_for_course(self, course_id: str, limit: int = 50, offset: int = 0) -> dict:
+        count_sql = "SELECT COUNT(*) AS total FROM answer_feedback WHERE course_id = %s;"
+        total_row = self.cm.select_one(count_sql, (course_id,))
+        total = total_row["total"] if total_row else 0
+
+        data_sql = """
+            SELECT id, query_id, course_id, student_id, vote, created_at
+            FROM answer_feedback
+            WHERE course_id = %s
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s;
+        """
+        results = self.cm.select_all(data_sql, (course_id, limit, offset))
+        return {"total": total, "answer_feedbacks": results}
+
     # ======================================================
     # DISCORD ADMINS
     # ======================================================
-    def create_discord_admin(self, discord_id: str) -> str:
+    def create_discord_admin(self, discord_id: str, name: str) -> str:
         sql = """
-            INSERT INTO discord_admins (discord_id)
-            VALUES (%s)
+            INSERT INTO discord_admins (discord_id, name)
+            VALUES (%s, %s)
             RETURNING id;
         """
-        return self.cm.insert_one(sql, (discord_id,))
+        return self.cm.insert_one(sql, (discord_id, name))
 
     def read_discord_admin(self, discord_id: str) -> Optional[Dict[str, Any]]:
         sql = """
-            SELECT id, discord_id, created_at
+            SELECT id, discord_id, name, created_at
             FROM discord_admins
             WHERE discord_id = %s;
         """
@@ -904,7 +919,7 @@ class SQLRepository(ISQLRepository):
         total = total_row["total"] if total_row else 0
 
         data_sql = """
-            SELECT id, discord_id, created_at
+            SELECT id, discord_id, name, created_at
             FROM discord_admins
             ORDER BY created_at DESC
             LIMIT %s OFFSET %s;

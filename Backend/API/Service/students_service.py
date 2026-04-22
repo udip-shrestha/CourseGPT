@@ -104,6 +104,8 @@ class StudentService:
         """Fetch all students with optional filtering by course_id."""
         students = self.sql_repo.read_all_students(course_id=course_id)
 
+        if limit is None:
+            return students
         # simple pagination (repository could also handle it internally)
         paginated = students[offset:offset + limit]
         return paginated

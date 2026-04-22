@@ -102,7 +102,7 @@ def is_registered_discord(
     service: StudentService = Depends(get_student_service),
 ) -> Dict[str, Optional[str]]:
     """Checks if a student is already registered in the specified course."""
-    students = service.read_all_students(course_id=course_id)
+    students = service.read_all_students(course_id=course_id, limit=None)
     match = next((s for s in students if s["discord_id"] == discord_id), None)
 
     if match:
