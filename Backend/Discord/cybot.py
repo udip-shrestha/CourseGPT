@@ -118,7 +118,7 @@ async def ask(interaction: discord.Interaction, question: str, image: Optional[d
                     image_mime = resp.headers.get("content-type")
                 else:
                     await interaction.followup.send(
-                        "❌ Failed to download the image.",
+                        "❌ Failed to download the image. Try again with a different image or check the file size (must be under 8MB).",
                         ephemeral=True
                     )
                     return
@@ -126,7 +126,7 @@ async def ask(interaction: discord.Interaction, question: str, image: Optional[d
             await interaction.response.defer(thinking=True)
             
         # Get answer from AI model (with optional image)
-        answer, sources, query_id = await ask_AI_model(question, course_id, image_bytes, image_name, image_mime)
+        answer, sources, query_id = await ask_AI_model(question, course_id, student_id, image_bytes, image_name, image_mime)
 
         # Format response with sources if available
         response = answer
