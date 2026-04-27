@@ -185,6 +185,7 @@ async def is_registered_discord(discord_id: str, course_id: str) -> Tuple[bool, 
 async def ask_AI_model(
     question: str,
     course_id: str,
+    student_id: Optional[str] = None,
     image_bytes: bytes | None = None,
     image_name: str | None = None,
     image_mime_type: str | None = None,
@@ -195,7 +196,7 @@ async def ask_AI_model(
     an `image` file field so the backend can process it.
     """
     url = f"{API_BASE_URL.rstrip('/')}/courses/{course_id}/queries"
-    params = {"question": question}
+    params = {"question": question, "student_id": student_id} if student_id else {"question": question}
     try:
         async with httpx.AsyncClient(timeout=LLM_TIMEOUT) as client:
             if image_bytes and image_name:
