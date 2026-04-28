@@ -13,11 +13,18 @@ function seedAdminSession(win: Window) {
 }
 
 function visitAdmin(path: string) {
-  cy.visit(path, {
+  cy.visit("/", {
     onBeforeLoad(win) {
       seedAdminSession(win);
     },
   });
+
+  if (path !== "/") {
+    cy.window().then((win) => {
+      win.history.pushState({}, "", path);
+      win.dispatchEvent(new PopStateEvent("popstate"));
+    });
+  }
 }
 
 /** Avoids failed network calls when smoke-testing dashboard navigation. */
