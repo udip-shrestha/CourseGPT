@@ -77,7 +77,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             .slice(0, 5);
     }, [filteredKeywords]);
 
-    // FIXED: Now correctly handles string "down" votes and maps to queryText for the gaps card
     const unhelpfulQuestions = useMemo(() => {
         const unhelpfulQueryIds = new Set(
             feedbacks
@@ -86,7 +85,12 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         );
 
         // Return top questions where students gave negative feedback
-        return topQuestions.filter(q => unhelpfulQueryIds.has(q.queryText));
+        // Uses @ts-ignore to allow check against query_id if it exists at runtime
+        return topQuestions.filter(q =>
+            unhelpfulQueryIds.has(q.queryText) ||
+            // @ts-ignore
+            unhelpfulQueryIds.has(q.query_id)
+        );
     }, [feedbacks, topQuestions]);
 
     const engagementRate = useMemo(() => {
@@ -146,10 +150,10 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
                     </div>
 
                     <Select value={selectedTimeRange} onValueChange={setSelectedTimeRange}>
-                        <SelectTrigger className="w-44 h-11 rounded-2xl border-slate-200 bg-white shadow-sm dark:border-slate-900 font-medium">
-                            <SelectValue placeholder="Range" />
+                        <SelectTrigger className="w-44 h-11 rounded-2xl border-slate-400 dark:border-slate-600 bg-white dark:bg-slate-900 shadow-md font-bold text-slate-900 dark:text-slate-100 transition-all hover:border-primary">
+                            <SelectValue placeholder="Select Range" />
                         </SelectTrigger>
-                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800">
+                        <SelectContent className="rounded-xl border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                             <SelectItem value="7d">Last 7 days</SelectItem>
                             <SelectItem value="30d">Last 30 days</SelectItem>
                             <SelectItem value="90d">Last 90 days</SelectItem>

@@ -73,6 +73,7 @@ deploy_frontend:
     - main
     - master
     
+    
   needs:
     - job: build_frontend
       artifacts: true
