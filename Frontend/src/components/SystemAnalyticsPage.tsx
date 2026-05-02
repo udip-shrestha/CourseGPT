@@ -16,6 +16,7 @@ import {
 
 import { useApiClient } from "../clients/ApiClientContext.tsx";
 import type {
+    AdminFeedbackItem,
     MetricBreakdownItem,
     SystemOverview,
     UsageTrendPoint,
@@ -70,6 +71,7 @@ export function SystemAnalyticsPage() {
     const [documentsByInstructor, setDocumentsByInstructor] = useState<MetricBreakdownItem[]>([]);
     const [coursesByInstructor, setCoursesByInstructor] = useState<MetricBreakdownItem[]>([]);
     const [queriesByCourse, setQueriesByCourse] = useState<MetricBreakdownItem[]>([]);
+    const [recentFeedback, setRecentFeedback] = useState<AdminFeedbackItem[]>([]);
 
     useEffect(() => {
         if (!instructorId) return;
@@ -86,6 +88,7 @@ export function SystemAnalyticsPage() {
                 docsInstructorRes,
                 coursesInstructorRes,
                 queriesCourseRes,
+                feedbackRes,
             ] = await Promise.all([
                 analyticsClient.getSystemOverview(instructorId),
                 analyticsClient.getSystemQueryTrend(instructorId, selectedTimeRange),
@@ -93,6 +96,7 @@ export function SystemAnalyticsPage() {
                 analyticsClient.getDocumentsByInstructor(instructorId),
                 analyticsClient.getCoursesByInstructor(instructorId),
                 analyticsClient.getQueriesByCourse(instructorId, selectedTimeRange),
+                analyticsClient.getAllFeedback(12),
             ]);
 
             if (cancelled) return;
@@ -104,6 +108,7 @@ export function SystemAnalyticsPage() {
                 docsInstructorRes.errorMessage,
                 coursesInstructorRes.errorMessage,
                 queriesCourseRes.errorMessage,
+                feedbackRes.errorMessage,
             ].filter(Boolean);
 
             if (errors.length > 0) {
@@ -115,6 +120,7 @@ export function SystemAnalyticsPage() {
                 setDocumentsByInstructor(docsInstructorRes.data ?? []);
                 setCoursesByInstructor(coursesInstructorRes.data ?? []);
                 setQueriesByCourse(queriesCourseRes.data ?? []);
+                setRecentFeedback(feedbackRes.data?.feedback ?? []);
             }
 
             setLoading(false);
@@ -545,6 +551,58 @@ export function SystemAnalyticsPage() {
                         </CardContent>
                     </Card>
                 </div>
+            </section>
+
+            <section className="space-y-4">
+                <div>
+                    <h2 className="text-xl font-semibold">Student Feedback Across Courses</h2>
+                    <p className="text-sm text-muted-foreground">
+                        Recent written feedback from students across the whole platform. This helps admins spot recurring praise, friction, and course-specific issues.
+                    </p>
+                </div>
+
+                <Card className="shadow-sm">
+                    <CardHeader>
+                        <CardTitle>Recent Feedback</CardTitle>
+                        <CardDescription>All courses, newest submissions first</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        {loading ? (
+                            <p className="text-sm text-muted-foreground">Loading feedback…</p>
+                        ) : recentFeedback.length === 0 ? (
+                            <p className="text-sm italic text-muted-foreground">
+                                No written student feedback has been submitted yet.
+                            </p>
+                        ) : (
+                            <div className="space-y-3">
+                                {recentFeedback.map((item) => (
+                                    <div
+                                        key={item.id}
+                                        className="rounded-2xl border bg-slate-50/70 p-4 shadow-sm dark:bg-slate-900/60"
+                                    >
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                                            <div className="min-w-0">
+                                                <p className="font-semibold">
+                                                    {item.course_name || "Unknown course"}
+                                                </p>
+                                                <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                                                    {item.feedback_text}
+                                                </p>
+                                            </div>
+                                            <p className="shrink-0 text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                                                {new Date(item.received_at).toLocaleDateString("en-US", {
+                                                    month: "short",
+                                                    day: "numeric",
+                                                    year: "numeric",
+                                                })}
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
             </section>
 
             <section className="grid grid-cols-1 gap-6 xl:grid-cols-[1.1fr_0.9fr]">

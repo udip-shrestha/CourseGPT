@@ -10,6 +10,17 @@ export interface AnswerFeedbackItem {
     created_at: string;
 }
 
+export interface CourseFeedbackItem {
+    id: string;
+    course_id: string;
+    feedback_text: string;
+    received_at: string;
+}
+
+export interface AdminFeedbackItem extends CourseFeedbackItem {
+    course_name: string;
+}
+
 export interface UsageTrendPoint {
     date: string;
     queries: number;
@@ -95,6 +106,22 @@ export class AnalyticsClient {
         return this.client.request<{ total: number; answer_feedbacks: AnswerFeedbackItem[] }>(
             "GET",
             `/feedback/courses/${courseId}/answer-feedbacks`,
+            { query: { limit, offset } }
+        );
+    }
+
+    async getCourseFeedback(courseId: string, limit: number = 50, offset: number = 0) {
+        return this.client.request<{ total: number; feedback: CourseFeedbackItem[] }>(
+            "GET",
+            `/feedback/courses/${courseId}`,
+            { query: { limit, offset } }
+        );
+    }
+
+    async getAllFeedback(limit: number = 50, offset: number = 0) {
+        return this.client.request<{ total: number; feedback: AdminFeedbackItem[] }>(
+            "GET",
+            "/feedback",
             { query: { limit, offset } }
         );
     }
