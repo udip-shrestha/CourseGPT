@@ -12,7 +12,7 @@ import type {
     TopQuestionsItem,
     TopKeywordsItem,
     CourseSatisfaction,
-    AnswerFeedbackItem
+    CourseFeedbackItem,
 } from "../clients/AnalyticsClient";
 
 import { StatCard } from "./StatCard.tsx";
@@ -55,7 +55,7 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
     const [topQuestions, setTopQuestions] = useState<TopQuestionsItem[]>([]);
     const [topKeywords, setTopKeywords] = useState<TopKeywordsItem[]>([]);
     const [satisfactionData, setSatisfactionData] = useState<CourseSatisfaction | null>(null);
-    const [feedbacks, setFeedbacks] = useState<AnswerFeedbackItem[]>([]);
+    const [courseFeedback, setCourseFeedback] = useState<CourseFeedbackItem[]>([]);
     const [enrolledCount, setEnrolledCount] = useState(0);
     const [totalDocs, setTotalDocs] = useState(0);
     const [uniqueActiveCount, setUniqueActiveCount] = useState(0);
@@ -77,22 +77,6 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             .slice(0, 5);
     }, [filteredKeywords]);
 
-    const unhelpfulQuestions = useMemo(() => {
-        const unhelpfulQueryIds = new Set(
-            feedbacks
-                .filter(f => String(f.vote).toLowerCase() === "down")
-                .map(f => f.query_id)
-        );
-
-        // Return top questions where students gave negative feedback
-        // Uses @ts-ignore to allow check against query_id if it exists at runtime
-        return topQuestions.filter(q =>
-            unhelpfulQueryIds.has(q.queryText) ||
-            // @ts-ignore
-            unhelpfulQueryIds.has(q.query_id)
-        );
-    }, [feedbacks, topQuestions]);
-
     const engagementRate = useMemo(() => {
         if (enrolledCount === 0) return 0;
         return Math.round((uniqueActiveCount / enrolledCount) * 100);
@@ -104,14 +88,15 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
         setLoading(true);
 
         (async () => {
-            const [trendRes, qRes, keyRes, sCountRes, satRes, docCountRes, feedRes] = await Promise.all([
+            const [trendRes, qRes, keyRes, sCountRes, satRes, docCountRes, feedRes, textFeedRes] = await Promise.all([
                 analyticsClient.getUsageTrend(courseId, selectedTimeRange),
                 analyticsClient.getTopQuestions(courseId, 10, selectedTimeRange),
                 analyticsClient.getTopKeywords(courseId, 12, selectedTimeRange),
                 analyticsClient.getStudentCount(courseId),
                 analyticsClient.getCourseSatisfaction(courseId),
                 analyticsClient.getDocumentCount(courseId),
-                analyticsClient.getCourseAnswerFeedbacks(courseId, 100)
+                analyticsClient.getCourseAnswerFeedbacks(courseId, 100),
+                analyticsClient.getCourseFeedback(courseId, 20),
             ]);
 
             if (cancelled) return;
@@ -124,9 +109,12 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
             if (docCountRes.data !== undefined) setTotalDocs(docCountRes.data);
 
             if (feedRes.data && feedRes.data.answer_feedbacks) {
-                setFeedbacks(feedRes.data.answer_feedbacks);
                 const uniqueIds = new Set(feedRes.data.answer_feedbacks.map(f => f.student_id));
                 setUniqueActiveCount(uniqueIds.size);
+            }
+
+            if (textFeedRes.data?.feedback) {
+                setCourseFeedback(textFeedRes.data.feedback);
             }
 
             setLoading(false);
@@ -227,24 +215,37 @@ export function CourseAnalyticsPage({ course }: CourseAnalyticsPageProps) {
 
             {/* 5. GAPS & FAQ */}
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <Card className="shadow-sm border-red-200 dark:border-red-900 bg-red-50/30 dark:bg-red-950/10">
+                <Card className="shadow-sm border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
                     <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-red-600">
-                            <HelpCircle className="h-5 w-5" /> Potential Knowledge Gaps
+                        <CardTitle className="flex items-center gap-2">
+                            <HelpCircle className="h-5 w-5 text-primary" /> Student Feedback
                         </CardTitle>
-                        <CardDescription>Questions students marked as "Not Helpful"</CardDescription>
+                        <CardDescription>Recent text feedback submitted by students for this course</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <ul className="space-y-4">
-                            {unhelpfulQuestions.length > 0 ? (
-                                unhelpfulQuestions.slice(0, 4).map((q, i) => (
-                                    <li key={i} className="p-3 rounded-lg bg-white dark:bg-slate-900 border border-red-100 dark:border-red-800">
-                                        <p className="text-sm font-medium text-slate-900 dark:text-slate-100">{q.queryText}</p>
-                                        <p className="text-[10px] mt-2 text-red-500 font-bold uppercase tracking-tighter">Action Required: Update Curriculum Docs</p>
+                            {courseFeedback.length > 0 ? (
+                                courseFeedback.slice(0, 4).map((item) => (
+                                    <li
+                                        key={item.id}
+                                        className="rounded-lg border border-slate-200 bg-slate-50/70 p-3 dark:border-slate-800 dark:bg-slate-900"
+                                    >
+                                        <p className="text-sm font-medium leading-relaxed text-slate-900 dark:text-slate-100">
+                                            {item.feedback_text}
+                                        </p>
+                                        <p className="mt-2 text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                                            {new Date(item.received_at).toLocaleDateString("en-US", {
+                                                month: "short",
+                                                day: "numeric",
+                                                year: "numeric",
+                                            })}
+                                        </p>
                                     </li>
                                 ))
                             ) : (
-                                <p className="text-sm italic text-muted-foreground text-center py-6">No instructional gaps detected.</p>
+                                <p className="text-sm italic text-muted-foreground text-center py-6">
+                                    No student feedback has been submitted for this course yet.
+                                </p>
                             )}
                         </ul>
                     </CardContent>
