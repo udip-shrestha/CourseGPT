@@ -66,14 +66,22 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
         onViewCourse();
     };
 
-    const handleButtonClick = (e: React.MouseEvent) => e.stopPropagation();
+    /**
+     * SHIELD LOGIC: Stops the click event from "bubbling" up to the Card's onClick handler.
+     * This prevents navigation to the course dashboard when interacting with settings.
+     */
+    const handleActionsClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+    };
 
     return (
         <Card
-            className={`transition-shadow relative overflow-hidden ${isDisabled ? "cursor-not-allowed opacity-60" : "hover:shadow-md cursor-pointer"}`}
+            className={`transition-shadow relative overflow-hidden ${
+                isDisabled ? "cursor-not-allowed opacity-60" : "hover:shadow-md cursor-pointer"
+            }`}
             onClick={handleCardClick}
         >
-           {isDisabled && (
+            {isDisabled && (
                 <>
                     <div
                         className="absolute inset-0 z-0 pointer-events-none"
@@ -90,15 +98,24 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                 </>
             )}
 
-            <div className="absolute top-2 right-2 z-10" onClick={handleButtonClick}>
+            {/* ACTION WRAPPER: Absolute positioned and stops all click propagation */}
+            <div
+                className="absolute top-2 right-2 z-30"
+                onClick={handleActionsClick}
+                onMouseDown={handleActionsClick}
+            >
                 <Popover open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
                     <PopoverTrigger asChild>
                         <Button variant="ghost" size="icon" aria-label="Course Settings">
                             <Settings className="h-4 w-4" />
                         </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-48 p-2">
+                    <PopoverContent
+                        className="w-48 p-2"
+                        onClick={handleActionsClick}
+                    >
                         <div className="grid gap-1">
+                            {/* DELETE COURSE DIALOG */}
                             <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button
@@ -109,20 +126,24 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                                         <Trash2 className="mr-2 h-4 w-4" /> Delete Course
                                     </Button>
                                 </DialogTrigger>
-                                <DialogContent>
+                                <DialogContent onClick={handleActionsClick}>
                                     <DialogHeader>
                                         <DialogTitle>Delete "{course.name}"?</DialogTitle>
-                                        <DialogDescription>Are you sure you want to delete this course? This action cannot be undone.</DialogDescription>
+                                        <DialogDescription>
+                                            Are you sure you want to delete this course? This action cannot be undone.
+                                        </DialogDescription>
                                     </DialogHeader>
                                     <DialogFooter className="gap-2 sm:justify-end">
                                         <DialogClose asChild>
                                             <Button variant="outline">Cancel</Button>
                                         </DialogClose>
+
+                                        {/* FINAL CONFIRMATION NESTED DIALOG */}
                                         <Dialog open={isFinalDeleteDialogOpen} onOpenChange={setIsFinalDeleteDialogOpen}>
                                             <DialogTrigger asChild>
                                                 <Button variant="destructive">Confirm Delete</Button>
                                             </DialogTrigger>
-                                            <DialogContent>
+                                            <DialogContent onClick={handleActionsClick}>
                                                 <DialogHeader>
                                                     <DialogTitle className="flex items-center gap-2">
                                                         <AlertTriangle className="text-destructive h-5 w-5" /> Final Confirmation
@@ -144,6 +165,7 @@ export function CourseCard({ course, onViewCourse, onDelete, onCourseUpdated }: 
                                 </DialogContent>
                             </Dialog>
 
+                            {/* EDIT COURSE DIALOG */}
                             <Dialog open={isUpdateDialogOpen} onOpenChange={setIsUpdateDialogOpen}>
                                 <DialogTrigger asChild>
                                     <Button
